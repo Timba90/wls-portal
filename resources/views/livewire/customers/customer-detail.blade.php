@@ -151,7 +151,7 @@
         @if ($customer->isCompany())
             <x-tab.items tab="ansprechpartner" title="Ansprechpartner">
                 <x-card>
-                    <x-not-yet-available area="Ansprechpartner" />
+                    <livewire:contacts.customer-contacts :customer="$customer" :key="'kontakte-'.$customer->id" />
                 </x-card>
             </x-tab.items>
         @endif

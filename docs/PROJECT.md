@@ -353,7 +353,7 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 |-------------|--------|-------|
 | 1 | Projektbasis, Authentifizierung, Basislayout | umgesetzt |
 | 2 | Kunden, Kundennummer, Liste, Detailseite, Archivierung | umgesetzt |
-| 3 | Ansprechpartner | offen |
+| 3 | Ansprechpartner, Rollen, Vertretungen | umgesetzt |
 | 4 | Katalog | offen |
 | 5 | Kundenleistungen | offen |
 | 6 | Preislogik | offen |

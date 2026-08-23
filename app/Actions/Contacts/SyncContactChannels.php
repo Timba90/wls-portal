@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Actions\Customers;
+namespace App\Actions\Contacts;
 
-use App\Models\Customer;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Gleicht E-Mail-Adressen und Telefonnummern eines Kontaktkanal-Inhabers ab.
+ *
+ * Verwendet von Privatkunden und Ansprechpartnern.
  *
  * Stellt sicher, dass jeweils genau eine Adresse beziehungsweise Nummer primaer
  * ist. Da MySQL keine partiellen Unique-Indizes kennt, wird diese Regel hier in
@@ -21,7 +22,7 @@ class SyncContactChannels
      * @param  array<int, array{email: string, type: string, is_primary?: bool}>  $emails
      * @param  array<int, array{number: string, type: string, is_primary?: bool}>  $phones
      */
-    public function __invoke(Customer|Model $owner, array $emails, array $phones): void
+    public function __invoke(Model $owner, array $emails, array $phones): void
     {
         DB::transaction(function () use ($owner, $emails, $phones): void {
             $this->syncEmails($owner, $emails);

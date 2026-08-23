@@ -49,8 +49,11 @@
 
                 <x-side-bar.item text="Kunden" icon="building-office-2" route="customers.index" match="customers.*" />
 
+                <x-side-bar.item text="Ansprechpartner" icon="user-group" route="contacts.index" match="contacts.*" />
+
                 <x-side-bar.separator text="Verwaltung" />
 
+                <x-side-bar.item text="Ansprechpartnerrollen" icon="identification" route="contact-roles.index" />
                 <x-side-bar.item text="Benutzer" icon="users" route="users.index" />
                 <x-side-bar.item text="Warteschlangen" icon="queue-list" href="{{ url('horizon') }}" />
             </x-side-bar>

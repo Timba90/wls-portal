@@ -13,6 +13,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -58,6 +60,32 @@ class Customer extends Model
     public function responsibleUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    /**
+     * Zuordnungen von Ansprechpartnern — nur bei Firmenkunden.
+     *
+     * @return HasMany<ContactAssignment, $this>
+     */
+    public function contactAssignments(): HasMany
+    {
+        return $this->hasMany(ContactAssignment::class)->orderBy('priority');
+    }
+
+    /**
+     * @return BelongsToMany<Contact, $this>
+     */
+    public function contacts(): BelongsToMany
+    {
+        return $this->belongsToMany(Contact::class, 'contact_assignments');
+    }
+
+    /**
+     * @return HasMany<ContactDeputy, $this>
+     */
+    public function contactDeputies(): HasMany
+    {
+        return $this->hasMany(ContactDeputy::class)->orderBy('priority');
     }
 
     /**

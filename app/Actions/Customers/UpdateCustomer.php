@@ -2,6 +2,7 @@
 
 namespace App\Actions\Customers;
 
+use App\Actions\Contacts\SyncContactChannels;
 use App\Enums\CustomerType;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
