@@ -1,6 +1,6 @@
 <div>
     @if ($definitions->isEmpty())
-        <p class="py-4 text-sm text-gray-500 dark:text-gray-400">
+        <p class="py-4 text-sm text-ink-muted">
             Für diesen Bereich sind keine benutzerdefinierten Felder eingerichtet.
         </p>
     @else

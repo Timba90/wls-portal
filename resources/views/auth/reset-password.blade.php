@@ -1,7 +1,7 @@
 <x-layouts.guest title="Neues Passwort vergeben">
     <div class="mb-6">
-        <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Neues Passwort vergeben</h1>
-        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+        <h1 class="text-lg font-semibold text-ink">Neues Passwort vergeben</h1>
+        <p class="mt-1 text-sm text-ink-muted">
             Mindestens 12 Zeichen mit Groß- und Kleinbuchstaben, Zahl und Sonderzeichen.
         </p>
     </div>

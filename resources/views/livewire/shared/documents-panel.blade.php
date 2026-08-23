@@ -1,6 +1,6 @@
 <div>
     <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-ink-muted">
             Dateien liegen in privatem Speicher. Der Zugriff läuft ausschließlich über die Anwendung.
             Maximal {{ $maxSizeMb }} MB je Datei.
         </p>
@@ -8,13 +8,13 @@
         <x-button sm icon="arrow-up-tray" wire:click="create">Dokument hochladen</x-button>
     </div>
 
-    <div class="divide-y divide-gray-200 dark:divide-dark-600">
+    <div class="divide-y divide-line">
         @forelse ($documents as $document)
             <div class="py-3" wire:key="document-{{ $document->id }}">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
-                            <span class="font-medium text-gray-800 dark:text-gray-100">{{ $document->name }}</span>
+                            <span class="font-medium text-ink">{{ $document->name }}</span>
 
                             <x-badge color="gray" :text="'Version '.$document->currentVersion?->version" sm />
 
@@ -24,11 +24,11 @@
                         </div>
 
                         @if ($document->description)
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $document->description }}</p>
+                            <p class="mt-1 text-sm text-ink-muted">{{ $document->description }}</p>
                         @endif
 
                         @if ($document->currentVersion)
-                            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                            <p class="mt-1 text-xs text-ink-muted">
                                 {{ $document->currentVersion->original_filename }}
                                 · {{ $document->currentVersion->humanSize() }}
                                 · {{ $document->currentVersion->created_at?->format('d.m.Y H:i') }}
@@ -40,11 +40,11 @@
 
                         @if ($document->versions->count() > 1)
                             <details class="mt-2">
-                                <summary class="cursor-pointer text-xs text-primary-600 dark:text-primary-400">
+                                <summary class="cursor-pointer text-xs text-accent">
                                     {{ $document->versions->count() }} Versionen anzeigen
                                 </summary>
 
-                                <ul class="mt-2 space-y-1 border-l border-gray-200 pl-3 text-xs text-gray-500 dark:border-dark-600 dark:text-gray-400">
+                                <ul class="mt-2 space-y-1 border-l border-line pl-3 text-xs text-ink-muted">
                                     @foreach ($document->versions as $version)
                                         <li wire:key="version-{{ $version->id }}">
                                             Version {{ $version->version }} ·
@@ -55,7 +55,7 @@
                                                 · {{ $version->uploader->name }}
                                             @endif
                                             <a href="{{ route('documents.download', [$document, $version]) }}"
-                                               class="ml-1 text-primary-600 hover:underline dark:text-primary-400">
+                                               class="ml-1 text-accent hover:underline">
                                                 Herunterladen
                                             </a>
                                         </li>
@@ -100,7 +100,7 @@
                 </div>
             </div>
         @empty
-            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p class="py-6 text-center text-sm text-ink-muted">
                 Noch keine Dokumente hinterlegt.
             </p>
         @endforelse

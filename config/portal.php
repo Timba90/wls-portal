@@ -4,6 +4,21 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Marke
+    |--------------------------------------------------------------------------
+    |
+    | Wortmarke und Zusatz aus dem Entwurf. Getrennt von APP_NAME, damit der
+    | Anwendungsname (Seitentitel, E-Mails) unabhängig bleibt.
+    |
+    */
+
+    'brand' => [
+        'name' => env('BRAND_NAME', 'weblab studio'),
+        'tagline' => env('BRAND_TAGLINE', 'Interne Verwaltung'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Passwortregeln
     |--------------------------------------------------------------------------
     |

@@ -2,26 +2,26 @@
     <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex flex-wrap items-center gap-4 text-sm">
             <div>
-                <span class="text-gray-500 dark:text-gray-400">Monatsumsatz</span>
-                <span class="ml-1 font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                <span class="text-ink-muted">Monatsumsatz</span>
+                <span class="ml-1 font-medium tabular-nums text-ink">
                     {{ $monthlyRevenue->format() }}
                 </span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-gray-400">Jahresumsatz</span>
-                <span class="ml-1 font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                <span class="text-ink-muted">Jahresumsatz</span>
+                <span class="ml-1 font-medium tabular-nums text-ink">
                     {{ $yearlyRevenue->format() }}
                 </span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-gray-400">Kosten (mtl.)</span>
-                <span class="ml-1 font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                <span class="text-ink-muted">Kosten (mtl.)</span>
+                <span class="ml-1 font-medium tabular-nums text-ink">
                     {{ $monthlyCosts->format() }}
                 </span>
             </div>
             <div>
-                <span class="text-gray-500 dark:text-gray-400">Marge (mtl.)</span>
-                <span class="ml-1 font-medium tabular-nums {{ $monthlyMargin->isNegative() ? 'text-red-600 dark:text-red-400' : 'text-gray-800 dark:text-gray-100' }}">
+                <span class="text-ink-muted">Marge (mtl.)</span>
+                <span class="ml-1 font-medium tabular-nums {{ $monthlyMargin->isNegative() ? 'text-[color:var(--pill-bad-ink)]' : 'text-ink' }}">
                     {{ $monthlyMargin->format() }}
                 </span>
             </div>
@@ -39,7 +39,7 @@
         </div>
     </div>
 
-    <div class="divide-y divide-gray-200 dark:divide-dark-600">
+    <div class="divide-y divide-line">
         @forelse ($services as $service)
             <div class="py-3" wire:key="service-{{ $service->id }}">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -47,7 +47,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <a href="{{ route('customer-services.show', [$customer, $service]) }}"
                                wire:navigate
-                               class="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                               class="font-medium text-accent hover:underline">
                                 {{ $service->name }}
                             </a>
 
@@ -64,7 +64,7 @@
                             @endforeach
                         </div>
 
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p class="mt-1 text-sm text-ink-muted">
                             @if ($service->isFromCatalog())
                                 {{ $service->product?->name }}@if ($service->productVariant) · {{ $service->productVariant->name }}@endif
                             @else
@@ -77,10 +77,10 @@
                     </div>
 
                     <div class="shrink-0 text-sm sm:text-right">
-                        <p class="font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                        <p class="font-medium tabular-nums text-ink">
                             {{ $service->salesPrice()->format() }} · {{ $service->billingInterval()->label() }}
                         </p>
-                        <p class="tabular-nums text-gray-500 dark:text-gray-400">
+                        <p class="tabular-nums text-ink-muted">
                             EK {{ $service->purchasePrice()->format() }} ·
                             Marge {{ $service->margin()->format() }}
                             @if ($service->marginPercentage() !== null)
@@ -91,7 +91,7 @@
                 </div>
             </div>
         @empty
-            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p class="py-6 text-center text-sm text-ink-muted">
                 Für diesen Kunden ist noch keine Leistung erfasst.
             </p>
         @endforelse

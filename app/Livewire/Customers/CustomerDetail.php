@@ -56,7 +56,11 @@ class CustomerDetail extends Component
 
     public function render(): View
     {
-        return view('livewire.customers.customer-detail')
-            ->title($this->customer->displayName());
+        // Fuer die Kennzahlen im Kopfband: nur abrechnungsrelevante Leistungen.
+        $this->customer->load(['responsibleUser', 'services' => fn ($query) => $query->billable()]);
+
+        return view('livewire.customers.customer-detail', [
+            'activeServices' => $this->customer->services()->active()->count(),
+        ])->title($this->customer->displayName());
     }
 }

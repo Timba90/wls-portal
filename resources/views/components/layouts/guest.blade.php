@@ -12,36 +12,48 @@
 
     <link rel="icon" href="/favicon.ico" sizes="any">
 
-    {{-- TallStackUI wird ueber resources/css/app.css in denselben Tailwind-Build
-         kompiliert; <tallstackui:style /> entfaellt deshalb bewusst. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
-    {{-- Livewire bringt Alpine mit. TallStackUI benoetigt Alpine auch auf Seiten
-         ohne Livewire-Komponente, deshalb werden die Assets hier explizit
-         eingebunden statt auf die automatische Injektion zu vertrauen. --}}
     @livewireStyles
     @livewireScripts
 
     <tallstackui:script />
 </head>
-<body class="flex min-h-full flex-col bg-gray-100 font-sans text-gray-900 antialiased dark:bg-dark-900 dark:text-gray-100">
-    <div class="flex flex-1 flex-col justify-center px-4 py-12 sm:px-6 lg:px-8">
-        <div class="mx-auto w-full max-w-md">
-            <div class="mb-8 flex flex-col items-center gap-3">
-                <span class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary-600 text-base font-bold text-white">
-                    WLS
-                </span>
-                <span class="text-lg font-semibold text-gray-800 dark:text-gray-100">{{ config('app.name') }}</span>
+<body class="min-h-full bg-canvas font-sans text-ink-base antialiased">
+    {{--
+        Zweispaltig wie im Entwurf. `flex-wrap-reverse` sorgt dafür, dass auf
+        schmalen Bildschirmen das Formular oben steht und die Markenspalte
+        darunter.
+    --}}
+    <div class="flex min-h-screen w-full flex-wrap-reverse items-stretch">
+        <aside class="flex flex-[1_1_380px] flex-col justify-between gap-10 border-r border-line bg-shell px-8 py-9 sm:px-11">
+            <x-brand />
+
+            <div class="flex max-w-[430px] flex-col gap-6">
+                <h1 class="text-[30px] font-semibold leading-[1.2] tracking-[-0.02em] text-ink">
+                    Kunden, Leistungen und Verträge an einer Stelle.
+                </h1>
+                <p class="text-[13.5px] leading-relaxed text-ink-muted">
+                    Betreuung, Abrechnung und Laufzeiten für alle Mandate — ohne Tabellenchaos,
+                    mit einer verbindlichen Zahl pro Kunde.
+                </p>
             </div>
 
-            <x-card>
+            @isset($aside)
+                {{ $aside }}
+            @endisset
+
+            <div class="flex flex-wrap items-center gap-4 text-[10.5px] text-ink-faint">
+                <span>© {{ now()->year }} {{ config('portal.brand.name') }}</span>
+                <x-theme-switch xs class="ml-auto" />
+            </div>
+        </aside>
+
+        <main class="flex flex-[1_1_420px] items-center justify-center px-5 py-10 sm:px-10">
+            <div class="flex w-full max-w-[400px] flex-col gap-7">
                 {{ $slot }}
-            </x-card>
-
-            <div class="mt-6 flex justify-center">
-                <x-theme-switch sm />
             </div>
-        </div>
+        </main>
     </div>
 
     <x-toast />

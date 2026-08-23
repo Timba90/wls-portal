@@ -7,23 +7,23 @@
     Livewire-Komponente nutzt dafuer den Trait WithConfigurableTable.
 --}}
 <x-modal wire="showTableSettings" id="spalten-einstellungen" title="Spalten einrichten" size="lg">
-    <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+    <p class="mb-4 text-sm text-ink-muted">
         Diese Einstellung gilt für alle Benutzer.
     </p>
 
-    <div class="divide-y divide-gray-200 dark:divide-dark-600">
+    <div class="divide-y divide-line">
         @foreach ($columns as $index => $column)
             <div class="flex items-center gap-3 py-2" wire:key="column-{{ $column['key'] }}">
                 <div class="flex flex-col">
                     <button type="button"
-                            class="cursor-pointer text-gray-400 transition hover:text-gray-700 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-200"
+                            class="cursor-pointer text-ink-faint transition hover:text-ink-base disabled:cursor-default disabled:opacity-30"
                             wire:click="moveColumn('{{ $column['key'] }}', -1)"
                             @disabled($index === 0)
                             title="Nach oben">
                         <x-icon name="chevron-up" class="h-4 w-4" />
                     </button>
                     <button type="button"
-                            class="cursor-pointer text-gray-400 transition hover:text-gray-700 disabled:cursor-default disabled:opacity-30 dark:hover:text-gray-200"
+                            class="cursor-pointer text-ink-faint transition hover:text-ink-base disabled:cursor-default disabled:opacity-30"
                             wire:click="moveColumn('{{ $column['key'] }}', 1)"
                             @disabled($index === count($columns) - 1)
                             title="Nach unten">
@@ -32,7 +32,7 @@
                 </div>
 
                 <div class="flex-1">
-                    <span class="text-sm text-gray-800 dark:text-gray-100">{{ $column['label'] }}</span>
+                    <span class="text-sm text-ink">{{ $column['label'] }}</span>
                     @if ($column['fixed'])
                         <x-badge color="gray" text="Immer sichtbar" sm class="ml-2" />
                     @endif

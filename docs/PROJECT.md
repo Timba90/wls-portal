@@ -461,6 +461,23 @@ Laden mit den aktuellen Spaltendefinitionen abgeglichen: neue Spalten kommen
 hinzu, entfallene verschwinden. Als `fixed` markierte Spalten
 (Kundennummer, Name) lassen sich nicht ausblenden.
 
+### AE-12a — Visuelles System aus dem Entwurf „WLS Portal"
+Farben, Schriften und Flächen stammen aus dem Design-Canvas `WLS Portal.dc.html`:
+Akzent `#4ADE9B`, Flächen von `#0C1013` bis `#1B2126`, Textstufen `#F0F3F3` bis
+`#606C73`, Statuspillen in fünf Ausprägungen, IBM Plex Mono für Marke, Labels
+und Zahlen sowie Source Sans 3 für Fließtext.
+
+Der Entwurf ist ausschließlich dunkel gehalten. Die Anforderung verlangt jedoch
+beide Erscheinungsbilder (§42). Die Tokens sind deshalb semantisch benannt
+(`--surface-*`, `--ink-*`, `--accent*`, `--pill-*`) und werden für den hellen
+Modus umdefiniert — die Oberfläche selbst bleibt in beiden Fällen unverändert.
+
+TallStackUI wird nicht ersetzt, sondern umgefärbt (§41): die Tokens `primary-*`
+und `dark-*` sind auf die Palette des Entwurfs gemappt, und die Schaltflächen
+tragen über `App\View\Components\TallStackUi\Colors\NormalButtonColors` die
+Akzentfarbe mit dunkler Schrift — das Paket würde im Dark Mode sonst einen
+dunkleren Ton mit heller Schrift verwenden.
+
 ### AE-13a — Kennzahlen in PHP statt in SQL
 Umsatz, Kosten und Marge entstehen durch Normalisierung unterschiedlicher
 Abrechnungsintervalle auf einen Monatswert. In SQL wäre das eine unübersichtliche

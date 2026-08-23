@@ -1,83 +1,97 @@
 <div>
-    <div class="mb-6">
-        <a href="{{ route('customers.index') }}"
-           wire:navigate
-           class="text-sm text-primary-600 hover:underline dark:text-primary-400">
-            &larr; Zurück zur Kundenliste
-        </a>
+    <x-page :title="$customer->displayName()"
+            :subtitle="$customer->customer_number.' · '.$customer->short_label.' · '.$customer->internal_code"
+            back-label="Kunden ／ zurück zur Liste"
+            :back-url="route('customers.index')">
+        <x-slot:actions>
+            @unless ($customer->isArchived())
+                <x-button sm color="secondary" outline icon="pencil"
+                          :href="route('customers.edit', $customer)" wire:navigate>
+                    Bearbeiten
+                </x-button>
 
-        <div class="mt-2 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
+                <x-button sm
+                          color="red"
+                          outline
+                          icon="archive-box"
+                          x-on:click="$dialog.confirm({
+                              title: 'Kunde archivieren?',
+                              description: 'Der Kunde bleibt vollständig erhalten, erscheint aber nicht mehr in der normalen Suche.',
+                              accept: { text: 'Archivieren', method: 'archive' },
+                              reject: { text: 'Abbrechen' },
+                          })">
+                    Archivieren
+                </x-button>
+            @else
+                <x-button sm
+                          color="secondary"
+                          outline
+                          icon="arrow-uturn-left"
+                          x-on:click="$dialog.confirm({
+                              title: 'Archivierung aufheben?',
+                              description: 'Der Kunde wird wieder als aktiv geführt.',
+                              accept: { text: 'Reaktivieren', method: 'restore' },
+                              reject: { text: 'Abbrechen' },
+                          })">
+                    Archivierung aufheben
+                </x-button>
+            @endunless
+        </x-slot:actions>
+
+        {{-- Kopfband: Initialen, Name, Status und die Kennzahlen des Kunden. --}}
+        <div class="mb-4 flex flex-col gap-4 rounded-[10px] border border-line bg-panel px-4 py-4 lg:flex-row lg:items-center">
+            <x-avatar-initials :initials="\Illuminate\Support\Str::of($customer->displayName())->substr(0, 2)->upper()" size="lg" />
+
+            <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
-                    <h1 class="text-xl font-semibold text-gray-900 dark:text-gray-100">
-                        {{ $customer->displayName() }}
-                    </h1>
-                    <x-badge :color="$customer->status->color()" :text="$customer->status->label()" sm />
-                    <x-badge color="gray" :text="$customer->type->label()" sm />
+                    <span class="truncate text-[15px] font-semibold text-ink">{{ $customer->displayName() }}</span>
+                    <x-status-pill :kind="$customer->isArchived() ? 'mute' : 'ok'" :label="$customer->status->label()" />
+                    <x-status-pill kind="info" :label="$customer->type->label()" :dot="false" />
                 </div>
 
-                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                    {{ $customer->customer_number }} · {{ $customer->short_label }} · {{ $customer->internal_code }}
+                <p class="mt-1 text-[11.5px] text-ink-muted">
+                    {{ $customer->customer_number }} · {{ $customer->short_label }}
+                    @if ($customer->responsibleUser)
+                        · betreut von {{ $customer->responsibleUser->name }}
+                    @endif
                 </p>
             </div>
 
-            <div class="flex flex-wrap gap-2">
-                @unless ($customer->isArchived())
-                    <x-button color="secondary"
-                              outline
-                              icon="pencil"
-                              :href="route('customers.edit', $customer)"
-                              wire:navigate>
-                        Bearbeiten
-                    </x-button>
-
-                    <x-button color="red"
-                              outline
-                              icon="archive-box"
-                              x-on:click="$dialog.confirm({
-                                  title: 'Kunde archivieren?',
-                                  description: 'Der Kunde bleibt vollständig erhalten, erscheint aber nicht mehr in der normalen Suche.',
-                                  accept: { text: 'Archivieren', method: 'archive' },
-                                  reject: { text: 'Abbrechen' },
-                              })">
-                        Archivieren
-                    </x-button>
-                @else
-                    <x-button color="secondary"
-                              outline
-                              icon="arrow-uturn-left"
-                              x-on:click="$dialog.confirm({
-                                  title: 'Archivierung aufheben?',
-                                  description: 'Der Kunde wird wieder als aktiv geführt.',
-                                  accept: { text: 'Reaktivieren', method: 'restore' },
-                                  reject: { text: 'Abbrechen' },
-                              })">
-                        Archivierung aufheben
-                    </x-button>
-                @endunless
+            <div class="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:w-auto">
+                @foreach ([
+                    ['Leistungen', number_format($activeServices, 0, ',', '.')],
+                    ['Umsatz / Mon', $customer->monthlyRevenue()->format()],
+                    ['Kosten / Mon', $customer->monthlyCosts()->format()],
+                    ['Marge / Mon', $customer->monthlyMargin()->format()],
+                ] as [$label, $value])
+                    <div class="flex flex-col gap-1 rounded-lg border border-line bg-raised px-3 py-2"
+                         wire:key="kennzahl-{{ $loop->index }}">
+                        <span class="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-ink-faint">{{ $label }}</span>
+                        <span class="tabular text-[13px] font-semibold text-ink">{{ $value }}</span>
+                    </div>
+                @endforeach
             </div>
         </div>
-    </div>
 
-    @if (session('erfolg'))
-        <x-alert color="green" class="mb-4">{{ session('erfolg') }}</x-alert>
-    @endif
+        @if (session('erfolg'))
+            <x-alert color="green" class="mb-4">{{ session('erfolg') }}</x-alert>
+        @endif
 
-    @if ($customer->isArchived())
-        <x-alert color="amber" class="mb-4" title="Archivierter Kunde">
-            Dieser Kunde ist archiviert und erscheint nicht in der globalen Suche.
-        </x-alert>
-    @endif
+        @if ($customer->isArchived())
+            <x-alert color="amber" class="mb-4" title="Archivierter Kunde">
+                Dieser Kunde ist archiviert und erscheint nicht in der globalen Suche.
+            </x-alert>
+        @endif
 
-    <x-tab wire:model="tab">
+        <x-tab wire:model="tab">
         <x-tab.items tab="uebersicht" title="Übersicht">
             <div class="grid gap-4 lg:grid-cols-2">
                 <x-card>
                     <x-slot:header>
-                        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Stammdaten</h2>
+                        <h2 class="text-sm font-semibold text-ink">Stammdaten</h2>
                     </x-slot:header>
 
-                    <dl class="divide-y divide-gray-200 text-sm dark:divide-dark-600">
+                    <dl class="divide-y divide-line text-sm">
                         <x-detail-row label="Kundennummer" :value="$customer->customer_number" />
                         <x-detail-row label="Typ" :value="$customer->type->label()" />
 
@@ -106,7 +120,7 @@
 
                 <x-card>
                     <x-slot:header>
-                        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Benutzerdefinierte Felder</h2>
+                        <h2 class="text-sm font-semibold text-ink">Benutzerdefinierte Felder</h2>
                     </x-slot:header>
 
                     <livewire:custom-fields.custom-fields-panel :record="$customer"
@@ -117,39 +131,39 @@
                 @if ($customer->isPrivate())
                     <x-card>
                         <x-slot:header>
-                            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Kontaktdaten</h2>
+                            <h2 class="text-sm font-semibold text-ink">Kontaktdaten</h2>
                         </x-slot:header>
 
                         <div class="space-y-4 text-sm">
                             <div>
-                                <p class="mb-1 font-medium text-gray-700 dark:text-gray-200">E-Mail-Adressen</p>
+                                <p class="mb-1 font-medium text-ink-base">E-Mail-Adressen</p>
 
                                 @forelse ($customer->emailAddresses as $email)
-                                    <p class="text-gray-600 dark:text-gray-300">
+                                    <p class="text-ink-base">
                                         {{ $email->email }}
-                                        <span class="text-gray-400">({{ $email->type->label() }})</span>
+                                        <span class="text-ink-faint">({{ $email->type->label() }})</span>
                                         @if ($email->is_primary)
                                             <x-badge color="green" text="Primär" sm class="ml-1" />
                                         @endif
                                     </p>
                                 @empty
-                                    <p class="text-gray-400">Keine hinterlegt.</p>
+                                    <p class="text-ink-faint">Keine hinterlegt.</p>
                                 @endforelse
                             </div>
 
                             <div>
-                                <p class="mb-1 font-medium text-gray-700 dark:text-gray-200">Telefonnummern</p>
+                                <p class="mb-1 font-medium text-ink-base">Telefonnummern</p>
 
                                 @forelse ($customer->phoneNumbers as $phone)
-                                    <p class="text-gray-600 dark:text-gray-300">
+                                    <p class="text-ink-base">
                                         {{ $phone->number }}
-                                        <span class="text-gray-400">({{ $phone->type->label() }})</span>
+                                        <span class="text-ink-faint">({{ $phone->type->label() }})</span>
                                         @if ($phone->is_primary)
                                             <x-badge color="green" text="Primär" sm class="ml-1" />
                                         @endif
                                     </p>
                                 @empty
-                                    <p class="text-gray-400">Keine hinterlegt.</p>
+                                    <p class="text-ink-faint">Keine hinterlegt.</p>
                                 @endforelse
                             </div>
                         </div>
@@ -199,4 +213,5 @@
             $tallstackui.toast().error('Archivierung nicht möglich', event.meldung).send());
     </script>
     @endscript
+    </x-page>
 </div>

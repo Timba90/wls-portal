@@ -33,6 +33,21 @@ berücksichtigt sie, Phase 1 implementiert sie nicht.
 | Rollen- und Rechtesystem                  | Alle Benutzer haben dieselben Rechte. Policies existieren als Einstiegspunkt.                                                        |
 | Beliebig tiefe Kategoriebäume             | Eine Hierarchiestufe (Kategorie + Unterkategorie).                                                                                   |
 
+## Aus dem Entwurf bewusst nicht übernommen
+
+Der Design-Canvas `WLS Portal.dc.html` zeigt Bereiche, die es in Phase 1 nicht
+gibt. Sie wurden nicht nachgebaut, weil die Oberfläche sonst Funktionen
+vortäuschen würde, die keine Daten haben.
+
+| Element im Entwurf | Grund |
+|---|---|
+| Navigationspunkt „Rechnungen", Panel „Rechnungslauf & offene Posten", Reiter „Rechnungen" am Kunden | Rechnungserzeugung ist ausdrücklich Zukunft. |
+| Navigationspunkt „Zeiterfassung" | Nicht Teil des Funktionsumfangs. |
+| Geschäftsjahr-Umschalter in der Seitenleiste | Es gibt keine Geschäftsjahre im Datenmodell. |
+| „Mit Passkey anmelden" auf dem Login | Passkeys wurden bewusst deaktiviert; vorgesehen sind Passwort und TOTP. |
+| Balken- und Anteilsdiagramme auf der Übersicht | Charts sind ausdrücklich als spätere Erweiterung vermerkt. |
+| Kennzahl „Letzte Aktivität" in der Kundenliste | Wird erst mit der Abrechnungskontrolle sinnvoll befüllbar. |
+
 ## Offene fachliche Rückfragen
 
 | Frage                                                                                                     | Aktuelle Annahme                                                                                              |

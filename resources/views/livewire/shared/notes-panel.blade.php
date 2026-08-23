@@ -11,14 +11,14 @@
         <x-button sm icon="plus" wire:click="create">Notiz anlegen</x-button>
     </div>
 
-    <div class="divide-y divide-gray-200 dark:divide-dark-600">
+    <div class="divide-y divide-line">
         @forelse ($notes as $note)
             <div class="py-3" wire:key="note-{{ $note->id }}">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                             <x-badge :color="$note->category->color()" :text="$note->category->label()" sm />
-                            <span class="text-xs text-gray-500 dark:text-gray-400">
+                            <span class="text-xs text-ink-muted">
                                 {{ $note->created_at->format('d.m.Y H:i') }}
                                 @if ($note->user)
                                     · {{ $note->user->name }}
@@ -29,7 +29,7 @@
                             </span>
                         </div>
 
-                        <p class="mt-2 whitespace-pre-line text-sm text-gray-700 dark:text-gray-200">{{ $note->body }}</p>
+                        <p class="mt-2 whitespace-pre-line text-sm text-ink-base">{{ $note->body }}</p>
                     </div>
 
                     <div class="flex shrink-0 gap-2">
@@ -51,7 +51,7 @@
                 </div>
             </div>
         @empty
-            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p class="py-6 text-center text-sm text-ink-muted">
                 Noch keine Notizen erfasst.
             </p>
         @endforelse

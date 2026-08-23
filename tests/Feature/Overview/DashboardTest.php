@@ -79,7 +79,7 @@ it('zeigt die Kennzahlen auf dem Dashboard', function (): void {
     Livewire::actingAs(User::factory()->create())
         ->test(DashboardPage::class)
         ->assertSee('Aktive Kunden')
-        ->assertSee('Soll-Umsatz')
+        ->assertSee('Umsatz / Monat')
         ->assertSee('59,00 €')
         ->assertSee('708,00 €')
         ->assertSee('41,00 €');

@@ -1,11 +1,11 @@
 <x-layouts.guest title="Zwei-Faktor-Bestätigung">
     <div x-data="{ recovery: false }">
         <div class="mb-6">
-            <h1 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Zwei-Faktor-Bestätigung</h1>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-show="!recovery">
+            <h1 class="text-lg font-semibold text-ink">Zwei-Faktor-Bestätigung</h1>
+            <p class="mt-1 text-sm text-ink-muted" x-show="!recovery">
                 Bitte geben Sie den Code aus Ihrer Authenticator-App ein.
             </p>
-            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400" x-show="recovery" x-cloak>
+            <p class="mt-1 text-sm text-ink-muted" x-show="recovery" x-cloak>
                 Bitte geben Sie einen Ihrer Wiederherstellungscodes ein.
             </p>
         </div>
@@ -34,7 +34,7 @@
             <div class="text-center">
                 <button type="button"
                         x-on:click="recovery = !recovery"
-                        class="cursor-pointer text-sm text-primary-600 hover:underline dark:text-primary-400">
+                        class="cursor-pointer text-sm text-accent hover:underline">
                     <span x-show="!recovery">Stattdessen Wiederherstellungscode verwenden</span>
                     <span x-show="recovery" x-cloak>Stattdessen Authenticator-Code verwenden</span>
                 </button>

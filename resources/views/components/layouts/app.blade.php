@@ -12,8 +12,8 @@
 
     <link rel="icon" href="/favicon.ico" sizes="any">
 
-    {{-- TallStackUI wird ueber resources/css/app.css in denselben Tailwind-Build
-         kompiliert; <tallstackui:style /> entfaellt deshalb bewusst. --}}
+    {{-- TallStackUI wird über resources/css/app.css in denselben Tailwind-Build
+         kompiliert; <tallstackui:style /> entfällt deshalb bewusst. --}}
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     {{-- Livewire bringt Alpine mit. TallStackUI benoetigt Alpine auch auf Seiten
@@ -24,87 +24,93 @@
 
     <tallstackui:script />
 </head>
-<body class="bg-gray-50 font-sans text-gray-900 antialiased dark:bg-dark-900 dark:text-gray-100 h-full">
-    <x-layout>
-        <x-slot:menu>
-            <x-side-bar collapsible navigate>
-                <x-slot:brand>
-                    <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center gap-2 px-4">
-                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-600 text-sm font-bold text-white">
-                            WLS
-                        </span>
-                        <span class="whitespace-nowrap text-sm font-semibold text-gray-800 dark:text-gray-100">Portal</span>
-                    </a>
-                </x-slot:brand>
+<body class="h-full bg-canvas font-sans text-ink-base antialiased">
+    <div x-data="{ mobileNav: false }" class="flex min-h-full">
+        {{-- Seitenleiste: 242px, sticky, eigene Fläche gegenüber dem Arbeitsbereich. --}}
+        <aside x-cloak
+               x-bind:class="mobileNav ? 'flex' : 'hidden md:flex'"
+               class="fixed inset-y-0 left-0 z-40 w-[242px] flex-none flex-col border-r border-line bg-shell md:sticky md:top-0 md:h-screen">
+            <div class="flex h-16 flex-none items-center justify-between border-b border-line px-4">
+                <a href="{{ route('dashboard') }}" wire:navigate>
+                    <x-brand />
+                </a>
 
-                <x-slot:brandCollapsed>
-                    <a href="{{ route('dashboard') }}" wire:navigate class="flex items-center px-4">
-                        <span class="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary-600 text-sm font-bold text-white">
-                            WLS
-                        </span>
-                    </a>
-                </x-slot:brandCollapsed>
+                <button type="button"
+                        class="cursor-pointer text-ink-faint transition hover:text-ink md:hidden"
+                        x-on:click="mobileNav = false"
+                        aria-label="Navigation schließen">
+                    <x-icon name="x-mark" class="h-5 w-5" />
+                </button>
+            </div>
 
-                <x-side-bar.item text="Dashboard" icon="home" route="dashboard" />
+            <nav class="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-3 soft-scrollbar">
+                <x-nav-group label="Arbeit">
+                    <x-nav-item route="dashboard" icon="squares-2x2" label="Übersicht" />
+                    <x-nav-item route="customers.index" match="customers.*" icon="building-office-2"
+                                label="Kunden" :count="$navCounts['customers']" />
+                    <x-nav-item route="services.index" icon="clipboard-document-list"
+                                label="Leistungen" :count="$navCounts['services']" />
+                    <x-nav-item route="contacts.index" match="contacts.*" icon="user-group"
+                                label="Ansprechpartner" :count="$navCounts['contacts']" />
+                    <x-nav-item route="products.index" match="products.*" icon="cube"
+                                label="Artikel" :count="$navCounts['products']" />
+                </x-nav-group>
 
-                <x-side-bar.item text="Kunden" icon="building-office-2" route="customers.index" match="customers.*" />
+                <x-nav-group label="Katalog">
+                    <x-nav-item route="categories.index" icon="folder" label="Kategorien" />
+                    <x-nav-item route="tags.index" icon="tag" label="Tags" />
+                    <x-nav-item route="contact-roles.index" icon="identification" label="Rollen" />
+                    <x-nav-item route="custom-fields.index" icon="rectangle-stack" label="Eigene Felder" />
+                </x-nav-group>
 
-                <x-side-bar.item text="Ansprechpartner" icon="user-group" route="contacts.index" match="contacts.*" />
+                <x-nav-group label="System">
+                    <x-nav-item route="archive.index" icon="archive-box" label="Archiv" />
+                    <x-nav-item route="users.index" icon="users" label="Benutzer" />
+                    <x-nav-item :href="url('horizon')" icon="queue-list" label="Queue & Jobs" />
+                </x-nav-group>
+            </nav>
 
-                <x-side-bar.item text="Artikel / Leistungen" icon="squares-2x2" route="products.index" match="products.*" />
-                <x-side-bar.item text="Leistungsübersicht" icon="clipboard-document-list" route="services.index" />
-                <x-side-bar.item text="Archiv" icon="archive-box" route="archive.index" />
+            <div class="flex flex-none items-center gap-2.5 border-t border-line px-3 py-3">
+                <x-avatar-initials :initials="auth()->user()->initials()" size="sm" />
 
-                <x-side-bar.separator text="Verwaltung" />
+                <span class="flex min-w-0 flex-1 flex-col">
+                    <span class="truncate text-[11.5px] text-ink-base">{{ auth()->user()->email }}</span>
+                    <span class="text-[10px] text-ink-faint">Interner Benutzer</span>
+                </span>
 
-                <x-side-bar.item text="Kategorien" icon="folder" route="categories.index" />
-                <x-side-bar.item text="Tags" icon="tag" route="tags.index" />
-                <x-side-bar.item text="Ansprechpartnerrollen" icon="identification" route="contact-roles.index" />
-                <x-side-bar.item text="Eigene Felder" icon="rectangle-stack" route="custom-fields.index" />
-                <x-side-bar.item text="Benutzer" icon="users" route="users.index" />
-                <x-side-bar.item text="Warteschlangen" icon="queue-list" href="{{ url('horizon') }}" />
-            </x-side-bar>
-        </x-slot:menu>
+                <button type="button"
+                        class="cursor-pointer text-[10.5px] text-ink-faint transition hover:text-ink"
+                        onclick="document.getElementById('logout-form').submit()">
+                    abmelden
+                </button>
+            </div>
+        </aside>
 
-        <x-slot:header>
-            <x-layout.header>
-                <x-slot:middle>
-                    <div class="hidden w-[28rem] max-w-full px-4 lg:block">
-                        <livewire:search.global-search-bar />
-                    </div>
-                </x-slot:middle>
+        {{-- Abdunklung hinter der mobilen Navigation. --}}
+        <div x-cloak
+             x-show="mobileNav"
+             x-on:click="mobileNav = false"
+             class="fixed inset-0 z-30 bg-black/60 md:hidden"></div>
 
-                <x-slot:right>
-                    <div class="flex items-center gap-3">
-                        <x-theme-switch sm />
+        <main class="flex min-w-0 flex-1 flex-col">
+            <div class="flex items-center gap-3 border-b border-line bg-shell px-4 py-2 md:hidden">
+                <button type="button"
+                        class="cursor-pointer text-ink-muted transition hover:text-ink"
+                        x-on:click="mobileNav = true"
+                        aria-label="Navigation öffnen">
+                    <x-icon name="bars-3" class="h-5 w-5" />
+                </button>
 
-                        <x-dropdown static>
-                            <x-slot:action>
-                                <button type="button"
-                                        class="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm text-gray-700 transition hover:bg-gray-100 dark:text-gray-200 dark:hover:bg-dark-600">
-                                    <span class="flex h-7 w-7 items-center justify-center rounded-full bg-primary-100 text-xs font-semibold text-primary-700 dark:bg-primary-900 dark:text-primary-100">
-                                        {{ auth()->user()->initials() }}
-                                    </span>
-                                    <span class="hidden sm:inline">{{ auth()->user()->name }}</span>
-                                </button>
-                            </x-slot:action>
+                <x-brand compact />
 
-                            <x-dropdown.items text="Profil" icon="user" :href="route('profile.show')" />
-                            <x-dropdown.items text="Sicherheit" icon="shield-check" :href="route('profile.security')" />
-                            <x-dropdown.items separator />
-                            <x-dropdown.items text="Abmelden" icon="arrow-right-start-on-rectangle" onclick="document.getElementById('logout-form').submit()" />
-                        </x-dropdown>
-                    </div>
-                </x-slot:right>
-            </x-layout.header>
-        </x-slot:header>
+                <div class="ml-auto flex items-center gap-2">
+                    <x-theme-switch sm />
+                </div>
+            </div>
 
-        @isset($header)
-            <div class="mb-6">{{ $header }}</div>
-        @endisset
-
-        {{ $slot }}
-    </x-layout>
+            {{ $slot }}
+        </main>
+    </div>
 
     <form id="logout-form" method="POST" action="{{ route('logout') }}" class="hidden">
         @csrf

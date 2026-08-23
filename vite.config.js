@@ -8,8 +8,13 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 'resources/js/app.js'],
             refresh: true,
+            // Source Sans 3 für Fließtext, IBM Plex Mono für Marke, Labels und
+            // alle Zahlen — so wie im Entwurf.
             fonts: [
-                bunny('Instrument Sans', {
+                bunny('Source Sans 3', {
+                    weights: [400, 500, 600, 700],
+                }),
+                bunny('IBM Plex Mono', {
                     weights: [400, 500, 600],
                 }),
             ],

@@ -1,6 +1,6 @@
 <div>
     <div class="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p class="text-sm text-gray-500 dark:text-gray-400">
+        <p class="text-sm text-ink-muted">
             {{ $assignments->count() }} {{ $assignments->count() === 1 ? 'Ansprechpartner' : 'Ansprechpartner' }}
             bei diesem Kunden.
         </p>
@@ -19,7 +19,7 @@
         </div>
     </div>
 
-    <div class="divide-y divide-gray-200 dark:divide-dark-600">
+    <div class="divide-y divide-line">
         @forelse ($assignments as $assignment)
             <div class="py-3" wire:key="assignment-{{ $assignment->id }}">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -27,7 +27,7 @@
                         <div class="flex flex-wrap items-center gap-2">
                             <a href="{{ route('contacts.show', $assignment->contact) }}"
                                wire:navigate
-                               class="font-medium text-primary-600 hover:underline dark:text-primary-400">
+                               class="font-medium text-accent hover:underline">
                                 {{ $assignment->contact->fullName() }}
                             </a>
 
@@ -52,15 +52,15 @@
                             @forelse ($assignment->roles as $role)
                                 <x-badge color="gray" :text="$role->name" sm />
                             @empty
-                                <span class="text-sm text-gray-400">Keine Rolle zugewiesen</span>
+                                <span class="text-sm text-ink-faint">Keine Rolle zugewiesen</span>
                             @endforelse
 
-                            <span class="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                            <span class="ml-2 text-sm text-ink-muted">
                                 Priorität {{ $assignment->priority }}
                             </span>
                         </div>
 
-                        <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        <p class="mt-1 text-sm text-ink-muted">
                             {{ $assignment->effectiveEmail()?->email ?? '—' }}
                             ·
                             {{ $assignment->effectivePhone()?->number ?? '—' }}
@@ -70,7 +70,7 @@
                         </p>
 
                         @if ($assignment->note)
-                            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">{{ $assignment->note }}</p>
+                            <p class="mt-1 text-sm text-ink-muted">{{ $assignment->note }}</p>
                         @endif
                     </div>
 
@@ -98,21 +98,21 @@
                 </div>
             </div>
         @empty
-            <p class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+            <p class="py-6 text-center text-sm text-ink-muted">
                 Diesem Kunden ist noch kein Ansprechpartner zugeordnet.
             </p>
         @endforelse
     </div>
 
     @if ($deputyGroups->isNotEmpty())
-        <div class="mt-6 border-t border-gray-200 pt-4 dark:border-dark-600">
-            <h3 class="mb-2 text-sm font-semibold text-gray-800 dark:text-gray-100">Vertretungen</h3>
+        <div class="mt-6 border-t border-line pt-4">
+            <h3 class="mb-2 text-sm font-semibold text-ink">Vertretungen</h3>
 
             <div class="space-y-2">
                 @foreach ($deputyGroups as $group)
                     <div class="text-sm" wire:key="deputy-group-{{ $group['role']->id }}">
-                        <span class="font-medium text-gray-700 dark:text-gray-200">{{ $group['role']->name }}:</span>
-                        <span class="text-gray-600 dark:text-gray-300">
+                        <span class="font-medium text-ink-base">{{ $group['role']->name }}:</span>
+                        <span class="text-ink-base">
                             {{ $group['deputies']->map(fn ($deputy) => $deputy->contact->fullName().' ('.$deputy->priority.')')->implode(', ') }}
                         </span>
                     </div>
@@ -122,7 +122,7 @@
     @endif
 
     <x-modal wire="showDeputies" id="vertretungen-formular" title="Vertretungen" size="2xl">
-        <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
+        <p class="mb-4 text-sm text-ink-muted">
             Je Rolle können mehrere Vertretungen mit Priorität hinterlegt werden.
             Kleinere Werte werden zuerst herangezogen.
         </p>
