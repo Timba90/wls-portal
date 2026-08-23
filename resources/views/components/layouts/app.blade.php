@@ -47,6 +47,8 @@
 
                 <x-side-bar.item text="Dashboard" icon="home" route="dashboard" />
 
+                <x-side-bar.item text="Kunden" icon="building-office-2" route="customers.index" match="customers.*" />
+
                 <x-side-bar.separator text="Verwaltung" />
 
                 <x-side-bar.item text="Benutzer" icon="users" route="users.index" />

@@ -347,6 +347,24 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 
 ---
 
+## Umsetzungsstand
+
+| Meilenstein | Inhalt | Stand |
+|-------------|--------|-------|
+| 1 | Projektbasis, Authentifizierung, Basislayout | umgesetzt |
+| 2 | Kunden, Kundennummer, Liste, Detailseite, Archivierung | umgesetzt |
+| 3 | Ansprechpartner | offen |
+| 4 | Katalog | offen |
+| 5 | Kundenleistungen | offen |
+| 6 | Preislogik | offen |
+| 7 | Notizen, Dokumente, Custom Fields, Audit Log | offen |
+| 8 | Dashboard, globale Suche, Archivansichten | offen |
+
+Die Kennzahlen der Kundenliste (Anzahl Leistungen, Monats- und Jahresumsatz,
+Kosten, Marge) stehen bis Meilenstein 5/6 auf 0.
+
+---
+
 ## 4. Architekturentscheidungen
 
 ### AE-1 — Kundennummern über eine Sequenztabelle
@@ -420,7 +438,22 @@ Deckungsbeitrag und alle Dashboard-Summen wären sonst durchgehend
 null-behaftet. `0` bedeutet fachlich „keine Kosten / kein Erlös" — etwa bei
 Eigenleistung oder Inklusivleistungen.
 
-### AE-12 — Normalisierung auf Monats- und Jahreswerte
+### AE-12 — Eine Kontaktkanal-Tabelle je Art, polymorph
+`email_addresses` und `phone_numbers` haengen polymorph an `Customer`
+(Privatkunden) und `Contact`. Getrennte Tabellen je Besitzertyp waeren reine
+Duplikation. `is_primary` wird von `SyncContactChannels` in einer Transaktion
+erzwungen: die erste als primaer markierte Zeile gewinnt, ist keine markiert,
+wird es die erste Zeile.
+
+### AE-13 — Tabellenkonfiguration global im Trait
+`App\Livewire\Concerns\WithConfigurableTable` haelt sichtbare Spalten,
+Reihenfolge und Breite in `table_configurations` — je Tabellenschluessel eine
+Zeile, gueltig fuer alle Benutzer. Gespeicherte Konfigurationen werden beim
+Laden mit den aktuellen Spaltendefinitionen abgeglichen: neue Spalten kommen
+hinzu, entfallene verschwinden. Als `fixed` markierte Spalten
+(Kundennummer, Name) lassen sich nicht ausblenden.
+
+### AE-14 — Normalisierung auf Monats- und Jahreswerte
 `App\Support\BillingInterval` rechnet jeden Betrag auf einen Monatswert um:
 
 | Einheit | Monatsfaktor            |
