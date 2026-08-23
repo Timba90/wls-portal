@@ -114,4 +114,17 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Zwei-Faktor-Authentifizierung verpflichtend
+    |--------------------------------------------------------------------------
+    |
+    | Zunächst ist 2FA pro Benutzer optional. Wird dieser Wert auf true gesetzt,
+    | erzwingt die Middleware EnsureTwoFactorIsEnabled die Einrichtung, bevor
+    | eine andere Seite der Anwendung geöffnet werden kann.
+    |
+    */
+
+    'two_factor_required' => (bool) env('AUTH_TWO_FACTOR_REQUIRED', false),
+
 ];

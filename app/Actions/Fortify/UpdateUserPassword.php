@@ -13,8 +13,6 @@ class UpdateUserPassword implements UpdatesUserPasswords
     use PasswordValidationRules;
 
     /**
-     * Validate and update the user's password.
-     *
      * @param  array<string, string>  $input
      *
      * @throws ValidationException
@@ -25,7 +23,7 @@ class UpdateUserPassword implements UpdatesUserPasswords
             'current_password' => ['required', 'string', 'current_password:web'],
             'password' => $this->passwordRules(),
         ], [
-            'current_password.current_password' => __('The provided password does not match your current password.'),
+            'current_password.current_password' => 'Das aktuelle Passwort ist nicht korrekt.',
         ])->validateWithBag('updatePassword');
 
         $user->forceFill([
