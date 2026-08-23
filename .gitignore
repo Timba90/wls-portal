@@ -25,3 +25,6 @@ _ide_helper.php
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Laravel Boost erzeugt diese Datei bei Bedarf neu.
+/.claude/skills

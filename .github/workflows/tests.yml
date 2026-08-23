@@ -1,0 +1,115 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+# Bei mehreren Pushes hintereinander reicht der jeweils letzte Lauf.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    name: Test-Suite
+    runs-on: ubuntu-latest
+
+    # Getestet wird gegen dieselbe Datenbank-Engine wie in Produktion, nicht
+    # gegen SQLite. Redis wird nicht benoetigt: die Test-Umgebung nutzt laut
+    # phpunit.xml Array-Treiber fuer Cache und Session sowie sync fuer Queues.
+    services:
+      mariadb:
+        image: mariadb:11
+        env:
+          MARIADB_ROOT_PASSWORD: geheim
+          MARIADB_DATABASE: wls_portal_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    env:
+      DB_CONNECTION: mysql
+      DB_HOST: 127.0.0.1
+      DB_PORT: 3306
+      DB_DATABASE: wls_portal_test
+      DB_USERNAME: root
+      DB_PASSWORD: geheim
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, ctype, dom, fileinfo, gd, iconv, intl, mbstring, pdo_mysql, xml, zip
+          coverage: none
+
+      - name: Composer-Abhängigkeiten cachen
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer-Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Node einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: NPM-Abhängigkeiten installieren
+        run: npm ci
+
+      # Die Layouts binden Assets über @vite ein; ohne Build fehlt das Manifest
+      # und jede Seitenansicht schlägt fehl.
+      - name: Frontend bauen
+        run: npm run build
+
+      - name: Anwendung vorbereiten
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Tests ausführen
+        run: php artisan test
+
+  code-style:
+    name: Code-Stil
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Repository auschecken
+        uses: actions/checkout@v4
+
+      - name: PHP einrichten
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: bcmath, ctype, dom, fileinfo, gd, iconv, intl, mbstring, pdo_mysql, xml, zip
+          coverage: none
+
+      - name: Composer-Abhängigkeiten cachen
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Composer-Abhängigkeiten installieren
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Laravel Pint prüfen
+        run: vendor/bin/pint --test

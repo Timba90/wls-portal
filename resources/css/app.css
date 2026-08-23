@@ -1,9 +1,245 @@
 @import 'tailwindcss';
 
+/*
+ * TallStackUI wird in denselben Tailwind-Build kompiliert wie die Anwendung.
+ *
+ * Das ausgelieferte Stylesheet des Pakets (<tallstackui:style />) wird bewusst
+ * nicht eingebunden: zwei getrennte Tailwind-Bundles enthalten dieselben
+ * Utility-Klassen mit gleicher Spezifitaet, wodurch je nach Ladereihenfolge
+ * entweder die Responsive-Varianten der Anwendung oder die Basisklassen des
+ * Pakets verlorengehen. Ein gemeinsamer Build vermeidet das vollstaendig.
+ */
+@import '../../vendor/tallstackui/tallstackui/css/plugins/custom-scrollbar.css';
+@import '../../vendor/tallstackui/tallstackui/css/plugins/number-appearance-none.css';
+@import '../../vendor/tallstackui/tallstackui/css/plugins/soft-scrollbar.css';
+@import '../../vendor/tallstackui/tallstackui/css/plugins/command-palette-scrollbar.css';
+
+@source '../../app/Livewire';
+@source '../../resources/views';
+@source '../../vendor/tallstackui/tallstackui/src';
+@source '../../vendor/tallstackui/tallstackui/js';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
 
-@theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+/* TallStackUI schaltet den Dark Mode ueber die Klasse .dark am <html>-Element. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@plugin '@tailwindcss/forms' {
+    strategy: 'class';
 }
+
+/*
+ * Farbsystem aus dem Entwurf „WLS Portal".
+ *
+ * Der Entwurf ist dunkel gehalten; die Anforderung verlangt jedoch beide
+ * Erscheinungsbilder (Systemeinstellung mit manueller Uebersteuerung). Die
+ * Tokens sind deshalb semantisch benannt und werden weiter unten fuer den
+ * hellen Modus umdefiniert — die Oberflaeche selbst bleibt unveraendert.
+ *
+ * Der Akzent ersetzt das bisherige Indigo von TallStackUI. `primary` bleibt als
+ * Name bestehen, damit die Komponenten des Pakets ihn ohne Anpassung nutzen.
+ */
+@theme {
+    --font-sans: 'Source Sans 3', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
+        'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+
+    /* Akzent — Minze */
+    --color-primary-50: #EAFBF3;
+    --color-primary-100: #CFF6E4;
+    --color-primary-200: #A6EFCE;
+    --color-primary-300: #8CEFC6;
+    --color-primary-400: #6BE9AF;
+    --color-primary-500: #4ADE9B;
+    --color-primary-600: #2FBE7F;
+    --color-primary-700: #229463;
+    --color-primary-800: #176947;
+    --color-primary-900: #0B211B;
+    --color-primary-950: #06120F;
+
+    /* Neutrale Flaechen und Raender des Entwurfs */
+    --color-dark-50: #F0F3F3;
+    --color-dark-100: #E6EAEC;
+    --color-dark-200: #C3CBD0;
+    --color-dark-300: #A7B1B7;
+    --color-dark-400: #8C979E;
+    --color-dark-500: #7C888F;
+    --color-dark-600: #2C3338;
+    --color-dark-700: #1B2126;
+    --color-dark-800: #171C21;
+    --color-dark-900: #14181B;
+    --color-dark-950: #0C1013;
+
+    --color-secondary-50: #F0F3F3;
+    --color-secondary-100: #E6EAEC;
+    --color-secondary-200: #C3CBD0;
+    --color-secondary-300: #A7B1B7;
+    --color-secondary-400: #8C979E;
+    --color-secondary-500: #7C888F;
+    --color-secondary-600: #6F7B82;
+    --color-secondary-700: #606C73;
+    --color-secondary-800: #2C3338;
+    --color-secondary-900: #212830;
+    --color-secondary-950: #171C21;
+
+    --animate-progress: progress 2s linear forwards;
+    --animate-indeterminate: indeterminate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+
+    @keyframes progress {
+        0% {
+            width: 0;
+        }
+        100% {
+            width: 100%;
+        }
+    }
+
+    @keyframes indeterminate {
+        0% {
+            transform: translateX(-100%);
+        }
+        100% {
+            transform: translateX(400%);
+        }
+    }
+}
+
+/*
+ * Semantische Flaechen-, Rand- und Textstufen.
+ *
+ * :root traegt die helle Variante, damit ein Token nie ausschliesslich in einem
+ * Media- oder [data-theme]-Block definiert ist. Der dunkle Block darunter setzt
+ * die Werte des Entwurfs.
+ */
+:root {
+    --surface-canvas: #F4F6F6;
+    --surface-shell: #FFFFFF;
+    --surface-panel: #FFFFFF;
+    --surface-raised: #F0F3F3;
+    --surface-input: #FFFFFF;
+
+    --line-subtle: #E2E7E9;
+    --line-strong: #CBD3D7;
+
+    --ink-strong: #14181B;
+    --ink-base: #2C3338;
+    --ink-muted: #606C73;
+    --ink-faint: #8C979E;
+
+    --accent: #229463;
+    --accent-hover: #176947;
+    --accent-ink: #FFFFFF;
+
+    --pill-ok-bg: #E4F7EE;
+    --pill-ok-line: #B4E6CE;
+    --pill-ok-ink: #176947;
+    --pill-warn-bg: #FBF2E2;
+    --pill-warn-line: #EDD9AF;
+    --pill-warn-ink: #8A6522;
+    --pill-bad-bg: #FBE9E6;
+    --pill-bad-line: #F0C7BF;
+    --pill-bad-ink: #A33E2C;
+    --pill-info-bg: #E4F1F7;
+    --pill-info-line: #B9DAE8;
+    --pill-info-ink: #2A6480;
+    --pill-mute-bg: #EEF1F2;
+    --pill-mute-line: #D8DEE1;
+    --pill-mute-ink: #606C73;
+}
+
+.dark {
+    --surface-canvas: #101418;
+    --surface-shell: #14181B;
+    --surface-panel: #171C21;
+    --surface-raised: #1B2126;
+    --surface-input: #191E22;
+
+    --line-subtle: #212830;
+    --line-strong: #2C3338;
+
+    --ink-strong: #F0F3F3;
+    --ink-base: #E6EAEC;
+    --ink-muted: #8C979E;
+    --ink-faint: #606C73;
+
+    --accent: #4ADE9B;
+    --accent-hover: #6BE9AF;
+    --accent-ink: #0B211B;
+
+    --pill-ok-bg: #17322A;
+    --pill-ok-line: #22513F;
+    --pill-ok-ink: #8CEFC6;
+    --pill-warn-bg: #2C2418;
+    --pill-warn-line: #4A3A22;
+    --pill-warn-ink: #E7C08A;
+    --pill-bad-bg: #2E1C1A;
+    --pill-bad-line: #4E2C27;
+    --pill-bad-ink: #F0A79B;
+    --pill-info-bg: #16262E;
+    --pill-info-line: #234350;
+    --pill-info-ink: #96D2E8;
+    --pill-mute-bg: #1B2126;
+    --pill-mute-line: #2C3338;
+    --pill-mute-ink: #98A3A9;
+}
+
+@theme inline {
+    --color-canvas: var(--surface-canvas);
+    --color-shell: var(--surface-shell);
+    --color-panel: var(--surface-panel);
+    --color-raised: var(--surface-raised);
+    --color-field: var(--surface-input);
+
+    --color-line: var(--line-subtle);
+    --color-line-strong: var(--line-strong);
+
+    --color-ink: var(--ink-strong);
+    --color-ink-base: var(--ink-base);
+    --color-ink-muted: var(--ink-muted);
+    --color-ink-faint: var(--ink-faint);
+
+    --color-accent: var(--accent);
+    --color-accent-hover: var(--accent-hover);
+    --color-accent-ink: var(--accent-ink);
+}
+
+[x-cloak] {
+    display: none !important;
+}
+
+/*
+ * Entfernt den Fokusring bei <x-button unfocus> per Maus, behaelt ihn aber bei
+ * Tastaturnavigation (WCAG 2.4.7). Uebernommen aus TallStackUI.
+ */
+[data-tsui-unfocus]:focus:not(:focus-visible) {
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-inset-shadow: 0 0 #0000;
+    --tw-inset-ring-shadow: 0 0 #0000;
+}
+
+/* Zahlen und Kennzahlen laufen im Entwurf durchgaengig in der Mono-Schrift. */
+.tabular {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+}
+
+/* Statuspille aus dem Entwurf. */
+.pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    border-width: 1px;
+    border-style: solid;
+}
+
+.pill-ok { background: var(--pill-ok-bg); border-color: var(--pill-ok-line); color: var(--pill-ok-ink); }
+.pill-warn { background: var(--pill-warn-bg); border-color: var(--pill-warn-line); color: var(--pill-warn-ink); }
+.pill-bad { background: var(--pill-bad-bg); border-color: var(--pill-bad-line); color: var(--pill-bad-ink); }
+.pill-info { background: var(--pill-info-bg); border-color: var(--pill-info-line); color: var(--pill-info-ink); }
+.pill-mute { background: var(--pill-mute-bg); border-color: var(--pill-mute-line); color: var(--pill-mute-ink); }
