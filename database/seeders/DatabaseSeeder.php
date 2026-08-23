@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             CustomerServiceSeeder::class,
             CustomFieldSeeder::class,
             NoteSeeder::class,
+            ArchiveSeeder::class,
         ]);
     }
 }

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DocumentController;
+use App\Livewire\Archive\ArchivePage;
 use App\Livewire\Catalog\CategoryList;
 use App\Livewire\Catalog\ProductDetail;
 use App\Livewire\Catalog\ProductForm;
@@ -19,6 +20,7 @@ use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Profile\SecurityPage;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
+use App\Livewire\Services\ServiceOverview;
 use App\Livewire\Users\UserList;
 use Illuminate\Support\Facades\Route;
 
@@ -48,6 +50,9 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/artikel/tags', TagList::class)->name('tags.index');
     Route::livewire('/artikel/{product}', ProductDetail::class)->name('products.show');
     Route::livewire('/artikel/{product}/bearbeiten', ProductForm::class)->name('products.edit');
+
+    Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
+    Route::livewire('/archiv', ArchivePage::class)->name('archive.index');
 
     Route::livewire('/felder', CustomFieldDefinitionList::class)->name('custom-fields.index');
 

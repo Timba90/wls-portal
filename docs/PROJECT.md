@@ -358,7 +358,7 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 5 | Kundenleistungen inkl. Kennzahlen | umgesetzt |
 | 6 | Preisverlauf, geplante Preisänderungen | umgesetzt |
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | umgesetzt |
-| 8 | Dashboard, globale Suche, Archivansichten | offen |
+| 8 | Dashboard, globale Suche, Leistungsübersicht, Archiv | umgesetzt |
 
 Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
 Jahresumsatz, Kosten, Marge) werden aus den Kundenleistungen berechnet. In die
@@ -461,6 +461,13 @@ Laden mit den aktuellen Spaltendefinitionen abgeglichen: neue Spalten kommen
 hinzu, entfallene verschwinden. Als `fixed` markierte Spalten
 (Kundennummer, Name) lassen sich nicht ausblenden.
 
+### AE-13a — Kennzahlen in PHP statt in SQL
+Umsatz, Kosten und Marge entstehen durch Normalisierung unterschiedlicher
+Abrechnungsintervalle auf einen Monatswert. In SQL wäre das eine unübersichtliche
+CASE-Konstruktion; stattdessen laufen die Summen in PHP über `chunkById` und nur
+über die abrechnungsrelevanten Spalten. Bei der erwarteten Datenmenge — wenige
+tausend Kundenleistungen — ist das schnell genug und deutlich besser prüfbar.
+
 ### AE-14 — Normalisierung auf Monats- und Jahreswerte
 `App\Support\BillingInterval` rechnet jeden Betrag auf einen Monatswert um:
 
@@ -486,6 +493,20 @@ Jahresumsatz ein.
   Model über einen `saving`-Guard, nicht nur in der Oberfläche.
 - Archivierte Datensätze erscheinen nicht in der globalen Suche.
 - Es gibt keine endgültige Löschung über die normale Oberfläche.
+
+---
+
+## 5a. Kennzahlen
+
+In Umsatz, Kosten und Marge fließen ausschließlich Leistungen ein, die
+
+- den Status `aktiv` tragen,
+- **nicht** als „Bewusst nicht abrechnen" gekennzeichnet sind und
+- ein wiederkehrendes Abrechnungsintervall haben.
+
+Einmalige Leistungen (`once`) wiederholen sich nicht und würden Monats- und
+Jahreswerte verfälschen. Dashboard und Leistungsübersicht weisen die
+ausgenommenen Leistungen deshalb separat aus.
 
 ---
 

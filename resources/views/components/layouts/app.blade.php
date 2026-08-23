@@ -52,6 +52,8 @@
                 <x-side-bar.item text="Ansprechpartner" icon="user-group" route="contacts.index" match="contacts.*" />
 
                 <x-side-bar.item text="Artikel / Leistungen" icon="squares-2x2" route="products.index" match="products.*" />
+                <x-side-bar.item text="Leistungsübersicht" icon="clipboard-document-list" route="services.index" />
+                <x-side-bar.item text="Archiv" icon="archive-box" route="archive.index" />
 
                 <x-side-bar.separator text="Verwaltung" />
 
@@ -66,6 +68,12 @@
 
         <x-slot:header>
             <x-layout.header>
+                <x-slot:middle>
+                    <div class="hidden w-[28rem] max-w-full px-4 lg:block">
+                        <livewire:search.global-search-bar />
+                    </div>
+                </x-slot:middle>
+
                 <x-slot:right>
                     <div class="flex items-center gap-3">
                         <x-theme-switch sm />
