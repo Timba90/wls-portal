@@ -4,7 +4,9 @@ namespace App\Actions\Services;
 
 use App\Actions\Catalog\SyncServiceComponents;
 use App\Actions\Catalog\SyncTags;
+use App\Actions\Pricing\SchedulePriceChange;
 use App\Enums\BillingIntervalUnit;
+use App\Enums\PriceType;
 use App\Exceptions\ReadOnlyRecordException;
 use App\Models\CustomerService;
 use App\Support\Money;
@@ -21,6 +23,7 @@ class UpdateCustomerService
     public function __construct(
         private readonly SyncTags $syncTags,
         private readonly SyncServiceComponents $syncServiceComponents,
+        private readonly SchedulePriceChange $schedulePriceChange,
     ) {}
 
     /**
@@ -43,13 +46,15 @@ class UpdateCustomerService
         return DB::transaction(function () use ($service, $attributes, $tags, $components): CustomerService {
             $unit = BillingIntervalUnit::from($attributes['billing_interval_unit']);
 
+            // Preise laufen ueber den Preisverlauf, damit sie nicht
+            // stillschweigend ueberschrieben werden.
+            $this->applyPriceChanges($service, $attributes);
+
             $service->update([
                 'name' => $attributes['name'],
                 'billing_label' => $attributes['billing_label'] ?? null,
                 'description' => $attributes['description'] ?? null,
                 'status' => $attributes['status'] ?? $service->status,
-                'purchase_price_cents' => Money::fromEuroInput($attributes['purchase_price'] ?? null)->cents,
-                'sales_price_cents' => Money::fromEuroInput($attributes['sales_price'] ?? null)->cents,
                 'billing_interval_unit' => $unit,
                 'billing_interval_count' => $unit->requiresCount()
                     ? max(1, (int) ($attributes['billing_interval_count'] ?? 1))
@@ -67,5 +72,36 @@ class UpdateCustomerService
 
             return $service;
         });
+    }
+
+    /**
+     * Schreibt geaenderte Preise als sofort wirksame Preisaenderung fort.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function applyPriceChanges(CustomerService $service, array $attributes): void
+    {
+        $neuePreise = [
+            PriceType::Purchase->value => Money::fromEuroInput($attributes['purchase_price'] ?? null),
+            PriceType::Sales->value => Money::fromEuroInput($attributes['sales_price'] ?? null),
+        ];
+
+        foreach ($neuePreise as $typ => $preis) {
+            $type = PriceType::from($typ);
+
+            if ($service->{$type->column()} === $preis->cents) {
+                continue;
+            }
+
+            ($this->schedulePriceChange)(
+                service: $service,
+                type: $type,
+                newPrice: $preis,
+                effectiveDate: now(),
+                user: auth()->user(),
+            );
+        }
+
+        $service->refresh();
     }
 }

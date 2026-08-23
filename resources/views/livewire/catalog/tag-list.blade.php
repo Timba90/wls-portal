@@ -39,7 +39,7 @@
         </x-table>
     </x-card>
 
-    <x-modal wire:model="showForm" :title="$editingTagId ? 'Tag bearbeiten' : 'Tag anlegen'" persistent>
+    <x-modal wire="showForm" id="tag-formular" :title="$editingTagId ? 'Tag bearbeiten' : 'Tag anlegen'" persistent>
         <form wire:submit="save" class="space-y-4" id="tag-form">
             <x-input wire:model="name" label="Name" required />
 

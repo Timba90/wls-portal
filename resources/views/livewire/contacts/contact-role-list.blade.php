@@ -44,7 +44,7 @@
         </x-table>
     </x-card>
 
-    <x-modal wire:model="showForm" :title="$editingRoleId ? 'Rolle bearbeiten' : 'Rolle anlegen'" persistent>
+    <x-modal wire="showForm" id="rollen-formular" :title="$editingRoleId ? 'Rolle bearbeiten' : 'Rolle anlegen'" persistent>
         <form wire:submit="save" class="space-y-4" id="role-form">
             <x-input wire:model="name" label="Name" required />
             <x-input wire:model="description" label="Beschreibung" />

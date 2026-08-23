@@ -74,7 +74,7 @@
         </div>
     </x-card>
 
-    <x-modal wire:model="showForm" :title="$editingCategoryId ? 'Kategorie bearbeiten' : 'Kategorie anlegen'" persistent>
+    <x-modal wire="showForm" id="kategorie-formular" :title="$editingCategoryId ? 'Kategorie bearbeiten' : 'Kategorie anlegen'" persistent>
         <x-errors title="Kategorie konnte nicht gespeichert werden" class="mb-4" />
 
         <form wire:submit="save" class="space-y-4" id="category-form">

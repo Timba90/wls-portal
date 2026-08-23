@@ -6,7 +6,7 @@
     Die Konfiguration gilt global fuer alle Benutzer; die aufrufende
     Livewire-Komponente nutzt dafuer den Trait WithConfigurableTable.
 --}}
-<x-modal wire:model="showTableSettings" title="Spalten einrichten" size="lg">
+<x-modal wire="showTableSettings" id="spalten-einstellungen" title="Spalten einrichten" size="lg">
     <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
         Diese Einstellung gilt für alle Benutzer.
     </p>

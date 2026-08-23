@@ -44,7 +44,7 @@
         </x-table>
     </x-card>
 
-    <x-modal wire:model="showForm" :title="$editingUserId ? 'Benutzer bearbeiten' : 'Benutzer anlegen'" persistent>
+    <x-modal wire="showForm" id="benutzer-formular" :title="$editingUserId ? 'Benutzer bearbeiten' : 'Benutzer anlegen'" persistent>
         <form wire:submit="save" class="space-y-4" id="user-form">
             <x-input label="Name" wire:model="name" required />
             <x-input label="E-Mail-Adresse" type="email" wire:model="email" required />

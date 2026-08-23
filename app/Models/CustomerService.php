@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 /**
@@ -114,6 +115,16 @@ class CustomerService extends Model
     public function responsibleUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    /**
+     * Vollstaendiger Preisverlauf inklusive geplanter Aenderungen.
+     *
+     * @return HasMany<PriceChange, $this>
+     */
+    public function priceChanges(): HasMany
+    {
+        return $this->hasMany(PriceChange::class);
     }
 
     /**

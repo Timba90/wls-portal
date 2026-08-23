@@ -117,7 +117,16 @@
 
         <x-card>
             <x-slot:header>
-                <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Preise</h2>
+                <div class="flex items-center justify-between gap-2">
+                    <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Preise</h2>
+
+                    @unless ($service->isArchived())
+                        <x-button color="secondary" outline sm icon="arrow-trending-up"
+                                  wire:click="openPriceChangeForm('sales')">
+                            Preisänderung
+                        </x-button>
+                    @endunless
+                </div>
             </x-slot:header>
 
             <dl class="divide-y divide-gray-200 text-sm dark:divide-dark-600">
@@ -190,6 +199,122 @@
         <x-service-components-list :components="$service->serviceComponents" />
     </x-card>
 
+    <x-card class="mt-4">
+        <x-slot:header>
+            <div class="flex items-center justify-between gap-2">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Preisverlauf</h2>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Preise werden nie überschrieben. Rückwirkende Änderungen sind ausgeschlossen,
+                        mehrere zukünftige Änderungen dürfen nebeneinander geplant werden.
+                    </p>
+                </div>
+
+                @unless ($service->isArchived())
+                    <x-button color="secondary" outline sm icon="plus"
+                              wire:click="openPriceChangeForm('sales')">
+                        Preisänderung planen
+                    </x-button>
+                @endunless
+            </div>
+        </x-slot:header>
+
+        @if ($scheduledPriceChanges->isNotEmpty())
+            <div class="mb-4">
+                <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Geplante Änderungen</p>
+
+                <div class="divide-y divide-gray-200 dark:divide-dark-600">
+                    @foreach ($scheduledPriceChanges as $change)
+                        <div class="flex flex-wrap items-center justify-between gap-2 py-2"
+                             wire:key="scheduled-{{ $change->id }}">
+                            <div class="text-sm">
+                                <span class="font-medium text-gray-800 dark:text-gray-100">
+                                    {{ $change->price_type->label() }}
+                                </span>
+                                <span class="text-gray-500 dark:text-gray-400">
+                                    {{ $change->oldPrice()?->format() ?? '—' }}
+                                    &rarr;
+                                </span>
+                                <span class="font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                                    {{ $change->newPrice()->format() }}
+                                </span>
+                                <span class="text-gray-500 dark:text-gray-400">
+                                    ab {{ $change->effective_date->format('d.m.Y') }}
+                                </span>
+
+                                @if ($change->note)
+                                    <span class="text-gray-400">· {{ $change->note }}</span>
+                                @endif
+                            </div>
+
+                            <div class="flex items-center gap-2">
+                                <x-badge color="blue" text="Geplant" sm />
+
+                                @unless ($service->isArchived())
+                                    <x-button.circle color="red"
+                                                     outline
+                                                     icon="trash"
+                                                     sm
+                                                     title="Geplante Preisänderung löschen"
+                                                     x-on:click="$dialog.confirm({
+                                                         title: 'Geplante Preisänderung löschen?',
+                                                         description: 'Die Änderung wird zum Wirksamkeitsdatum nicht mehr greifen.',
+                                                         accept: { text: 'Löschen', method: 'cancelPriceChange', params: {{ $change->id }} },
+                                                         reject: { text: 'Abbrechen' },
+                                                     })" />
+                                @endunless
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            </div>
+        @endif
+
+        <p class="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Wirksam gewordene Änderungen</p>
+
+        <div class="divide-y divide-gray-200 dark:divide-dark-600">
+            @forelse ($appliedPriceChanges as $change)
+                <div class="flex flex-wrap items-center justify-between gap-2 py-2"
+                     wire:key="applied-{{ $change->id }}">
+                    <div class="text-sm">
+                        <span class="font-medium text-gray-800 dark:text-gray-100">
+                            {{ $change->price_type->label() }}
+                        </span>
+                        <span class="text-gray-500 dark:text-gray-400">
+                            {{ $change->oldPrice()?->format() ?? 'neu' }}
+                            &rarr;
+                        </span>
+                        <span class="font-medium tabular-nums text-gray-800 dark:text-gray-100">
+                            {{ $change->newPrice()->format() }}
+                        </span>
+
+                        @if ($change->difference())
+                            <span class="tabular-nums {{ $change->difference()->isNegative() ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400' }}">
+                                ({{ $change->difference()->isNegative() ? '' : '+' }}{{ $change->difference()->format() }})
+                            </span>
+                        @endif
+
+                        @if ($change->note)
+                            <span class="text-gray-400">· {{ $change->note }}</span>
+                        @endif
+                    </div>
+
+                    <div class="text-xs text-gray-500 dark:text-gray-400">
+                        wirksam ab {{ $change->effective_date->format('d.m.Y') }}
+                        · erfasst {{ $change->applied_at?->format('d.m.Y H:i') }}
+                        @if ($change->user)
+                            · {{ $change->user->name }}
+                        @endif
+                    </div>
+                </div>
+            @empty
+                <p class="py-4 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Noch keine Preisänderungen erfasst.
+                </p>
+            @endforelse
+        </div>
+    </x-card>
+
     @unless ($service->isArchived())
         <x-card class="mt-4">
             <x-slot:header>
@@ -209,7 +334,7 @@
         </x-card>
     @endunless
 
-    <x-modal wire:model="showDoNotBillForm" title="Bewusst nicht abrechnen" persistent>
+    <x-modal wire="showDoNotBillForm" id="nicht-abrechnen-formular" title="Bewusst nicht abrechnen" persistent>
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
             Die Kennzeichnung gilt, bis sie manuell entfernt wird. Nach dem Entfernen beginnt die
             normale Betrachtung erst ab diesem Zeitpunkt — es erfolgt keine rückwirkende Nachberechnung.
@@ -229,6 +354,35 @@
         </x-slot:footer>
     </x-modal>
 
+    <x-modal wire="showPriceChangeForm" id="preisaenderung-formular" title="Preisänderung" persistent>
+        <x-errors title="Die Preisänderung konnte nicht gespeichert werden" class="mb-4" />
+
+        <div class="space-y-4">
+            <x-select.styled wire:model="priceChangeType"
+                             label="Preisart"
+                             :options="$priceTypeOptions"
+                             select="label:label|value:value"
+                             required />
+
+            <x-input wire:model="priceChangeValue" label="Neuer Preis" suffix="€" required />
+
+            <x-date wire:model="priceChangeEffectiveDate"
+                    label="Wirksam ab"
+                    format="DD.MM.YYYY"
+                    :min-date="now()->toDateString()"
+                    hint="Heute wirkt sofort. Rückwirkende Änderungen sind nicht möglich." />
+
+            <x-input wire:model="priceChangeNote" label="Notiz" placeholder="optional" />
+        </div>
+
+        <x-slot:footer>
+            <div class="flex justify-end gap-2">
+                <x-button color="secondary" outline wire:click="$set('showPriceChangeForm', false)">Abbrechen</x-button>
+                <x-button wire:click="savePriceChange">Speichern</x-button>
+            </div>
+        </x-slot:footer>
+    </x-modal>
+
     @script
     <script>
         $wire.on('status-geaendert', () => $tallstackui.toast().success('Status geändert').send());
@@ -236,6 +390,8 @@
         $wire.on('nicht-abrechnen-entfernt', () => $tallstackui.toast().success('Kennzeichnung entfernt').send());
         $wire.on('leistung-archiviert', () => $tallstackui.toast().success('Leistung archiviert').send());
         $wire.on('leistung-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
+        $wire.on('preisaenderung-gespeichert', () => $tallstackui.toast().success('Preisänderung gespeichert').send());
+        $wire.on('preisaenderung-geloescht', () => $tallstackui.toast().success('Geplante Preisänderung gelöscht').send());
     </script>
     @endscript
 </div>

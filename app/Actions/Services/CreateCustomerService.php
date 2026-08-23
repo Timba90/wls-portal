@@ -4,6 +4,7 @@ namespace App\Actions\Services;
 
 use App\Actions\Catalog\SyncServiceComponents;
 use App\Actions\Catalog\SyncTags;
+use App\Actions\Pricing\RecordInitialPrices;
 use App\Enums\BillingIntervalUnit;
 use App\Enums\CustomerServiceStatus;
 use App\Models\Customer;
@@ -24,6 +25,7 @@ class CreateCustomerService
         private readonly BuildCatalogSnapshot $buildCatalogSnapshot,
         private readonly SyncTags $syncTags,
         private readonly SyncServiceComponents $syncServiceComponents,
+        private readonly RecordInitialPrices $recordInitialPrices,
     ) {}
 
     /**
@@ -72,6 +74,7 @@ class CreateCustomerService
 
             ($this->syncTags)($service, $tags);
             ($this->syncServiceComponents)($service, $components);
+            ($this->recordInitialPrices)($service, auth()->user());
 
             return $service;
         });

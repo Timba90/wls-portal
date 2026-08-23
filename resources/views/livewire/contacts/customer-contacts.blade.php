@@ -121,7 +121,7 @@
         </div>
     @endif
 
-    <x-modal wire:model="showDeputies" title="Vertretungen" size="2xl">
+    <x-modal wire="showDeputies" id="vertretungen-formular" title="Vertretungen" size="2xl">
         <p class="mb-4 text-sm text-gray-500 dark:text-gray-400">
             Je Rolle können mehrere Vertretungen mit Priorität hinterlegt werden.
             Kleinere Werte werden zuerst herangezogen.

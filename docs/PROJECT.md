@@ -356,7 +356,7 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 3 | Ansprechpartner, Rollen, Vertretungen | umgesetzt |
 | 4 | Katalog, Kategorien, Varianten, Tags | umgesetzt |
 | 5 | Kundenleistungen inkl. Kennzahlen | umgesetzt |
-| 6 | Preislogik | offen |
+| 6 | Preisverlauf, geplante Preisänderungen | umgesetzt |
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | offen |
 | 8 | Dashboard, globale Suche, Archivansichten | offen |
 
@@ -395,6 +395,12 @@ Die Anforderung nennt `ServiceComponent` und `CustomerServiceComponent`
 getrennt. Umgesetzt ist eine polymorphe Tabelle `service_components` für
 Katalogartikel, Varianten und Kundenleistungen. Die Struktur ist identisch, das
 Verhalten ebenfalls — zwei Tabellen wären reine Duplikation.
+
+### AE-5a — Modals brauchen `wire` und eine eigene `id`
+TallStackUI bindet ein Modal über das Attribut `wire="eigenschaft"`, nicht über
+`wire:model`. Ohne `wire` bleibt das Modal dauerhaft geschlossen. Zusätzlich
+trägt jedes Modal eine eigene `id` — die Vorgabe `modal` kollidiert, sobald
+zwei Modals auf derselben Seite stehen.
 
 ### AE-5 — Aktueller Preis denormalisiert, Historie vollständig
 `customer_services` trägt den aktuell gültigen Preis, `price_changes` die

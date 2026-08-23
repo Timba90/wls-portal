@@ -187,7 +187,7 @@
         </x-tab.items>
     </x-tab>
 
-    <x-modal wire:model="showVariantForm"
+    <x-modal wire="showVariantForm" id="varianten-formular"
              :title="$editingVariantId ? 'Variante bearbeiten' : 'Variante anlegen'"
              size="2xl"
              persistent>
