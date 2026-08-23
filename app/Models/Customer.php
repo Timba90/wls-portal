@@ -7,6 +7,7 @@ use App\Enums\CustomerType;
 use App\Enums\Gender;
 use App\Enums\Salutation;
 use App\Exceptions\ImmutableAttributeException;
+use App\Models\Concerns\HasTags;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -39,7 +40,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */
-    use HasFactory;
+    use HasFactory, HasTags;
 
     protected static function booted(): void
     {

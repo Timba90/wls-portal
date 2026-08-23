@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\ContactMethod;
 use App\Enums\Gender;
 use App\Enums\Salutation;
+use App\Models\Concerns\HasTags;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Contact extends Model
 {
     /** @use HasFactory<ContactFactory> */
-    use HasFactory;
+    use HasFactory, HasTags;
 
     /**
      * @return HasMany<ContactAssignment, $this>

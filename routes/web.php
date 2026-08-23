@@ -1,5 +1,10 @@
 <?php
 
+use App\Livewire\Catalog\CategoryList;
+use App\Livewire\Catalog\ProductDetail;
+use App\Livewire\Catalog\ProductForm;
+use App\Livewire\Catalog\ProductList;
+use App\Livewire\Catalog\TagList;
 use App\Livewire\Contacts\ContactDetail;
 use App\Livewire\Contacts\ContactForm;
 use App\Livewire\Contacts\ContactList;
@@ -28,6 +33,13 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/ansprechpartner/rollen', ContactRoleList::class)->name('contact-roles.index');
     Route::livewire('/ansprechpartner/{contact}', ContactDetail::class)->name('contacts.show');
     Route::livewire('/ansprechpartner/{contact}/bearbeiten', ContactForm::class)->name('contacts.edit');
+
+    Route::livewire('/artikel', ProductList::class)->name('products.index');
+    Route::livewire('/artikel/neu', ProductForm::class)->name('products.create');
+    Route::livewire('/artikel/kategorien', CategoryList::class)->name('categories.index');
+    Route::livewire('/artikel/tags', TagList::class)->name('tags.index');
+    Route::livewire('/artikel/{product}', ProductDetail::class)->name('products.show');
+    Route::livewire('/artikel/{product}/bearbeiten', ProductForm::class)->name('products.edit');
 
     Route::livewire('/profil', ProfilePage::class)->name('profile.show');
     Route::livewire('/profil/sicherheit', SecurityPage::class)->name('profile.security');
