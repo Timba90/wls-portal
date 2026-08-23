@@ -4,6 +4,7 @@ namespace App\Livewire\Customers;
 
 use App\Actions\Customers\ArchiveCustomer;
 use App\Actions\Customers\RestoreCustomer;
+use App\Exceptions\ArchivingNotPossibleException;
 use App\Models\Customer;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
@@ -31,7 +32,13 @@ class CustomerDetail extends Component
 
     public function archive(ArchiveCustomer $archiveCustomer): void
     {
-        $archiveCustomer($this->customer);
+        try {
+            $archiveCustomer($this->customer);
+        } catch (ArchivingNotPossibleException $exception) {
+            $this->dispatch('archivierung-nicht-moeglich', meldung: $exception->getMessage());
+
+            return;
+        }
 
         $this->customer->refresh();
 

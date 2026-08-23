@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             ContactRoleSeeder::class,
             ContactSeeder::class,
             CatalogSeeder::class,
+            CustomerServiceSeeder::class,
         ]);
     }
 }

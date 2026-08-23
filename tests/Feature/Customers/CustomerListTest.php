@@ -111,7 +111,7 @@ it('zeigt standardmaessig alle Spalten', function (): void {
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
     expect(array_column($component->get('tableColumns'), 'key'))
-        ->toContain('customer_number', 'name', 'short_label', 'internal_code', 'status', 'services_count', 'margin');
+        ->toContain('customer_number', 'name', 'short_label', 'internal_code', 'status', 'active_services_count', 'margin');
 });
 
 it('blendet eine Spalte global aus und merkt sich das', function (): void {

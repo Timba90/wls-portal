@@ -86,24 +86,26 @@
                 {{ $row->responsibleUser?->name ?? '—' }}
             @endinteract
 
-            @interact('column_services_count', $row)
-                <span class="tabular-nums">0</span>
+            @interact('column_active_services_count', $row)
+                <span class="tabular-nums">{{ $row->active_services_count }}</span>
             @endinteract
 
             @interact('column_monthly_revenue', $row)
-                <span class="tabular-nums">{{ \App\Support\Money::zero()->format() }}</span>
+                <span class="tabular-nums">{{ $row->monthlyRevenue()->format() }}</span>
             @endinteract
 
             @interact('column_yearly_revenue', $row)
-                <span class="tabular-nums">{{ \App\Support\Money::zero()->format() }}</span>
+                <span class="tabular-nums">{{ $row->yearlyRevenue()->format() }}</span>
             @endinteract
 
             @interact('column_monthly_costs', $row)
-                <span class="tabular-nums">{{ \App\Support\Money::zero()->format() }}</span>
+                <span class="tabular-nums">{{ $row->monthlyCosts()->format() }}</span>
             @endinteract
 
             @interact('column_margin', $row)
-                <span class="tabular-nums">{{ \App\Support\Money::zero()->format() }}</span>
+                <span class="tabular-nums {{ $row->monthlyMargin()->isNegative() ? 'text-red-600 dark:text-red-400' : '' }}">
+                    {{ $row->monthlyMargin()->format() }}
+                </span>
             @endinteract
 
             <x-slot:empty>

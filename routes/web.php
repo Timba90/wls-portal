@@ -15,6 +15,8 @@ use App\Livewire\Customers\CustomerList;
 use App\Livewire\Dashboard\DashboardPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Profile\SecurityPage;
+use App\Livewire\Services\CustomerServiceDetail;
+use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Users\UserList;
 use Illuminate\Support\Facades\Route;
 
@@ -27,6 +29,10 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/kunden/neu', CustomerForm::class)->name('customers.create');
     Route::livewire('/kunden/{customer}', CustomerDetail::class)->name('customers.show');
     Route::livewire('/kunden/{customer}/bearbeiten', CustomerForm::class)->name('customers.edit');
+
+    Route::livewire('/kunden/{customer}/leistungen/neu', CustomerServiceForm::class)->name('customer-services.create');
+    Route::livewire('/kunden/{customer}/leistungen/{service}', CustomerServiceDetail::class)->name('customer-services.show');
+    Route::livewire('/kunden/{customer}/leistungen/{service}/bearbeiten', CustomerServiceForm::class)->name('customer-services.edit');
 
     Route::livewire('/ansprechpartner', ContactList::class)->name('contacts.index');
     Route::livewire('/ansprechpartner/neu', ContactForm::class)->name('contacts.create');

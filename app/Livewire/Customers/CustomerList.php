@@ -83,9 +83,6 @@ class CustomerList extends Component
     }
 
     /**
-     * Kennzahlen zu Leistungen, Umsatz, Kosten und Marge werden mit den
-     * Kundenleistungen befuellt (Meilenstein 5/6) und stehen bis dahin auf 0.
-     *
      * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
      */
     protected function columnDefinitions(): array
@@ -98,7 +95,7 @@ class CustomerList extends Component
             'type' => ['label' => 'Typ', 'width' => 140],
             'status' => ['label' => 'Status', 'width' => 120],
             'responsible' => ['label' => 'Verantwortlich', 'sortable' => false],
-            'services_count' => ['label' => 'Leistungen', 'sortable' => false, 'width' => 120],
+            'active_services_count' => ['label' => 'Leistungen', 'width' => 120],
             'monthly_revenue' => ['label' => 'Monatsumsatz', 'sortable' => false, 'width' => 150],
             'yearly_revenue' => ['label' => 'Jahresumsatz', 'sortable' => false, 'width' => 150],
             'monthly_costs' => ['label' => 'Kosten', 'sortable' => false, 'width' => 140],
@@ -112,7 +109,8 @@ class CustomerList extends Component
     private function customers(): LengthAwarePaginator
     {
         return Customer::query()
-            ->with('responsibleUser')
+            ->with(['responsibleUser', 'services' => fn ($query) => $query->billable()])
+            ->withCount(['services as active_services_count' => fn (Builder $query) => $query->active()])
             ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
             ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
             ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
@@ -143,7 +141,10 @@ class CustomerList extends Component
      */
     private function sortColumn(): string
     {
-        $sortable = ['customer_number', 'short_label', 'internal_code', 'type', 'status', 'created_at'];
+        $sortable = [
+            'customer_number', 'short_label', 'internal_code', 'type', 'status',
+            'active_services_count', 'created_at',
+        ];
 
         return in_array($this->sort['column'], $sortable, strict: true)
             ? $this->sort['column']

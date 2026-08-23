@@ -158,7 +158,7 @@
 
         <x-tab.items tab="leistungen" title="Leistungen">
             <x-card>
-                <x-not-yet-available area="Leistungen" />
+                <livewire:services.customer-services :customer="$customer" :key="'leistungen-'.$customer->id" />
             </x-card>
         </x-tab.items>
 
@@ -185,6 +185,8 @@
     <script>
         $wire.on('kunde-archiviert', () => $tallstackui.toast().success('Kunde archiviert').send());
         $wire.on('kunde-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
+        $wire.on('archivierung-nicht-moeglich', (event) =>
+            $tallstackui.toast().error('Archivierung nicht möglich', event.meldung).send());
     </script>
     @endscript
 </div>

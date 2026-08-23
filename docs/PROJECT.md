@@ -355,13 +355,15 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 2 | Kunden, Kundennummer, Liste, Detailseite, Archivierung | umgesetzt |
 | 3 | Ansprechpartner, Rollen, Vertretungen | umgesetzt |
 | 4 | Katalog, Kategorien, Varianten, Tags | umgesetzt |
-| 5 | Kundenleistungen | offen |
+| 5 | Kundenleistungen inkl. Kennzahlen | umgesetzt |
 | 6 | Preislogik | offen |
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | offen |
 | 8 | Dashboard, globale Suche, Archivansichten | offen |
 
-Die Kennzahlen der Kundenliste (Anzahl Leistungen, Monats- und Jahresumsatz,
-Kosten, Marge) stehen bis Meilenstein 5/6 auf 0.
+Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
+Jahresumsatz, Kosten, Marge) werden aus den Kundenleistungen berechnet. In die
+Summen fließen ausschließlich aktive, wiederkehrende Leistungen ohne die
+Kennzeichnung „Bewusst nicht abrechnen" ein.
 
 ---
 

@@ -8,6 +8,7 @@ use App\Enums\Gender;
 use App\Enums\Salutation;
 use App\Exceptions\ImmutableAttributeException;
 use App\Models\Concerns\HasTags;
+use App\Support\Money;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -61,6 +62,14 @@ class Customer extends Model
     public function responsibleUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'responsible_user_id');
+    }
+
+    /**
+     * @return HasMany<CustomerService, $this>
+     */
+    public function services(): HasMany
+    {
+        return $this->hasMany(CustomerService::class);
     }
 
     /**
@@ -145,6 +154,52 @@ class Customer extends Model
     public function primaryPhoneNumber(): ?PhoneNumber
     {
         return $this->phoneNumbers->firstWhere('is_primary', true);
+    }
+
+    /**
+     * Auf einen Monat normalisierter Umsatz aller abrechnungsrelevanten
+     * Leistungen.
+     *
+     * Erwartet die Beziehung `services` als geladenen Bestand; die Kundenliste
+     * laedt sie mit dem Scope `billable` vor.
+     */
+    public function monthlyRevenue(): Money
+    {
+        return $this->sumOverBillableServices(
+            fn (CustomerService $service): Money => $service->monthlyRevenue(),
+        );
+    }
+
+    public function yearlyRevenue(): Money
+    {
+        return $this->sumOverBillableServices(
+            fn (CustomerService $service): Money => $service->yearlyRevenue(),
+        );
+    }
+
+    public function monthlyCosts(): Money
+    {
+        return $this->sumOverBillableServices(
+            fn (CustomerService $service): Money => $service->monthlyCosts(),
+        );
+    }
+
+    public function monthlyMargin(): Money
+    {
+        return $this->monthlyRevenue()->minus($this->monthlyCosts());
+    }
+
+    /**
+     * @param  callable(CustomerService): Money  $value
+     */
+    private function sumOverBillableServices(callable $value): Money
+    {
+        return $this->services
+            ->filter(fn (CustomerService $service): bool => $service->countsTowardsRevenue())
+            ->reduce(
+                fn (Money $carry, CustomerService $service): Money => $carry->plus($value($service)),
+                Money::zero(),
+            );
     }
 
     /**
