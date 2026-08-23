@@ -59,4 +59,34 @@ return [
 
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | MCP-Zugang
+    |--------------------------------------------------------------------------
+    |
+    | Der MCP-Server stellt den Datenbestand als Werkzeuge für KI-Clients
+    | bereit — lesend und schreibend, einschließlich endgültigem Löschen und
+    | dem direkten Überschreiben von Preisen ohne Preisverlauf.
+    |
+    | Der Zugang läuft über persönliche Tokens. Ein Token trägt die vollen
+    | Rechte seines Benutzers; es gibt keine feinere Abstufung. Tokens werden
+    | mit `php artisan portal:mcp-token` ausgestellt und widerrufen.
+    |
+    | `enabled` schaltet den Endpunkt insgesamt ab, ohne dass Tokens
+    | zurückgezogen werden müssen.
+    |
+    */
+
+    'mcp' => [
+
+        'enabled' => (bool) env('MCP_ENABLED', true),
+
+        'path' => env('MCP_PATH', 'mcp/portal'),
+
+        'rate_limit' => env('MCP_RATE_LIMIT', '60,1'),
+
+        'token_expiration_days' => (int) env('MCP_TOKEN_EXPIRATION_DAYS', 90),
+
+    ],
+
 ];

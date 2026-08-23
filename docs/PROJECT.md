@@ -500,6 +500,51 @@ Der Jahreswert ist stets `Monatswert × 12`. Gerundet wird kaufmännisch auf
 ganze Cent. Einmalige Leistungen (`once`) fließen **nicht** in Monats- und
 Jahresumsatz ein.
 
+### AE-15 — MCP-Server mit vollen Schreibrechten
+Der Datenbestand ist über einen MCP-Server für KI-Clients erreichbar
+(`app/Mcp`, Route `mcp/portal`, 27 Werkzeuge). Der Auftraggeber hat sich
+ausdrücklich für den vollen Umfang **ohne Leitplanken** entschieden: neben
+Lesen und Schreiben auch endgültiges Löschen und das direkte Überschreiben von
+Preisen am Preisverlauf vorbei. Das steht bewusst quer zu den Grundsätzen
+„keine Hard Deletes" und „Preise werden nie stillschweigend überschrieben",
+die für die Oberfläche unverändert gelten.
+
+Abgesichert ist der Zugang über persönliche Sanctum-Tokens. Ein Token trägt
+die vollen Rechte seines Benutzers, ist einzeln widerrufbar und läuft
+standardmäßig nach 90 Tagen ab. Es gibt keine feinere Rechteabstufung — wer
+ein Token hat, kann alles, was der Benutzer kann.
+
+Vier Dinge bleiben trotzdem bestehen, weil sie im Model sitzen und nicht in
+den Actions:
+
+- **Die Änderungshistorie.** `Auditable` hängt an den Model-Events, nicht an
+  den Actions. Auch ein Schreibzugriff an den Actions vorbei landet dort, und
+  Audit-Einträge bleiben unveränderlich und unlöschbar. Nach einem endgültigen
+  Löschen ist die Historie das einzige, was den Vorgang noch belegt.
+- **Der Schreibschutz archivierter Kundenleistungen.**
+- **Die Unveränderlichkeit der Kundennummer.**
+- **Das Verbot rückwirkender Preisänderungen** — es gilt für
+  `preisaenderung-planen`; `preis-direkt-setzen` umgeht es naturgemäß, weil es
+  gar keinen Verlaufseintrag schreibt.
+
+Die fünf gefährlichen Werkzeuge (`kunde-loeschen`,
+`ansprechpartner-loeschen`, `produkt-loeschen`, `leistung-loeschen`,
+`preis-direkt-setzen`) tragen die MCP-Annotation `destructiveHint` und
+verlangen eine inhaltliche Bestätigung — die Kundennummer, den Nachnamen, den
+internen Namen, den Leistungsnamen beziehungsweise die Zeichenkette
+`ohne-preisverlauf`. Das schützt nicht vor Absicht, aber vor einem falsch
+aufgelösten Datensatz.
+
+`App\Actions\Maintenance\DeletePermanently` bündelt das Löschen an einer
+Stelle. Nötig ist das, weil `customer_services.customer_id` auf
+`restrictOnDelete` steht und die polymorphen Anhänge — Notizen, Dokumente,
+benutzerdefinierte Felder, Tags, Kontaktkanäle — überhaupt keinen
+Fremdschlüssel besitzen und sonst als Waisen zurückblieben. Dokumentdateien
+werden dabei auch aus dem Object Storage entfernt.
+
+`MCP_ENABLED=false` schaltet den Endpunkt ab, ohne dass Tokens
+zurückgezogen werden müssen.
+
 ---
 
 ## 5. Archivierung
