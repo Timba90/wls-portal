@@ -95,12 +95,12 @@ it('setzt faellige Preisaenderungen zum Wirksamkeitsdatum um', function (): void
     app(SchedulePriceChange::class)($service, PriceType::Sales, Money::fromEuroInput('59,00'), now()->addDays(10));
 
     // Vor dem Wirksamkeitsdatum passiert nichts.
-    expect(app(ApplyDuePriceChanges::class)())->toBe(0)
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 0, 'lapsed' => 0])
         ->and($service->fresh()->sales_price_cents)->toBe(4900);
 
     $this->travelTo(now()->addDays(10));
 
-    expect(app(ApplyDuePriceChanges::class)())->toBe(1)
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 1, 'lapsed' => 0])
         ->and($service->fresh()->sales_price_cents)->toBe(5900)
         ->and($service->priceChanges()->scheduled()->count())->toBe(0);
 });
@@ -113,7 +113,7 @@ it('setzt mehrere faellige Aenderungen in der richtigen Reihenfolge um', functio
 
     $this->travelTo(now()->addMonths(3));
 
-    expect(app(ApplyDuePriceChanges::class)())->toBe(2)
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 2, 'lapsed' => 0])
         ->and($service->fresh()->sales_price_cents)->toBe(6900);
 
     $verlauf = $service->priceChanges()->orderBy('effective_date')->get();
@@ -210,11 +210,51 @@ it('laesst geplante Aenderungen archivierter Leistungen verfallen', function ():
 
     $this->travelTo(now()->addMonths(2));
 
-    app(ApplyDuePriceChanges::class)();
+    // Verfallene Aenderungen duerfen nicht als wirksam gezaehlt werden.
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 0, 'lapsed' => 1]);
 
     expect($service->fresh()->sales_price_cents)->toBe(4900)
         ->and($service->priceChanges()->scheduled()->count())->toBe(0)
         ->and($service->priceChanges()->first()->note)->toContain('archiviert');
+});
+
+it('zaehlt wirksame und verfallene Aenderungen im selben Lauf getrennt', function (): void {
+    $aktiveLeistung = CustomerService::factory()->create(['sales_price_cents' => 4900]);
+    $archivierteLeistung = CustomerService::factory()->create(['sales_price_cents' => 4900]);
+
+    app(SchedulePriceChange::class)($aktiveLeistung, PriceType::Sales, Money::fromEuroInput('59,00'), now()->addDay());
+    app(SchedulePriceChange::class)($archivierteLeistung, PriceType::Sales, Money::fromEuroInput('69,00'), now()->addDay());
+
+    app(ArchiveCustomerService::class)($archivierteLeistung);
+
+    $this->travelTo(now()->addDays(2));
+
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 1, 'lapsed' => 1])
+        ->and($aktiveLeistung->fresh()->sales_price_cents)->toBe(5900)
+        ->and($archivierteLeistung->fresh()->sales_price_cents)->toBe(4900);
+});
+
+it('ueberspringt keine faellige Aenderung, wenn die Reihenfolge von der ID abweicht', function (): void {
+    $service = CustomerService::factory()->create(['sales_price_cents' => 4900]);
+
+    // Die spaeter angelegte Aenderung wird zuerst wirksam: Wirksamkeitsdatum und
+    // ID laufen bewusst gegenlaeufig.
+    app(SchedulePriceChange::class)($service, PriceType::Sales, Money::fromEuroInput('69,00'), now()->addDays(20));
+    app(SchedulePriceChange::class)($service, PriceType::Sales, Money::fromEuroInput('59,00'), now()->addDays(10));
+
+    $this->travelTo(now()->addDays(30));
+
+    expect(app(ApplyDuePriceChanges::class)())->toBe(['applied' => 2, 'lapsed' => 0])
+        // Die zuletzt wirksame Aenderung ist die mit dem spaetesten Datum.
+        ->and($service->fresh()->sales_price_cents)->toBe(6900)
+        ->and($service->priceChanges()->scheduled()->count())->toBe(0);
+
+    $verlauf = $service->priceChanges()->orderBy('effective_date')->get();
+
+    expect($verlauf[0]->new_price_cents)->toBe(5900)
+        ->and($verlauf[0]->old_price_cents)->toBe(4900)
+        ->and($verlauf[1]->new_price_cents)->toBe(6900)
+        ->and($verlauf[1]->old_price_cents)->toBe(5900);
 });
 
 it('schreibt Preisaenderungen aus dem Bearbeitungsformular in den Verlauf', function (): void {

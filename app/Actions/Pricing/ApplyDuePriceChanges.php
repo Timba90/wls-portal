@@ -15,24 +15,35 @@ class ApplyDuePriceChanges
     public function __construct(private readonly ApplyPriceChange $applyPriceChange) {}
 
     /**
-     * @return int Anzahl der wirksam gewordenen Aenderungen
+     * @return array{applied: int, lapsed: int} Wirksam gewordene und verfallene
+     *                                          Aenderungen, getrennt gezaehlt
      */
-    public function __invoke(): int
+    public function __invoke(): array
     {
-        $anzahl = 0;
+        $wirksam = 0;
+        $verfallen = 0;
 
-        PriceChange::query()
+        // Bewusst kein chunkById: dessen Cursor laeuft ueber die ID, waehrend
+        // die fachlich richtige Reihenfolge das Wirksamkeitsdatum ist. Bei
+        // abweichender Sortierung wuerden Zeilen uebersprungen. Die Menge der an
+        // einem Tag faelligen Aenderungen ist klein genug, um die IDs vorab in
+        // der richtigen Reihenfolge zu holen.
+        $ids = PriceChange::query()
             ->due()
-            ->with('customerService')
             ->orderBy('effective_date')
             ->orderBy('id')
-            ->chunkById(100, function ($changes) use (&$anzahl): void {
-                foreach ($changes as $change) {
-                    ($this->applyPriceChange)($change);
-                    $anzahl++;
-                }
-            });
+            ->pluck('id');
 
-        return $anzahl;
+        foreach ($ids as $id) {
+            $change = PriceChange::query()->with('customerService')->find($id);
+
+            if (! $change) {
+                continue;
+            }
+
+            ($this->applyPriceChange)($change) ? $wirksam++ : $verfallen++;
+        }
+
+        return ['applied' => $wirksam, 'lapsed' => $verfallen];
     }
 }

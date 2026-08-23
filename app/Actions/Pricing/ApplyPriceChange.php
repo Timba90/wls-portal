@@ -9,22 +9,29 @@ use Illuminate\Support\Facades\DB;
  * Setzt eine geplante Preisaenderung wirksam.
  *
  * Schreibt den neuen Preis auf die Kundenleistung und markiert die Aenderung
- * als angewendet. Der denormalisierte Preis auf der Leistung und der
+ * als bearbeitet. Der denormalisierte Preis auf der Leistung und der
  * Preisverlauf werden ausschliesslich hier gemeinsam fortgeschrieben.
  */
 class ApplyPriceChange
 {
-    public function __invoke(PriceChange $change): PriceChange
+    /**
+     * @return bool Ob die Aenderung tatsaechlich wirksam geworden ist. `false`
+     *              bedeutet, dass sie verfallen ist — etwa weil die
+     *              Kundenleistung zum Wirksamkeitsdatum bereits archiviert war.
+     */
+    public function __invoke(PriceChange $change): bool
     {
         if ($change->isApplied()) {
-            return $change;
+            return false;
         }
 
-        DB::transaction(function () use ($change): void {
+        return DB::transaction(function () use ($change): bool {
             $service = $change->customerService;
 
             // Archivierte Leistungen bleiben unveraendert; die geplante
-            // Aenderung verfaellt und bleibt als Historie erhalten.
+            // Aenderung verfaellt und bleibt als Historie erhalten. Sie wird
+            // mit einem Zeitstempel versehen, damit sie nicht taeglich erneut
+            // aufgegriffen wird.
             if ($service->isArchived()) {
                 $change->forceFill([
                     'applied_at' => now(),
@@ -32,7 +39,7 @@ class ApplyPriceChange
                         .'Nicht wirksam geworden: Leistung war zum Wirksamkeitsdatum archiviert.'),
                 ])->save();
 
-                return;
+                return false;
             }
 
             $column = $change->price_type->column();
@@ -46,8 +53,8 @@ class ApplyPriceChange
             ])->save();
 
             $service->forceFill([$column => $change->new_price_cents])->save();
-        });
 
-        return $change->refresh();
+            return true;
+        });
     }
 }

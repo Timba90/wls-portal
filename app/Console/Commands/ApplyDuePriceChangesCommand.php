@@ -18,11 +18,17 @@ class ApplyDuePriceChangesCommand extends Command
 
     public function handle(ApplyDuePriceChanges $applyDuePriceChanges): int
     {
-        $anzahl = $applyDuePriceChanges();
+        ['applied' => $wirksam, 'lapsed' => $verfallen] = $applyDuePriceChanges();
 
-        $this->info($anzahl === 1
+        $this->info($wirksam === 1
             ? '1 Preisänderung wurde wirksam.'
-            : "{$anzahl} Preisänderungen wurden wirksam.");
+            : "{$wirksam} Preisänderungen wurden wirksam.");
+
+        if ($verfallen > 0) {
+            $this->warn($verfallen === 1
+                ? '1 Preisänderung ist verfallen, weil die Leistung archiviert war.'
+                : "{$verfallen} Preisänderungen sind verfallen, weil die Leistung archiviert war.");
+        }
 
         return self::SUCCESS;
     }
