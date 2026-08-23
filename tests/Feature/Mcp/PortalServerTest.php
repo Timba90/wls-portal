@@ -58,6 +58,7 @@ it('beschreibt jedes Werkzeug mit Name, Titel und Beschreibung', function (): vo
 
     foreach ($werkzeuge as $werkzeug) {
         expect($werkzeug['name'])->toMatch('/^[a-z]+(-[a-z]+)*$/')
+            ->and($werkzeug['title'])->not->toBeEmpty()
             ->and($werkzeug['description'])->not->toBeEmpty()
             ->and($werkzeug['inputSchema'])->toHaveKey('properties');
     }

@@ -123,7 +123,12 @@ class DeletePermanently
 
         $model->documents()->with('versions')->cursor()->each(function (Document $dokument) use (&$anzahl): void {
             $dokument->versions->each(function (DocumentVersion $version): void {
-                Storage::disk($version->disk)->delete($version->path);
+                // Erst nach dem Commit der aeussersten Transaktion. Direkt
+                // geloescht waeren die Dateien bei einem spaeteren Rollback
+                // weg, waehrend die Datenbankzeilen bestehen blieben.
+                DB::afterCommit(function () use ($version): void {
+                    Storage::disk($version->disk)->delete($version->path);
+                });
             });
 
             // Die Versionszeilen haengen per Fremdschluessel am Dokument und

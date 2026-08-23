@@ -46,6 +46,8 @@ class PreisaenderungPlanen extends PortalTool
             $eingabe['notiz'] ?? null,
         );
 
+        $leistung->refresh();
+
         return Response::json([
             'id' => $aenderung->id,
             'leistung_id' => $leistung->id,
@@ -56,7 +58,10 @@ class PreisaenderungPlanen extends PortalTool
             'neuer_preis' => $this->money($aenderung->new_price_cents),
             'wirksam_ab' => $this->date($aenderung->effective_date),
             'bereits_wirksam' => $aenderung->isApplied(),
-            'aktueller_verkaufspreis' => $this->money($leistung->refresh()->sales_price_cents),
+            // Beide Preise, damit die Antwort unabhaengig von der geplanten
+            // Preisart den tatsaechlichen Stand zeigt.
+            'aktueller_einkaufspreis' => $this->money($leistung->purchase_price_cents),
+            'aktueller_verkaufspreis' => $this->money($leistung->sales_price_cents),
         ]);
     }
 
