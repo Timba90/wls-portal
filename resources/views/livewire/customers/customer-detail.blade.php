@@ -104,6 +104,16 @@
                     </dl>
                 </x-card>
 
+                <x-card>
+                    <x-slot:header>
+                        <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Benutzerdefinierte Felder</h2>
+                    </x-slot:header>
+
+                    <livewire:custom-fields.custom-fields-panel :record="$customer"
+                                                                :read-only="$customer->isArchived()"
+                                                                :key="'felder-'.$customer->id" />
+                </x-card>
+
                 @if ($customer->isPrivate())
                     <x-card>
                         <x-slot:header>
@@ -164,19 +174,19 @@
 
         <x-tab.items tab="notizen" title="Notizen">
             <x-card>
-                <x-not-yet-available area="Notizen" />
+                <livewire:shared.notes-panel :notable="$customer" :key="'notizen-'.$customer->id" />
             </x-card>
         </x-tab.items>
 
         <x-tab.items tab="dokumente" title="Dokumente">
             <x-card>
-                <x-not-yet-available area="Dokumente" />
+                <livewire:shared.documents-panel :documentable="$customer" :key="'dokumente-'.$customer->id" />
             </x-card>
         </x-tab.items>
 
         <x-tab.items tab="historie" title="Historie">
             <x-card>
-                <x-not-yet-available area="Historie" />
+                <livewire:shared.audit-panel :auditable="$customer" :key="'historie-'.$customer->id" />
             </x-card>
         </x-tab.items>
     </x-tab>

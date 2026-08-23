@@ -201,6 +201,40 @@
 
     <x-card class="mt-4">
         <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Benutzerdefinierte Felder</h2>
+        </x-slot:header>
+
+        <livewire:custom-fields.custom-fields-panel :record="$service"
+                                                    :read-only="$service->isArchived()"
+                                                    :key="'felder-leistung-'.$service->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Notizen</h2>
+        </x-slot:header>
+
+        <livewire:shared.notes-panel :notable="$service" :key="'notizen-leistung-'.$service->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Dokumente</h2>
+        </x-slot:header>
+
+        <livewire:shared.documents-panel :documentable="$service" :key="'dokumente-leistung-'.$service->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Historie</h2>
+        </x-slot:header>
+
+        <livewire:shared.audit-panel :auditable="$service" :key="'historie-leistung-'.$service->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
             <div class="flex items-center justify-between gap-2">
                 <div>
                     <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Preisverlauf</h2>

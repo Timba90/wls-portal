@@ -30,6 +30,14 @@ return [
 
     'disks' => [
 
+        // Nur fuer die Test-Suite: ersetzt den privaten Object Storage.
+        'documents_test' => [
+            'driver' => 'local',
+            'root' => storage_path('framework/testing/dokumente'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),

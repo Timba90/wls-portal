@@ -174,6 +174,30 @@
         </div>
     </x-card>
 
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Notizen</h2>
+        </x-slot:header>
+
+        <livewire:shared.notes-panel :notable="$contact" :key="'notizen-kontakt-'.$contact->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Dokumente</h2>
+        </x-slot:header>
+
+        <livewire:shared.documents-panel :documentable="$contact" :key="'dokumente-kontakt-'.$contact->id" />
+    </x-card>
+
+    <x-card class="mt-4">
+        <x-slot:header>
+            <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Historie</h2>
+        </x-slot:header>
+
+        <livewire:shared.audit-panel :auditable="$contact" :key="'historie-kontakt-'.$contact->id" />
+    </x-card>
+
     @script
     <script>
         $wire.on('ansprechpartner-archiviert', () => $tallstackui.toast().success('Ansprechpartner archiviert').send());

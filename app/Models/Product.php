@@ -4,6 +4,8 @@ namespace App\Models;
 
 use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasCustomFields;
 use App\Models\Concerns\HasTags;
 use App\Support\BillingInterval;
 use App\Support\Money;
@@ -36,7 +38,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Product extends Model
 {
     /** @use HasFactory<ProductFactory> */
-    use HasFactory, HasTags;
+    use Auditable, HasCustomFields, HasFactory, HasTags;
 
     /**
      * @return BelongsTo<Category, $this>
@@ -120,6 +122,26 @@ class Product extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('status', CatalogStatus::Active);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function auditLabels(): array
+    {
+        return [
+            'name' => 'Name',
+            'internal_name' => 'Interne Bezeichnung',
+            'description' => 'Beschreibung',
+            'category_id' => 'Kategorie',
+            'subcategory_id' => 'Unterkategorie',
+            'status' => 'Status',
+            'default_purchase_price_cents' => 'Standard-Einkaufspreis (Cent)',
+            'default_sales_price_cents' => 'Standard-Verkaufspreis (Cent)',
+            'default_billing_interval_unit' => 'Abrechnungsintervall',
+            'default_billing_interval_count' => 'Intervallanzahl',
+            'archived_at' => 'Archiviert am',
+        ];
     }
 
     /**

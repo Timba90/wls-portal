@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
+use App\Models\Concerns\Auditable;
 use App\Support\BillingInterval;
 use App\Support\Money;
 use Database\Factories\ProductVariantFactory;
@@ -33,7 +34,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class ProductVariant extends Model
 {
     /** @use HasFactory<ProductVariantFactory> */
-    use HasFactory;
+    use Auditable, HasFactory;
 
     /**
      * @return BelongsTo<Product, $this>

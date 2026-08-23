@@ -115,6 +115,22 @@
 
                 <x-service-components-list :components="$product->serviceComponents" />
             </x-card>
+
+            <x-card class="mt-4">
+                <x-slot:header>
+                    <h2 class="text-sm font-semibold text-gray-800 dark:text-gray-100">Benutzerdefinierte Felder</h2>
+                </x-slot:header>
+
+                <livewire:custom-fields.custom-fields-panel :record="$product"
+                                                            :read-only="$product->isArchived()"
+                                                            :key="'felder-artikel-'.$product->id" />
+            </x-card>
+        </x-tab.items>
+
+        <x-tab.items tab="historie" title="Historie">
+            <x-card>
+                <livewire:shared.audit-panel :auditable="$product" :key="'historie-artikel-'.$product->id" />
+            </x-card>
         </x-tab.items>
 
         <x-tab.items tab="varianten" title="Varianten">

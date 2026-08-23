@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             ContactSeeder::class,
             CatalogSeeder::class,
             CustomerServiceSeeder::class,
+            CustomFieldSeeder::class,
+            NoteSeeder::class,
         ]);
     }
 }

@@ -7,6 +7,10 @@ use App\Enums\CustomerType;
 use App\Enums\Gender;
 use App\Enums\Salutation;
 use App\Exceptions\ImmutableAttributeException;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasCustomFields;
+use App\Models\Concerns\HasDocuments;
+use App\Models\Concerns\HasNotes;
 use App\Models\Concerns\HasTags;
 use App\Support\Money;
 use Database\Factories\CustomerFactory;
@@ -41,7 +45,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Customer extends Model
 {
     /** @use HasFactory<CustomerFactory> */
-    use HasFactory, HasTags;
+    use Auditable, HasCustomFields, HasDocuments, HasFactory, HasNotes, HasTags;
 
     protected static function booted(): void
     {
@@ -216,6 +220,29 @@ class Customer extends Model
     public function scopeArchived(Builder $query): void
     {
         $query->where('status', CustomerStatus::Archived);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function auditLabels(): array
+    {
+        return [
+            'customer_number' => 'Kundennummer',
+            'type' => 'Kundentyp',
+            'company_name' => 'Firmenname',
+            'salutation' => 'Anrede',
+            'academic_title' => 'Akademischer Titel',
+            'first_name' => 'Vorname',
+            'last_name' => 'Nachname',
+            'birth_date' => 'Geburtsdatum',
+            'gender' => 'Geschlecht',
+            'short_label' => 'Kurzbezeichnung',
+            'internal_code' => 'Internes Kürzel',
+            'status' => 'Status',
+            'responsible_user_id' => 'Interner Verantwortlicher',
+            'archived_at' => 'Archiviert am',
+        ];
     }
 
     /**

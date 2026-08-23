@@ -6,6 +6,10 @@ use App\Enums\BillingIntervalUnit;
 use App\Enums\CustomerServiceStatus;
 use App\Enums\DoNotBillReason;
 use App\Exceptions\ReadOnlyRecordException;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasCustomFields;
+use App\Models\Concerns\HasDocuments;
+use App\Models\Concerns\HasNotes;
 use App\Models\Concerns\HasTags;
 use App\Support\BillingInterval;
 use App\Support\Money;
@@ -48,7 +52,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class CustomerService extends Model
 {
     /** @use HasFactory<CustomerServiceFactory> */
-    use HasFactory, HasTags;
+    use Auditable, HasCustomFields, HasDocuments, HasFactory, HasNotes, HasTags;
 
     protected static function booted(): void
     {
@@ -292,6 +296,36 @@ class CustomerService extends Model
         $query->where('status', CustomerServiceStatus::Active)
             ->where('do_not_bill', false)
             ->where('billing_interval_unit', '!=', BillingIntervalUnit::Once);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function auditLabels(): array
+    {
+        return [
+            'product_id' => 'Katalogartikel',
+            'product_variant_id' => 'Artikelvariante',
+            'name' => 'Interner Anzeigename',
+            'billing_label' => 'Rechnungsbezeichnung',
+            'description' => 'Beschreibung',
+            'status' => 'Status',
+            'purchase_price_cents' => 'Einkaufspreis (Cent)',
+            'sales_price_cents' => 'Verkaufspreis (Cent)',
+            'billing_interval_unit' => 'Abrechnungsintervall',
+            'billing_interval_count' => 'Intervallanzahl',
+            'service_start_date' => 'Leistungsbeginn',
+            'billing_start_date' => 'Abrechnungsstart',
+            'first_billing_date' => 'Erstes Abrechnungsdatum',
+            'category_id' => 'Kategorie',
+            'subcategory_id' => 'Unterkategorie',
+            'responsible_user_id' => 'Interner Verantwortlicher',
+            'do_not_bill' => 'Bewusst nicht abrechnen',
+            'do_not_bill_reason' => 'Grund',
+            'do_not_bill_since' => 'Nicht abrechnen seit',
+            'do_not_bill_released_at' => 'Nicht abrechnen aufgehoben am',
+            'archived_at' => 'Archiviert am',
+        ];
     }
 
     /**

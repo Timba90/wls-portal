@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DocumentController;
 use App\Livewire\Catalog\CategoryList;
 use App\Livewire\Catalog\ProductDetail;
 use App\Livewire\Catalog\ProductForm;
@@ -12,6 +13,7 @@ use App\Livewire\Contacts\ContactRoleList;
 use App\Livewire\Customers\CustomerDetail;
 use App\Livewire\Customers\CustomerForm;
 use App\Livewire\Customers\CustomerList;
+use App\Livewire\CustomFields\CustomFieldDefinitionList;
 use App\Livewire\Dashboard\DashboardPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Profile\SecurityPage;
@@ -46,6 +48,15 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/artikel/tags', TagList::class)->name('tags.index');
     Route::livewire('/artikel/{product}', ProductDetail::class)->name('products.show');
     Route::livewire('/artikel/{product}/bearbeiten', ProductForm::class)->name('products.edit');
+
+    Route::livewire('/felder', CustomFieldDefinitionList::class)->name('custom-fields.index');
+
+    // Dokumente liegen in privatem Speicher; jeder Zugriff laeuft authentifiziert
+    // ueber die Anwendung.
+    Route::get('/dokumente/{document}/versionen/{version}/download', [DocumentController::class, 'download'])
+        ->name('documents.download');
+    Route::get('/dokumente/{document}/versionen/{version}/vorschau', [DocumentController::class, 'preview'])
+        ->name('documents.preview');
 
     Route::livewire('/profil', ProfilePage::class)->name('profile.show');
     Route::livewire('/profil/sicherheit', SecurityPage::class)->name('profile.security');

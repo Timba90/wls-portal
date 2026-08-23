@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContactMethod;
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 ])]
 class ContactAssignment extends Model
 {
+    use Auditable;
+
     /**
      * @return BelongsTo<Contact, $this>
      */

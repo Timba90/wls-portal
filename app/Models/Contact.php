@@ -5,6 +5,9 @@ namespace App\Models;
 use App\Enums\ContactMethod;
 use App\Enums\Gender;
 use App\Enums\Salutation;
+use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasDocuments;
+use App\Models\Concerns\HasNotes;
 use App\Models\Concerns\HasTags;
 use Database\Factories\ContactFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -34,7 +37,7 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
 class Contact extends Model
 {
     /** @use HasFactory<ContactFactory> */
-    use HasFactory, HasTags;
+    use Auditable, HasDocuments, HasFactory, HasNotes, HasTags;
 
     /**
      * @return HasMany<ContactAssignment, $this>
@@ -112,6 +115,23 @@ class Contact extends Model
     public function scopeActive(Builder $query): void
     {
         $query->whereNull('archived_at');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function auditLabels(): array
+    {
+        return [
+            'salutation' => 'Anrede',
+            'academic_title' => 'Akademischer Titel',
+            'first_name' => 'Vorname',
+            'last_name' => 'Nachname',
+            'gender' => 'Geschlecht',
+            'birth_date' => 'Geburtsdatum',
+            'preferred_contact_method' => 'Bevorzugte Kontaktart',
+            'archived_at' => 'Archiviert am',
+        ];
     }
 
     /**

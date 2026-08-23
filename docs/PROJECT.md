@@ -357,7 +357,7 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 4 | Katalog, Kategorien, Varianten, Tags | umgesetzt |
 | 5 | Kundenleistungen inkl. Kennzahlen | umgesetzt |
 | 6 | Preisverlauf, geplante Preisänderungen | umgesetzt |
-| 7 | Notizen, Dokumente, Custom Fields, Audit Log | offen |
+| 7 | Notizen, Dokumente, Custom Fields, Audit Log | umgesetzt |
 | 8 | Dashboard, globale Suche, Archivansichten | offen |
 
 Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
