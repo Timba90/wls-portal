@@ -54,6 +54,26 @@ Die Test-Suite läuft gegen dieselbe Datenbank-Engine wie die Produktion. Die
 Zugangsdaten stehen in `phpunit.xml`; die Datenbank `wls_portal_test` muss
 existieren.
 
+Zusätzlich prüfen:
+
+```bash
+vendor/bin/pint --test    # Code-Stil
+npm run build             # Frontend-Build
+```
+
+### Continuous Integration
+
+`.github/workflows/tests.yml` führt bei jedem Push auf `main` und bei jedem
+Pull Request zwei Jobs aus:
+
+- **Test-Suite** — PHP 8.4 gegen einen MariaDB-Service, inklusive
+  Frontend-Build, weil die Layouts Assets über `@vite` einbinden und ohne
+  Manifest jede Seitenansicht fehlschlägt.
+- **Code-Stil** — Laravel Pint im Prüfmodus.
+
+Redis wird in CI nicht benötigt: die Test-Umgebung nutzt laut `phpunit.xml`
+Array-Treiber für Cache und Session sowie `sync` für Queues.
+
 ## Wiederkehrende Aufgaben
 
 Geplante Preisänderungen werden täglich wirksam gesetzt. Dafür muss der
