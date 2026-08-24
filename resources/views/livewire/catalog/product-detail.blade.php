@@ -29,9 +29,6 @@
                     <span class="text-[16px] font-semibold tracking-[-0.015em] text-ink">{{ $product->name }}</span>
                     <x-status-pill :kind="$product->isArchived() ? 'mute' : 'ok'" :label="$product->status->label()" />
 
-                    @foreach ($product->tags as $tag)
-                        <x-badge :color="$tag->color" :text="$tag->name" sm />
-                    @endforeach
                 </div>
 
                 <span class="text-[11.5px] text-ink-muted">

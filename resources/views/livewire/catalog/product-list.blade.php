@@ -85,14 +85,6 @@
                                  icon="magnifying-glass" />
                     </div>
 
-                    <div class="sm:w-52">
-                        <x-select.styled wire:model.live="tagId"
-                                         label="Tag"
-                                         placeholder="Alle"
-                                         :options="$tags"
-                                         select="label:name|value:id" />
-                    </div>
-
                     <div class="flex gap-2 sm:ml-auto">
                         <x-button color="secondary" outline sm wire:click="resetFilters">Filter zurücksetzen</x-button>
 
@@ -221,15 +213,6 @@
                                                 </span>
                                                 @break
 
-                                            @case('tags')
-                                                <span class="flex flex-wrap gap-1">
-                                                    @forelse ($artikel->tags->take(2) as $tag)
-                                                        <x-status-pill kind="info" :label="$tag->name" :dot="false" />
-                                                    @empty
-                                                        <span class="text-[11.5px] text-ink-faint">—</span>
-                                                    @endforelse
-                                                </span>
-                                                @break
                                         @endswitch
                                     @endforeach
                                 </a>

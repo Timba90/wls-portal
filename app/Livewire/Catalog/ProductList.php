@@ -73,7 +73,6 @@ class ProductList extends Component
             'products' => $this->products(),
             'categories' => $this->categories(),
             'categoryTotal' => $this->categoryTotal(),
-            'tags' => $this->tags(),
             'statusOptions' => CatalogStatus::options(),
         ]);
     }
@@ -102,7 +101,6 @@ class ProductList extends Component
             'default_purchase_price_cents' => ['label' => 'Einkauf', 'default_visible' => false],
             'margin' => ['label' => 'Marge', 'sortable' => false, 'default_visible' => false],
             'variants_count' => ['label' => 'Varianten', 'sortable' => false, 'default_visible' => false],
-            'tags' => ['label' => 'Tags', 'sortable' => false, 'default_visible' => false],
         ];
     }
 
@@ -123,7 +121,6 @@ class ProductList extends Component
             'default_purchase_price_cents' => ['breite' => '0.9fr', 'rechts' => true],
             'margin' => ['breite' => '0.9fr', 'rechts' => true],
             'variants_count' => ['breite' => '0.6fr', 'rechts' => true],
-            'tags' => ['breite' => '1fr'],
         ];
     }
 
@@ -282,13 +279,5 @@ class ProductList extends Component
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))
             ->count();
-    }
-
-    /**
-     * @return Collection<int, Tag>
-     */
-    private function tags(): Collection
-    {
-        return Tag::query()->orderBy('name')->get();
     }
 }

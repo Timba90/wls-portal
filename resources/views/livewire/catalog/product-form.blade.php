@@ -36,15 +36,6 @@
                                      :disabled="$subcategories->isEmpty()"
                                      :hint="$category_id === '' ? 'Zuerst eine Kategorie wählen.' : null" />
 
-                    <x-select.styled wire:model="tagIds"
-                                     label="Tags"
-                                     placeholder="Keine"
-                                     :options="$tags"
-                                     select="label:name|value:id"
-                                     multiple
-                                     searchable
-                                     class="md:col-span-2" />
-
                     <x-select.styled wire:model="status"
                                      label="Status"
                                      :options="$statusOptions"

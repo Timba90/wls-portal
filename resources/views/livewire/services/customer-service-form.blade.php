@@ -61,14 +61,6 @@
                                      select="label:name|value:id"
                                      :disabled="$subcategories->isEmpty()" />
 
-                    <x-select.styled wire:model="tagIds"
-                                     label="Tags"
-                                     placeholder="Keine"
-                                     :options="$tags"
-                                     select="label:name|value:id"
-                                     multiple
-                                     searchable />
-
                     <x-select.styled wire:model="responsible_user_id"
                                      label="Interner Verantwortlicher"
                                      placeholder="Niemand"

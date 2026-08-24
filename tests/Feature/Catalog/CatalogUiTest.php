@@ -204,12 +204,18 @@ it('zeigt standardmaessig die sechs Spalten des Entwurfs', function (): void {
     ]);
 });
 
-it('haelt Einkauf, Marge, Varianten und Tags zuschaltbar bereit', function (): void {
+it('haelt Einkauf, Marge und Varianten zuschaltbar bereit', function (): void {
     $komponente = Livewire::actingAs(User::factory()->create())->test(ProductList::class);
 
     expect($komponente->instance()->isColumnVisible('margin'))->toBeFalse()
         ->and(array_column($komponente->get('tableColumns'), 'key'))
-        ->toContain('default_purchase_price_cents', 'margin', 'variants_count', 'tags');
+        ->toContain('default_purchase_price_cents', 'margin', 'variants_count');
+});
+
+it('bietet vorerst keine Tag-Spalte an', function (): void {
+    $komponente = Livewire::actingAs(User::factory()->create())->test(ProductList::class);
+
+    expect(array_column($komponente->get('tableColumns'), 'key'))->not->toContain('tags');
 });
 
 it('zaehlt die Artikel je Statusfilter', function (): void {
@@ -301,4 +307,18 @@ it('zaehlt die Kundenleistungen je Artikel', function (): void {
 
     expect($komponente->viewData('products')->firstWhere('name', 'Managed Hosting')->contracts_count)
         ->toBe(3);
+});
+
+it('zeigt keine Tags mehr in der Oberflaeche', function (): void {
+    $artikel = Product::factory()->create();
+    $tag = Tag::factory()->create(['name' => 'Wartungsvertrag']);
+    $artikel->tags()->attach($tag);
+
+    $benutzer = User::factory()->create();
+
+    Livewire::actingAs($benutzer)->test(ProductList::class)->assertDontSee('Wartungsvertrag');
+
+    Livewire::actingAs($benutzer)
+        ->test(ProductDetail::class, ['product' => $artikel])
+        ->assertDontSee('Wartungsvertrag');
 });

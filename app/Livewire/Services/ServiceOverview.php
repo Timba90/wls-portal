@@ -7,7 +7,6 @@ use App\Livewire\Concerns\WithConfigurableTable;
 use App\Models\Category;
 use App\Models\CustomerService;
 use App\Models\Product;
-use App\Models\Tag;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -82,7 +81,6 @@ class ServiceOverview extends Component
             'statusOptions' => CustomerServiceStatus::options(),
             'products' => $this->products(),
             'categories' => $this->categories(),
-            'tags' => $this->tags(),
             'responsibleUsers' => $this->responsibleUsers(),
         ]);
     }
@@ -102,7 +100,6 @@ class ServiceOverview extends Component
             'name' => ['label' => 'Leistung', 'fixed' => true],
             'product' => ['label' => 'Katalogartikel', 'sortable' => false],
             'category' => ['label' => 'Kategorie', 'sortable' => false],
-            'tags' => ['label' => 'Tags', 'sortable' => false],
             'status' => ['label' => 'Status', 'width' => 120],
             'purchase_price_cents' => ['label' => 'Einkauf', 'width' => 130],
             'sales_price_cents' => ['label' => 'Verkauf', 'width' => 130],
@@ -229,14 +226,6 @@ class ServiceOverview extends Component
             ->orderBy('name')
             ->get()
             ->map(fn (Category $category): array => ['id' => $category->id, 'label' => $category->path()]);
-    }
-
-    /**
-     * @return Collection<int, Tag>
-     */
-    private function tags(): Collection
-    {
-        return Tag::query()->orderBy('name')->get();
     }
 
     /**

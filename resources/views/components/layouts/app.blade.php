@@ -61,7 +61,6 @@
 
                 <x-nav-group label="Katalog">
                     <x-nav-item route="categories.index" icon="folder" label="Kategorien" />
-                    <x-nav-item route="tags.index" icon="tag" label="Tags" />
                     <x-nav-item route="contact-roles.index" icon="identification" label="Rollen" />
                     <x-nav-item route="custom-fields.index" icon="rectangle-stack" label="Eigene Felder" />
                 </x-nav-group>

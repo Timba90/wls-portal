@@ -42,42 +42,6 @@
         </x-slot:actions>
 
 
-        {{--
-            Status und die Kennzeichnung „nicht abrechnen" stehen in der
-            Kopfkarte; hier bleiben nur die Tags.
-        --}}
-        <div class="mb-3.5 flex flex-wrap items-center gap-2">
-
-            @foreach ($service->tags as $tag)
-                <x-badge :color="$tag->color" :text="$tag->name" sm />
-            @endforeach
-        </div>
-
-        @if (session('erfolg'))
-            <x-alert color="green" class="mb-4">{{ session('erfolg') }}</x-alert>
-        @endif
-
-        @if ($service->isArchived())
-            <x-alert color="amber" class="mb-4" title="Archivierte Leistung">
-                Diese Leistung ist schreibgeschützt. Sie bleibt historisch erhalten und kann nicht mehr verändert werden.
-            </x-alert>
-        @endif
-
-        @if ($service->do_not_bill)
-            <x-alert color="amber" class="mb-4" title="Bewusst nicht abrechnen">
-                Grund: {{ $service->do_not_bill_reason?->label() }}.
-                Gesetzt am {{ $service->do_not_bill_since?->format('d.m.Y H:i') }}.
-                Die Kennzeichnung gilt, bis sie manuell entfernt wird — es erfolgt keine rückwirkende Nachberechnung.
-            </x-alert>
-        @elseif ($service->do_not_bill_released_at)
-            <x-alert color="blue" class="mb-4">
-                Die Kennzeichnung „Bewusst nicht abrechnen" wurde am
-                {{ $service->do_not_bill_released_at->format('d.m.Y H:i') }} entfernt.
-                Die normale Betrachtung beginnt ab diesem Zeitpunkt.
-            </x-alert>
-        @endif
-
-
         {{-- Kopfkarte: Kürzel, Name mit Status, Kunde und Kennzahlenreihe. --}}
         <div class="mb-3.5 flex flex-wrap items-center gap-4 rounded-[10px] border border-line bg-panel px-[17px] py-4">
             <x-avatar-initials :initials="Str::upper(Str::substr($service->name, 0, 2))" size="lg" />
