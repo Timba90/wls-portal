@@ -63,14 +63,11 @@ it('laesst angemeldete Benutzer auf das Dashboard', function (): void {
         ->assertSee('Dashboard');
 });
 
-it('haelt die Anmeldeseite unabhaengig vom Farbschema hell', function (): void {
-    $antwort = $this->get(route('login'));
-
-    // Ohne die Dark-Mode-Bindung am <html> loesen alle Tokens — auch die der
-    // Formularfelder — auf ihre hellen Werte auf.
-    $antwort->assertOk()
-        ->assertDontSee('tallstackui_darkTheme', escape: false)
-        ->assertDontSee("'dark': darkTheme", escape: false);
+it('laesst die Anmeldeseite dem Farbschema folgen', function (): void {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('tallstackui_darkTheme', escape: false)
+        ->assertSee("'dark': darkTheme", escape: false);
 });
 
 it('zeigt das Raster hinter der Markenspalte', function (): void {

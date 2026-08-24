@@ -1,99 +1,74 @@
-<div>
-    <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex flex-wrap items-center gap-4 text-sm">
-            <div>
-                <span class="text-ink-muted">Monatsumsatz</span>
-                <span class="ml-1 font-medium tabular-nums text-ink">
-                    {{ $monthlyRevenue->format() }}
-                </span>
-            </div>
-            <div>
-                <span class="text-ink-muted">Jahresumsatz</span>
-                <span class="ml-1 font-medium tabular-nums text-ink">
-                    {{ $yearlyRevenue->format() }}
-                </span>
-            </div>
-            <div>
-                <span class="text-ink-muted">Kosten (mtl.)</span>
-                <span class="ml-1 font-medium tabular-nums text-ink">
-                    {{ $monthlyCosts->format() }}
-                </span>
-            </div>
-            <div>
-                <span class="text-ink-muted">Marge (mtl.)</span>
-                <span class="ml-1 font-medium tabular-nums {{ $monthlyMargin->isNegative() ? 'text-[color:var(--pill-bad-ink)]' : 'text-ink' }}">
-                    {{ $monthlyMargin->format() }}
-                </span>
-            </div>
-        </div>
+<div class="flex flex-col gap-3.5">
+    {{--
+        Die Summen stehen in der Kopfkarte des Kundendetails; hier bleiben nur
+        die Bedienelemente, damit dieselbe Zahl nicht zweimal auf dem Schirm
+        steht.
+    --}}
+    <div class="flex flex-wrap items-center justify-end gap-3">
+        <x-toggle wire:model.live="showArchived" label="Archivierte anzeigen" sm />
 
-        <div class="flex flex-wrap items-center gap-3">
-            <x-toggle wire:model.live="showArchived" label="Archivierte anzeigen" sm />
-
-            <x-button sm
-                      icon="plus"
-                      :href="route('customer-services.create', $customer)"
-                      wire:navigate>
-                Leistung anlegen
-            </x-button>
-        </div>
+        <x-button sm
+                  icon="plus"
+                  :href="route('customer-services.create', $customer)"
+                  wire:navigate>
+            Leistung anlegen
+        </x-button>
     </div>
 
-    <div class="divide-y divide-line">
-        @forelse ($services as $service)
-            <div class="py-3" wire:key="service-{{ $service->id }}">
-                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                            <a href="{{ route('customer-services.show', [$customer, $service]) }}"
-                               wire:navigate
-                               class="font-medium text-accent hover:underline">
-                                {{ $service->name }}
-                            </a>
+    <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
+        <div class="overflow-x-auto">
+            <div class="min-w-[640px]">
+                <div class="grid grid-cols-[1.9fr_0.9fr_0.9fr_1fr_0.9fr] gap-3 border-b border-line bg-raised px-4 py-2.5">
+                    @foreach (['Leistung', 'Turnus', 'Preis', 'Beginn', 'Status'] as $spalte)
+                        <span @class([
+                            'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
+                            'text-right' => $spalte === 'Preis',
+                        ])>{{ $spalte }}</span>
+                    @endforeach
+                </div>
 
-                            <x-badge :color="$service->status->color()" :text="$service->status->label()" sm />
+                @forelse ($services as $service)
+                    <a href="{{ route('customer-services.show', [$customer, $service]) }}"
+                       wire:navigate
+                       wire:key="service-{{ $service->id }}"
+                       class="grid grid-cols-[1.9fr_0.9fr_0.9fr_1fr_0.9fr] items-center gap-3 border-b border-line px-4 py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none">
+                        <div class="flex min-w-0 items-center gap-2.5">
+                            {{-- Statuspunkt in der Farbe der Statusplakette. --}}
+                            <span class="h-[7px] w-[7px] flex-none rounded-full"
+                                  style="background: var(--pill-{{ $service->status->pillKind() }}-ink)"></span>
 
-                            @if ($service->do_not_bill)
-                                <x-badge color="amber"
-                                         :text="'Nicht abrechnen · '.$service->do_not_bill_reason?->label()"
-                                         sm />
-                            @endif
-
-                            @foreach ($service->tags as $tag)
-                                <x-badge :color="$tag->color" :text="$tag->name" sm />
-                            @endforeach
+                            <span class="flex min-w-0 flex-col">
+                                <span class="truncate text-[12.5px] font-medium text-ink-base">{{ $service->name }}</span>
+                                <span class="truncate text-[10.5px] text-ink-faint">
+                                    {{ $service->product?->name ?? 'Individuelle Leistung' }}
+                                </span>
+                            </span>
                         </div>
 
-                        <p class="mt-1 text-sm text-ink-muted">
-                            @if ($service->isFromCatalog())
-                                {{ $service->product?->name }}@if ($service->productVariant) · {{ $service->productVariant->name }}@endif
-                            @else
-                                Individuelle Leistung
-                            @endif
-                            @if ($service->service_start_date)
-                                · seit {{ $service->service_start_date->format('d.m.Y') }}
-                            @endif
-                        </p>
-                    </div>
+                        <span class="truncate text-[12px] text-ink-muted">{{ $service->billingInterval()->label() }}</span>
 
-                    <div class="shrink-0 text-sm sm:text-right">
-                        <p class="font-medium tabular-nums text-ink">
-                            {{ $service->salesPrice()->format() }} · {{ $service->billingInterval()->label() }}
-                        </p>
-                        <p class="tabular-nums text-ink-muted">
-                            EK {{ $service->purchasePrice()->format() }} ·
-                            Marge {{ $service->margin()->format() }}
-                            @if ($service->marginPercentage() !== null)
-                                ({{ number_format($service->marginPercentage(), 1, ',', '.') }} %)
+                        <span class="truncate tabular text-right text-[12.5px] text-ink">
+                            {{ $service->salesPrice()->format() }}
+                        </span>
+
+                        <span class="truncate text-[12px] text-ink-muted">
+                            {{ $service->service_start_date?->format('d.m.Y') ?? '—' }}
+                        </span>
+
+                        <span class="flex flex-wrap items-center gap-1.5">
+                            <x-status-pill :kind="$service->status->pillKind()" :label="$service->status->label()" />
+
+                            @if ($service->do_not_bill)
+                                <x-status-pill kind="warn" label="Nicht abrechnen" :dot="false" />
                             @endif
-                        </p>
+                        </span>
+                    </a>
+                @empty
+                    <div class="px-4 py-[34px] text-center text-[12.5px] text-ink-faint">
+                        Für diesen Kunden ist noch keine Leistung hinterlegt.
                     </div>
-                </div>
+                @endforelse
             </div>
-        @empty
-            <p class="py-6 text-center text-sm text-ink-muted">
-                Für diesen Kunden ist noch keine Leistung erfasst.
-            </p>
-        @endforelse
+        </div>
     </div>
 </div>

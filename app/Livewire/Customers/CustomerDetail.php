@@ -23,7 +23,7 @@ class CustomerDetail extends Component
     public Customer $customer;
 
     #[Url(as: 'bereich', except: 'uebersicht')]
-    public string $tab = 'uebersicht';
+    public string $tab = 'leistungen';
 
     public function mount(Customer $customer): void
     {
@@ -54,10 +54,54 @@ class CustomerDetail extends Component
         $this->dispatch('kunde-reaktiviert');
     }
 
+    /**
+     * Stammdaten fuer die rechte Spalte, in der Reihenfolge des Entwurfs.
+     *
+     * @return array<string, ?string>
+     */
+    public function masterData(): array
+    {
+        $gemeinsam = [
+            'Kundennummer' => $this->customer->customer_number,
+            'Typ' => $this->customer->type->label(),
+        ];
+
+        $persoenlich = $this->customer->isCompany()
+            ? ['Firmenname' => $this->customer->company_name]
+            : [
+                'Anrede' => $this->customer->salutation?->label(),
+                'Akademischer Titel' => $this->customer->academic_title,
+                'Vorname' => $this->customer->first_name,
+                'Nachname' => $this->customer->last_name,
+                'Geburtsdatum' => $this->customer->birth_date?->format('d.m.Y'),
+                'Geschlecht' => $this->customer->gender?->label(),
+            ];
+
+        return [
+            ...$gemeinsam,
+            ...$persoenlich,
+            'Kurzbezeichnung' => $this->customer->short_label,
+            'Internes Kürzel' => $this->customer->internal_code,
+            'Verantwortlich' => $this->customer->responsibleUser?->name,
+            'Angelegt' => $this->customer->created_at?->format('d.m.Y'),
+            'Zuletzt geändert' => $this->customer->updated_at?->format('d.m.Y H:i'),
+            ...($this->customer->archived_at
+                ? ['Archiviert' => $this->customer->archived_at->format('d.m.Y H:i')]
+                : []),
+        ];
+    }
+
     public function render(): View
     {
         // Fuer die Kennzahlen im Kopfband: nur abrechnungsrelevante Leistungen.
-        $this->customer->load(['responsibleUser', 'services' => fn ($query) => $query->billable()]);
+        $this->customer->load([
+            'responsibleUser',
+            'services' => fn ($query) => $query->billable(),
+            'emailAddresses',
+            'phoneNumbers',
+            'contactAssignments.contact.emailAddresses',
+            'contactAssignments.roles',
+        ]);
 
         return view('livewire.customers.customer-detail', [
             'activeServices' => $this->customer->services()->active()->count(),

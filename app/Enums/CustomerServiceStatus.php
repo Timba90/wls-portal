@@ -28,6 +28,19 @@ enum CustomerServiceStatus: string
         };
     }
 
+    /**
+     * Ausprägung der Statusplakette aus dem Entwurf.
+     */
+    public function pillKind(): string
+    {
+        return match ($this) {
+            self::Planned => 'info',
+            self::Active => 'ok',
+            self::Paused => 'warn',
+            self::Ended, self::Archived => 'mute',
+        };
+    }
+
     public function color(): string
     {
         return match ($this) {

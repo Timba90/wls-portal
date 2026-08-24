@@ -189,7 +189,9 @@ trait WithConfigurableTable
             ->reject(fn (array $definition, string $key): bool => $storedByKey->has($key))
             ->map(fn (array $definition, string $key): array => [
                 'key' => $key,
-                'visible' => true,
+                // Spalten duerfen sich abgeschaltet einreihen; ohne Angabe
+                // bleibt es beim bisherigen Verhalten.
+                'visible' => $definition['default_visible'] ?? true,
                 'width' => $definition['width'] ?? null,
             ])
             ->values();
