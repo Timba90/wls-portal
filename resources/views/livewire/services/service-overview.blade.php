@@ -35,12 +35,6 @@
                                  select="label:label|value:id"
                                  searchable />
 
-                <x-select.styled wire:model.live="tagId"
-                                 label="Tag"
-                                 placeholder="Alle"
-                                 :options="$tags"
-                                 select="label:name|value:id" />
-
                 <x-select.styled wire:model.live="responsibleUserId"
                                  label="Interner Verantwortlicher"
                                  placeholder="Alle"
@@ -104,14 +98,6 @@
                     @else
                         {{ $row->category?->name ?? '—' }}
                     @endif
-                @endinteract
-
-                @interact('column_tags', $row)
-                    <div class="flex flex-wrap gap-1">
-                        @foreach ($row->tags as $tag)
-                            <x-badge :color="$tag->color" :text="$tag->name" sm />
-                        @endforeach
-                    </div>
                 @endinteract
 
                 @interact('column_status', $row)

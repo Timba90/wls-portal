@@ -12,7 +12,6 @@ use App\Models\CustomerService;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ServiceComponent;
-use App\Models\Tag;
 use App\Models\User;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
@@ -260,7 +259,6 @@ class CustomerServiceForm extends Component
             'variants' => $this->variants(),
             'rootCategories' => $this->rootCategories(),
             'subcategories' => $this->subcategories(),
-            'tags' => $this->tags(),
             'responsibleUsers' => $this->responsibleUsers(),
         ])->title($this->isEditing() ? 'Kundenleistung bearbeiten' : 'Kundenleistung anlegen');
     }
@@ -412,14 +410,6 @@ class CustomerServiceForm extends Component
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-    }
-
-    /**
-     * @return Collection<int, Tag>
-     */
-    private function tags(): Collection
-    {
-        return Tag::query()->orderBy('name')->get();
     }
 
     /**

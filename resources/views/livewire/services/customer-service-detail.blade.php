@@ -1,8 +1,19 @@
+@php
+    $reiter = collect([
+        'preise' => 'Preisverlauf',
+        'bestandteile' => 'Bestandteile',
+        'notizen' => 'Notizen',
+        'dokumente' => 'Dokumente',
+        'felder' => 'Eigene Felder',
+        'verlauf' => 'Verlauf',
+    ]);
+@endphp
+
 <div>
-    <x-page title="{{ $service->name }}"
-            subtitle="{{ $customer->customer_number }} · {{ $customer->displayName() }}"
+    <x-page :title="$service->name"
+            :subtitle="$customer->customer_number.' · '.$customer->displayName()"
             back-label="Leistungen ／ zurück zum Kunden"
-            back-url="{{ route('customers.show', ['customer' => $customer, 'bereich' => 'leistungen']) }}">
+            :back-url="route('customers.show', ['customer' => $customer, 'bereich' => 'leistungen'])">
         <x-slot:actions>
             @if ($service->isArchived())
             <x-button sm color="secondary" outline icon="arrow-uturn-left" wire:click="restore">
@@ -27,219 +38,137 @@
                 </x-button>
             @endif
 
-            <x-button sm color="red"
-                      outline
-                      icon="archive-box"
-                      x-on:click="$dialog.confirm({
-                          title: 'Leistung archivieren?',
-                          description: 'Archivierte Leistungen sind vollständig schreibgeschützt und bleiben historisch erhalten.',
-                          accept: { text: 'Archivieren', method: 'archive' },
-                          reject: { text: 'Abbrechen' },
-                      })">
-                Archivieren
-            </x-button>
                 @endif
         </x-slot:actions>
 
-        <div class="mb-4 flex flex-wrap items-center gap-2">
-            <x-badge :color="$service->status->color()" :text="$service->status->label()" sm />
 
-            @if ($service->do_not_bill)
-                <x-badge color="amber" :text="'Nicht abrechnen · '.$service->do_not_bill_reason?->label()" sm />
-            @endif
+        {{-- Kopfkarte: Kürzel, Name mit Status, Kunde und Kennzahlenreihe. --}}
+        <div class="mb-3.5 flex flex-wrap items-center gap-4 rounded-[10px] border border-line bg-panel px-[17px] py-4">
+            <x-avatar-initials :initials="Str::upper(Str::substr($service->name, 0, 2))" size="lg" />
 
-            @foreach ($service->tags as $tag)
-                <x-badge :color="$tag->color" :text="$tag->name" sm />
-            @endforeach
-        </div>
+            <div class="flex min-w-[210px] flex-[1_1_240px] flex-col gap-[5px]">
+                <div class="flex flex-wrap items-center gap-2.5">
+                    <span class="text-[16px] font-semibold tracking-[-0.015em] text-ink">{{ $service->name }}</span>
+                    <x-status-pill :kind="$service->status->pillKind()" :label="$service->status->label()" />
 
-        @if (session('erfolg'))
-            <x-alert color="green" class="mb-4">{{ session('erfolg') }}</x-alert>
-        @endif
-
-        @if ($service->isArchived())
-            <x-alert color="amber" class="mb-4" title="Archivierte Leistung">
-                Diese Leistung ist schreibgeschützt. Sie bleibt historisch erhalten und kann nicht mehr verändert werden.
-            </x-alert>
-        @endif
-
-        @if ($service->do_not_bill)
-            <x-alert color="amber" class="mb-4" title="Bewusst nicht abrechnen">
-                Grund: {{ $service->do_not_bill_reason?->label() }}.
-                Gesetzt am {{ $service->do_not_bill_since?->format('d.m.Y H:i') }}.
-                Die Kennzeichnung gilt, bis sie manuell entfernt wird — es erfolgt keine rückwirkende Nachberechnung.
-            </x-alert>
-        @elseif ($service->do_not_bill_released_at)
-            <x-alert color="blue" class="mb-4">
-                Die Kennzeichnung „Bewusst nicht abrechnen" wurde am
-                {{ $service->do_not_bill_released_at->format('d.m.Y H:i') }} entfernt.
-                Die normale Betrachtung beginnt ab diesem Zeitpunkt.
-            </x-alert>
-        @endif
-
-        <div class="grid gap-4 lg:grid-cols-2">
-            <x-card>
-                <x-slot:header>
-                    <h2 class="text-sm font-semibold text-ink">Leistung</h2>
-                </x-slot:header>
-
-                <dl class="divide-y divide-line text-sm">
-                    <x-detail-row label="Interner Anzeigename" :value="$service->name" />
-                    <x-detail-row label="Rechnungsbezeichnung" :value="$service->billing_label" />
-                    <x-detail-row label="Status" :value="$service->status->label()" />
-                    <x-detail-row label="Kategorie" :value="$service->category?->name" />
-                    <x-detail-row label="Unterkategorie" :value="$service->subcategory?->name" />
-                    <x-detail-row label="Interner Verantwortlicher" :value="$service->responsibleUser?->name" />
-                    <x-detail-row label="Leistungsbeginn" :value="$service->service_start_date?->format('d.m.Y')" />
-                    <x-detail-row label="Abrechnungsstart" :value="$service->billing_start_date?->format('d.m.Y')" />
-                    <x-detail-row label="Erstes Abrechnungsdatum" :value="$service->first_billing_date?->format('d.m.Y')" />
-                </dl>
-
-                @if ($service->description)
-                    <p class="mt-4 whitespace-pre-line text-sm text-ink-base">
-                        {{ $service->description }}
-                    </p>
-                @endif
-            </x-card>
-
-            <x-card>
-                <x-slot:header>
-                    <div class="flex items-center justify-between gap-2">
-                        <h2 class="text-sm font-semibold text-ink">Preise</h2>
-
-                        @unless ($service->isArchived())
-                            <x-button color="secondary" outline sm icon="arrow-trending-up"
-                                      wire:click="openPriceChangeForm('sales')">
-                                Preisänderung
-                            </x-button>
-                        @endunless
-                    </div>
-                </x-slot:header>
-
-                <dl class="divide-y divide-line text-sm">
-                    <x-detail-row label="Einkaufspreis" :value="$service->purchasePrice()->format()" />
-                    <x-detail-row label="Verkaufspreis" :value="$service->salesPrice()->format()" />
-                    <x-detail-row label="Marge / Deckungsbeitrag"
-                                  :value="$service->margin()->format()
-                                      .($service->marginPercentage() !== null
-                                          ? ' ('.number_format($service->marginPercentage(), 1, ',', '.').' %)'
-                                          : '')" />
-                    <x-detail-row label="Abrechnungsintervall" :value="$service->billingInterval()->label()" />
-
-                    @if ($service->billingInterval()->isRecurring())
-                        <x-detail-row label="Monatsumsatz" :value="$service->monthlyRevenue()->format()" />
-                        <x-detail-row label="Jahresumsatz" :value="$service->yearlyRevenue()->format()" />
-                        <x-detail-row label="Monatliche Kosten" :value="$service->monthlyCosts()->format()" />
-                        <x-detail-row label="Monatliche Marge" :value="$service->monthlyMargin()->format()" />
-                    @else
-                        <x-detail-row label="Monats- und Jahreswert"
-                                      value="Einmalige Leistungen fließen nicht in wiederkehrende Kennzahlen ein." />
+                    @if ($service->do_not_bill)
+                        <x-status-pill kind="warn"
+                                       :label="'Nicht abrechnen · '.$service->do_not_bill_reason?->label()"
+                                       :dot="false" />
                     @endif
-                </dl>
-            </x-card>
+                </div>
+
+                <div class="flex flex-wrap items-center gap-[7px]">
+                    <a href="{{ route('customers.show', $customer) }}"
+                       wire:navigate
+                       class="text-[11.5px] font-medium text-accent hover:underline">
+                        {{ $customer->displayName() }}
+                    </a>
+
+                    <span class="text-[11.5px] text-ink-muted">
+                        {{ $service->billingInterval()->label() }}
+                        @if ($service->product)
+                            · {{ $service->product->name }}
+                        @else
+                            · Individuelle Leistung
+                        @endif
+                    </span>
+                </div>
+            </div>
+
+            <div class="ml-auto flex flex-wrap gap-[22px]">
+                @foreach ([
+                    ['Verkaufspreis', $service->salesPrice()->format(), false],
+                    ['Einkaufspreis', $service->purchasePrice()->format(), false],
+                    ['Marge', $service->margin()->format(), $service->margin()->isNegative()],
+                    ['Umsatz / Mon', $service->monthlyRevenue()->format(), false],
+                ] as [$label, $wert, $negativ])
+                    <div class="flex flex-col gap-1" wire:key="kennzahl-{{ $loop->index }}">
+                        <span class="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-ink-faint">{{ $label }}</span>
+                        <span @class([
+                            'tabular text-[15px] font-semibold',
+                            'text-[color:var(--pill-bad-ink)]' => $negativ,
+                            'text-ink' => ! $negativ,
+                        ])>{{ $wert }}</span>
+                    </div>
+                @endforeach
+            </div>
         </div>
 
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Herkunft aus dem Katalog</h2>
-            </x-slot:header>
-
-            @if ($service->isFromCatalog())
-                <dl class="divide-y divide-line text-sm">
-                    <x-detail-row label="Katalogartikel" :value="$service->product?->name" />
-                    <x-detail-row label="Variante" :value="$service->productVariant?->name" />
-                </dl>
-
-                @if ($deviations !== [])
-                    <div class="mt-4">
-                        <p class="mb-2 text-sm font-medium text-ink-base">
-                            Abweichungen vom Katalogstand bei Verknüpfung
-                        </p>
-
-                        <div class="divide-y divide-line text-sm">
-                            @foreach ($deviations as $feld => $werte)
-                                <div class="grid grid-cols-3 gap-4 py-2" wire:key="deviation-{{ $loop->index }}">
-                                    <span class="text-ink-muted">{{ $feld }}</span>
-                                    <span class="text-ink-muted line-through">{{ $werte['katalog'] }}</span>
-                                    <span class="font-medium text-ink">{{ $werte['kunde'] }}</span>
-                                </div>
-                            @endforeach
-                        </div>
-                    </div>
-                @else
-                    <p class="mt-4 text-sm text-ink-muted">
-                        Keine Abweichungen gegenüber dem Katalogstand bei Verknüpfung.
-                    </p>
-                @endif
-            @else
-                <p class="text-sm text-ink-muted">
-                    Vollständig individuelle Leistung ohne Katalogartikel.
-                </p>
-            @endif
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Leistungsbestandteile</h2>
-            </x-slot:header>
-
-            <x-service-components-list :components="$service->serviceComponents" />
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Benutzerdefinierte Felder</h2>
-            </x-slot:header>
-
-            <livewire:custom-fields.custom-fields-panel :record="$service"
-                                                        :read-only="$service->isArchived()"
-                                                        :key="'felder-leistung-'.$service->id" />
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Notizen</h2>
-            </x-slot:header>
-
-            <livewire:shared.notes-panel :notable="$service" :key="'notizen-leistung-'.$service->id" />
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Dokumente</h2>
-            </x-slot:header>
-
-            <livewire:shared.documents-panel :documentable="$service" :key="'dokumente-leistung-'.$service->id" />
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <h2 class="text-sm font-semibold text-ink">Historie</h2>
-            </x-slot:header>
-
-            <livewire:shared.audit-panel :auditable="$service" :key="'historie-leistung-'.$service->id" />
-        </x-card>
-
-        <x-card class="mt-4">
-            <x-slot:header>
-                <div class="flex items-center justify-between gap-2">
-                    <div>
-                        <h2 class="text-sm font-semibold text-ink">Preisverlauf</h2>
-                        <p class="mt-1 text-xs text-ink-muted">
-                            Preise werden nie überschrieben. Rückwirkende Änderungen sind ausgeschlossen,
-                            mehrere zukünftige Änderungen dürfen nebeneinander geplant werden.
-                        </p>
-                    </div>
-
-                    @unless ($service->isArchived())
-                        <x-button color="secondary" outline sm icon="plus"
-                                  wire:click="openPriceChangeForm('sales')">
-                            Preisänderung planen
-                        </x-button>
-                    @endunless
+        <div class="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
+            <div class="flex min-w-0 flex-col gap-3.5">
+                <div class="flex gap-1 rounded-[9px] border border-line bg-panel p-1">
+                    @foreach ($reiter as $schluessel => $beschriftung)
+                        <button type="button"
+                                wire:click="$set('tab', '{{ $schluessel }}')"
+                                @class([
+                                    'flex-1 rounded-[6px] px-2.5 py-1.5 text-[12px] font-medium transition',
+                                    'bg-accent text-accent-ink' => $tab === $schluessel,
+                                    'text-ink-muted hover:bg-raised hover:text-ink-base' => $tab !== $schluessel,
+                                ])>{{ $beschriftung }}</button>
+                    @endforeach
                 </div>
-            </x-slot:header>
 
+                @switch($tab)
+                    @case('bestandteile')
+                        <div class="rounded-[10px] border border-line bg-panel p-[17px]">
+                            <x-service-components-list :components="$service->serviceComponents" />
+                        </div>
+                        @break
+
+                    @case('notizen')
+                        <div class="rounded-[10px] border border-line bg-panel p-[17px]">
+                            <livewire:shared.notes-panel :notable="$service" :key="'notizen-leistung-'.$service->id" />
+                        </div>
+                        @break
+
+                    @case('dokumente')
+                        <div class="rounded-[10px] border border-line bg-panel p-[17px]">
+                            <livewire:shared.documents-panel :documentable="$service" :key="'dokumente-leistung-'.$service->id" />
+                        </div>
+                        @break
+
+                    @case('felder')
+                        <div class="rounded-[10px] border border-line bg-panel p-[17px]">
+                            <livewire:custom-fields.custom-fields-panel :record="$service"
+                                                                        :read-only="$service->isArchived()"
+                                                                        :key="'felder-leistung-'.$service->id" />
+                        </div>
+                        @break
+
+                    @case('verlauf')
+                        <div class="rounded-[10px] border border-line bg-panel">
+                            <div class="flex flex-col gap-[3px] border-b border-line px-[17px] py-[15px]">
+                                <h3 class="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">Verlauf</h3>
+                                <span class="text-[11.5px] text-ink-faint">Änderungen an dieser Vertragsposition</span>
+                            </div>
+
+                            <div class="p-[17px]">
+                                <livewire:shared.audit-panel :auditable="$service" :key="'historie-leistung-'.$service->id" />
+                            </div>
+                        </div>
+                        @break
+
+                    @default
+                        <div class="rounded-[10px] border border-line bg-panel">
+                            <div class="flex items-baseline justify-between gap-3.5 border-b border-line px-[17px] py-[15px]">
+                                <div class="flex flex-col gap-[3px]">
+                                    <h3 class="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">Preisverlauf</h3>
+                                    <span class="text-[11.5px] text-ink-faint">
+                                        Preise werden nie überschrieben · rückwirkende Änderungen sind ausgeschlossen
+                                    </span>
+                                </div>
+
+                                @unless ($service->isArchived())
+                                    <button type="button"
+                                            wire:click="openPriceChangeForm('sales')"
+                                            class="cursor-pointer text-[11.5px] text-accent hover:underline">
+                                        Preisänderung planen
+                                    </button>
+                                @endunless
+                            </div>
+
+                            <div class="p-[17px]">
             @if ($scheduledPriceChanges->isNotEmpty())
                 <div class="mb-4">
                     <p class="mb-2 text-sm font-medium text-ink-base">Geplante Änderungen</p>
@@ -334,26 +263,115 @@
                     </p>
                 @endforelse
             </div>
-        </x-card>
+                            </div>
+                        </div>
+                @endswitch
+            </div>
 
-        @unless ($service->isArchived())
-            <x-card class="mt-4">
-                <x-slot:header>
-                    <h2 class="text-sm font-semibold text-ink">Status wechseln</h2>
-                </x-slot:header>
+            {{-- Rechte Spalte: Vertragsdaten, Basisartikel, Aktionen. --}}
+            <div class="flex min-w-0 flex-col gap-3.5">
+                <div class="flex flex-col gap-[11px] rounded-[10px] border border-line bg-panel px-4 py-[15px]">
+                    <span class="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-ink-faint">Vertragsdaten</span>
 
-                <div class="flex flex-wrap gap-2">
-                    @foreach ($statusOptions as $option)
-                        <x-button sm
-                                  :color="$option['value'] === $service->status->value ? 'primary' : 'secondary'"
-                                  :outline="$option['value'] !== $service->status->value"
-                                  wire:click="changeStatus('{{ $option['value'] }}')">
-                            {{ $option['label'] }}
-                        </x-button>
+                    @foreach ($this->contractData() as $label => $wert)
+                        <div class="flex items-baseline justify-between gap-3" wire:key="vertrag-{{ $loop->index }}">
+                            <span class="text-[11.5px] text-ink-muted">{{ $label }}</span>
+                            <span class="truncate text-right text-[12px] text-ink-base">{{ blank($wert) ? '—' : $wert }}</span>
+                        </div>
                     @endforeach
                 </div>
-            </x-card>
-        @endunless
+
+                @if ($service->product)
+                    <div class="flex flex-col gap-2.5 rounded-[10px] border border-line bg-panel px-4 py-[15px]">
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-ink-faint">Basisartikel</span>
+                            <a href="{{ route('products.show', $service->product) }}"
+                               wire:navigate
+                               class="text-[11px] text-accent hover:underline">öffnen</a>
+                        </div>
+
+                        <div class="flex items-center gap-[11px]">
+                            <x-avatar-initials :initials="Str::upper(Str::substr($service->product->name, 0, 2))" size="sm" />
+
+                            <span class="flex min-w-0 flex-1 flex-col gap-0.5">
+                                <span class="truncate text-[12.5px] text-ink-base">{{ $service->product->name }}</span>
+                                <span class="truncate font-mono text-[10.5px] text-ink-faint">
+                                    {{ $service->product->internal_name }}
+                                </span>
+                            </span>
+                        </div>
+
+                        <div class="flex items-baseline justify-between gap-3 pt-0.5">
+                            <span class="text-[11.5px] text-ink-muted">Listenpreis</span>
+                            <span class="tabular text-[12px] text-ink-base">
+                                {{ $service->product->defaultSalesPrice()->format() }}
+                            </span>
+                        </div>
+
+                        @php $abweichung = $this->priceDeviation(); @endphp
+
+                        <div class="flex items-baseline justify-between gap-3">
+                            <span class="text-[11.5px] text-ink-muted">Abweichung</span>
+                            <span @class([
+                                'tabular text-[12px] font-medium',
+                                'text-ink-faint' => $abweichung === 0,
+                                'text-[color:var(--pill-ok-ink)]' => $abweichung > 0,
+                                'text-[color:var(--pill-bad-ink)]' => $abweichung < 0,
+                            ])>
+                                @if ($abweichung === 0)
+                                    keine
+                                @else
+                                    {{ $abweichung > 0 ? '+' : '' }}{{ \App\Support\Money::fromCents($abweichung)->format() }}
+                                @endif
+                            </span>
+                        </div>
+                    </div>
+                @endif
+
+                @unless ($service->isArchived())
+                    <div class="flex flex-col gap-2.5 rounded-[10px] border border-line bg-panel px-4 py-[15px]">
+                        <span class="text-[9.5px] font-semibold uppercase tracking-[0.11em] text-ink-faint">Aktionen</span>
+
+                        <x-button sm block wire:click="openPriceChangeForm('sales')">Preis anpassen</x-button>
+
+                        <div class="flex flex-col gap-1.5">
+                            <span class="text-[10px] font-semibold uppercase tracking-[0.09em] text-ink-faint">Status</span>
+
+                            <div class="flex flex-wrap gap-1.5">
+                                @foreach ($statusOptions as $option)
+                                    <button type="button"
+                                            wire:click="changeStatus('{{ $option['value'] }}')"
+                                            wire:key="status-{{ $option['value'] }}"
+                                            @class([
+                                                'rounded-[7px] border px-2.5 py-1.5 text-[11.5px] font-medium transition',
+                                                'border-accent bg-accent text-accent-ink' => $service->status->value === $option['value'],
+                                                'border-line bg-raised text-ink-muted hover:border-line-strong hover:text-ink-base'
+                                                    => $service->status->value !== $option['value'],
+                                            ])>{{ $option['label'] }}</button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <span class="text-[11px] leading-normal text-ink-faint">
+                            Archivierte Leistungen sind vollständig schreibgeschützt und bleiben historisch erhalten.
+                        </span>
+
+                        <x-button sm
+                                  block
+                                  color="red"
+                                  outline
+                                  x-on:click="$dialog.confirm({
+                                      title: 'Leistung archivieren?',
+                                      description: 'Archivierte Leistungen sind vollständig schreibgeschützt und bleiben historisch erhalten.',
+                                      accept: { text: 'Archivieren', method: 'archive' },
+                                      reject: { text: 'Abbrechen' },
+                                  })">
+                            Leistung archivieren
+                        </x-button>
+                    </div>
+                @endunless
+            </div>
+        </div>
 
         <x-modal wire="showDoNotBillForm" id="nicht-abrechnen-formular" title="Bewusst nicht abrechnen" persistent>
             <p class="mb-4 text-sm text-ink-muted">

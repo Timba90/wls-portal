@@ -154,7 +154,7 @@
                     @foreach ($this->masterData() as $label => $wert)
                         <div class="flex items-baseline justify-between gap-3" wire:key="stamm-{{ $loop->index }}">
                             <span class="text-[11.5px] text-ink-muted">{{ $label }}</span>
-                            <span class="truncate text-right text-[12px] text-ink-base">{{ $wert ?: '—' }}</span>
+                            <span class="truncate text-right text-[12px] text-ink-base">{{ blank($wert) ? '—' : $wert }}</span>
                         </div>
                     @endforeach
                 </div>

@@ -72,7 +72,7 @@ class ProductList extends Component
         return view('livewire.catalog.product-list', [
             'products' => $this->products(),
             'categories' => $this->categories(),
-            'tags' => $this->tags(),
+            'categoryTotal' => $this->categoryTotal(),
             'statusOptions' => CatalogStatus::options(),
         ]);
     }
@@ -83,22 +83,82 @@ class ProductList extends Component
     }
 
     /**
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * Spalten des Katalogs.
+     *
+     * Die ersten sechs bilden den Entwurf ab, die uebrigen bleiben zuschaltbar.
+     *
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     protected function columnDefinitions(): array
     {
         return [
-            'name' => ['label' => 'Name', 'fixed' => true],
-            'internal_name' => ['label' => 'Interne Bezeichnung'],
+            'article' => ['label' => 'Artikel', 'sortable' => false, 'fixed' => true],
             'category' => ['label' => 'Kategorie', 'sortable' => false],
-            'tags' => ['label' => 'Tags', 'sortable' => false],
-            'variants_count' => ['label' => 'Varianten', 'sortable' => false, 'width' => 120],
-            'default_purchase_price_cents' => ['label' => 'Einkauf', 'width' => 130],
-            'default_sales_price_cents' => ['label' => 'Verkauf', 'width' => 130],
-            'margin' => ['label' => 'Marge', 'sortable' => false, 'width' => 150],
-            'interval' => ['label' => 'Intervall', 'sortable' => false, 'width' => 150],
-            'status' => ['label' => 'Status', 'width' => 120],
+            'interval' => ['label' => 'Turnus', 'sortable' => false],
+            'default_sales_price_cents' => ['label' => 'Preis'],
+            'contracts' => ['label' => 'Verträge', 'sortable' => false],
+            'status' => ['label' => 'Status'],
+            'default_purchase_price_cents' => ['label' => 'Einkauf', 'default_visible' => false],
+            'margin' => ['label' => 'Marge', 'sortable' => false, 'default_visible' => false],
+            'variants_count' => ['label' => 'Varianten', 'sortable' => false, 'default_visible' => false],
         ];
+    }
+
+    /**
+     * Rasteranteil und Ausrichtung je Spalte, entsprechend dem Entwurf.
+     *
+     * @return array<string, array{breite: string, rechts?: bool}>
+     */
+    public function columnLayout(): array
+    {
+        return [
+            'article' => ['breite' => '2fr'],
+            'category' => ['breite' => '1fr'],
+            'interval' => ['breite' => '0.9fr'],
+            'default_sales_price_cents' => ['breite' => '0.9fr', 'rechts' => true],
+            'contracts' => ['breite' => '0.7fr', 'rechts' => true],
+            'status' => ['breite' => '0.9fr'],
+            'default_purchase_price_cents' => ['breite' => '0.9fr', 'rechts' => true],
+            'margin' => ['breite' => '0.9fr', 'rechts' => true],
+            'variants_count' => ['breite' => '0.6fr', 'rechts' => true],
+        ];
+    }
+
+    /**
+     * Zaehler der Statusfilter ueber der Tabelle.
+     *
+     * Beruecksichtigt Suche, Kategorie und Tag, damit die Zahlen zu dem passen,
+     * was ein Statuswechsel tatsaechlich zeigen wuerde.
+     *
+     * @return array<int, array{wert: string, label: string, anzahl: int}>
+     */
+    public function statusFilters(): array
+    {
+        $basis = fn (): Builder => Product::query()
+            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
+            ->when($this->categoryId !== '', fn (Builder $query) => $this->applyCategory($query))
+            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+                'tags',
+                fn (Builder $tags) => $tags->whereKey($this->tagId),
+            ));
+
+        return [
+            ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
+            ['wert' => CatalogStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $basis()->active()->count()],
+            ['wert' => CatalogStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $basis()->archived()->count()],
+        ];
+    }
+
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
+        $this->resetPage();
+    }
+
+    public function setCategory(string $categoryId): void
+    {
+        $this->categoryId = $categoryId;
+        $this->resetPage();
     }
 
     /**
@@ -108,28 +168,42 @@ class ProductList extends Component
     {
         return Product::query()
             ->with(['category', 'subcategory', 'tags'])
-            ->withCount('variants')
-            ->when($this->search !== '', function (Builder $query): void {
-                $term = '%'.$this->search.'%';
-
-                $query->where(function (Builder $query) use ($term): void {
-                    $query->where('name', 'like', $term)
-                        ->orWhere('internal_name', 'like', $term)
-                        ->orWhere('description', 'like', $term);
-                });
-            })
+            ->withCount(['variants', 'customerServices as contracts_count'])
+            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
             ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->categoryId !== '', fn (Builder $query) => $query->where(
-                fn (Builder $query) => $query
-                    ->where('category_id', $this->categoryId)
-                    ->orWhere('subcategory_id', $this->categoryId),
-            ))
+            ->when($this->categoryId !== '', fn (Builder $query) => $this->applyCategory($query))
             ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))
             ->orderBy($this->sortColumn(), $this->sort['direction'])
             ->paginate(25);
+    }
+
+    /**
+     * @param  Builder<Product>  $query
+     */
+    private function applySearch(Builder $query): void
+    {
+        $term = '%'.$this->search.'%';
+
+        $query->where(function (Builder $query) use ($term): void {
+            $query->where('name', 'like', $term)
+                ->orWhere('internal_name', 'like', $term)
+                ->orWhere('description', 'like', $term);
+        });
+    }
+
+    /**
+     * Kategorie und Unterkategorie gelten gleichermassen.
+     *
+     * @param  Builder<Product>  $query
+     */
+    private function applyCategory(Builder $query): void
+    {
+        $query->where(fn (Builder $query) => $query
+            ->where('category_id', $this->categoryId)
+            ->orWhere('subcategory_id', $this->categoryId));
     }
 
     private function sortColumn(): string
@@ -145,25 +219,65 @@ class ProductList extends Component
     }
 
     /**
-     * @return Collection<int, array{id: int, label: string}>
+     * Kategorien fuer die Leiste links, in der Reihenfolge des Baums.
+     *
+     * `anzahl` zaehlt genau das, was ein Klick auf die Kategorie zeigt: Artikel
+     * mit dieser Kategorie oder dieser Unterkategorie. Ein Aufsummieren der
+     * Unterkategorien waere falsch — ein Artikel in einer Unterkategorie traegt
+     * immer auch die Oberkategorie und wuerde dort sonst doppelt zaehlen.
+     *
+     * @return Collection<int, array{id: int, name: string, meta: string, anzahl: int, unterkategorie: bool}>
      */
     private function categories(): Collection
     {
-        return Category::query()
-            ->with('parent')
+        // Die Zaehler beruecksichtigen Suche, Status und Tag — alles ausser der
+        // Kategorie selbst. Sonst stuende in der Leiste eine Vier, waehrend der
+        // Klick darauf eine leere Tabelle zeigt.
+        $gefiltert = fn (Builder $query): Builder => $query
+            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
+            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
+            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+                'tags',
+                fn (Builder $tags) => $tags->whereKey($this->tagId),
+            ));
+
+        $kategorien = Category::query()
+            ->with(['parent', 'children'])
+            ->withCount([
+                'products' => $gefiltert,
+                'subcategoryProducts' => $gefiltert,
+            ])
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()
-            ->sortBy(fn (Category $category): string => $category->path())
-            ->map(fn (Category $category): array => ['id' => $category->id, 'label' => $category->path()])
+            ->sortBy(fn (Category $category): string => $category->path());
+
+        return $kategorien
+            ->map(fn (Category $category): array => [
+                'id' => $category->id,
+                'name' => $category->name,
+                'meta' => $category->parent
+                    ? $category->parent->name
+                    : trans_choice(':count Unterkategorie|:count Unterkategorien', $category->children->count()),
+                'anzahl' => $category->products_count + $category->subcategory_products_count,
+                'unterkategorie' => $category->parent !== null,
+            ])
             ->values();
     }
 
     /**
-     * @return Collection<int, Tag>
+     * Artikel insgesamt, auf derselben Grundlage wie die Kategoriezaehler —
+     * also ohne die Einschraenkung auf eine Kategorie.
      */
-    private function tags(): Collection
+    private function categoryTotal(): int
     {
-        return Tag::query()->orderBy('name')->get();
+        return Product::query()
+            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
+            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
+            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+                'tags',
+                fn (Builder $tags) => $tags->whereKey($this->tagId),
+            ))
+            ->count();
     }
 }

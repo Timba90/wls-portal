@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html lang="de"
-      x-data="tallstackui_darkTheme({ default: 'system' })"
-      x-bind:class="{ 'dark': darkTheme }"
-      class="h-full">
+{{--
+    Die Oberfläche ist dauerhaft dunkel. Die Klasse steht fest am <html> statt
+    über eine Alpine-Bindung: es gibt keine Auswahl mehr, also auch nichts, was
+    zur Laufzeit umschalten müsste. Ohne Bindung entfällt zugleich das kurze
+    Aufblitzen der hellen Fassung, bevor Alpine startet.
+--}}
+<html lang="de" class="dark h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -36,9 +39,6 @@
                 </a>
 
                 <div class="flex items-center gap-1">
-                    {{-- Theme-Umschalter (Desktop): Hell/Dunkel/System, persistiert via TallStackUI localStorage. --}}
-                    <x-theme-switch sm class="hidden md:block" />
-
                     <button type="button"
                             class="cursor-pointer text-ink-faint transition hover:text-ink md:hidden"
                             x-on:click="mobileNav = false"
@@ -63,7 +63,6 @@
 
                 <x-nav-group label="Katalog">
                     <x-nav-item route="categories.index" icon="folder" label="Kategorien" />
-                    <x-nav-item route="tags.index" icon="tag" label="Tags" />
                     <x-nav-item route="contact-roles.index" icon="identification" label="Rollen" />
                     <x-nav-item route="custom-fields.index" icon="rectangle-stack" label="Eigene Felder" />
                 </x-nav-group>
@@ -108,9 +107,6 @@
 
                 <x-brand compact />
 
-                <div class="ml-auto flex items-center gap-2">
-                    <x-theme-switch sm />
-                </div>
             </div>
 
             {{ $slot }}

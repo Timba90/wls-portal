@@ -7,7 +7,6 @@ use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
 use App\Models\Category;
 use App\Models\Product;
-use App\Models\Tag;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -157,7 +156,6 @@ class ProductForm extends Component
             'intervalUnitOptions' => BillingIntervalUnit::options(),
             'rootCategories' => $this->rootCategories(),
             'subcategories' => $this->subcategories(),
-            'tags' => $this->tags(),
         ])->title($this->isEditing() ? 'Artikel bearbeiten' : 'Artikel anlegen');
     }
 
@@ -241,13 +239,5 @@ class ProductForm extends Component
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-    }
-
-    /**
-     * @return Collection<int, Tag>
-     */
-    private function tags(): Collection
-    {
-        return Tag::query()->orderBy('name')->get();
     }
 }

@@ -190,3 +190,65 @@ it('meldet beim Archivieren eines Kunden mit aktiven Leistungen einen Fehler', f
 
     expect($customer->fresh()->isArchived())->toBeFalse();
 });
+
+it('fuehrt die Vertragsdaten in der Reihenfolge des Entwurfs', function (): void {
+    $customer = Customer::factory()->create();
+    $service = CustomerService::factory()->for($customer)->create();
+
+    $vertragsdaten = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
+        ->instance()
+        ->contractData();
+
+    expect(array_keys($vertragsdaten))->toBe([
+        'Status', 'Turnus', 'Leistungsbeginn', 'Abrechnungsbeginn', 'Erste Abrechnung',
+        'Einkaufspreis', 'Verkaufspreis', 'Marge', 'Umsatz / Jahr', 'Verantwortlich',
+    ]);
+});
+
+it('beziffert die Abweichung vom Listenpreis des Basisartikels', function (): void {
+    $artikel = Product::factory()->create(['default_sales_price_cents' => 790]);
+    $customer = Customer::factory()->create();
+    $service = CustomerService::factory()->for($customer)->for($artikel)->create(['sales_price_cents' => 672]);
+
+    $abweichung = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
+        ->instance()
+        ->priceDeviation();
+
+    // Günstiger als der Katalog: negativ.
+    expect($abweichung)->toBe(-118);
+});
+
+it('meldet ohne Basisartikel keine Abweichung', function (): void {
+    $customer = Customer::factory()->create();
+    $service = CustomerService::factory()->for($customer)->create(['product_id' => null]);
+
+    $abweichung = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
+        ->instance()
+        ->priceDeviation();
+
+    expect($abweichung)->toBe(0);
+});
+
+it('startet das Leistungsdetail auf dem Preisverlauf', function (): void {
+    $customer = Customer::factory()->create();
+    $service = CustomerService::factory()->for($customer)->create();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
+        ->assertSet('tab', 'preise')
+        ->assertSee('Preisverlauf');
+});
+
+it('verlinkt den Basisartikel im Leistungsdetail', function (): void {
+    $artikel = Product::factory()->create(['name' => 'Webhosting Standard', 'internal_name' => 'webhosting-standard']);
+    $customer = Customer::factory()->create();
+    $service = CustomerService::factory()->for($customer)->for($artikel)->create();
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
+        ->assertSee('Webhosting Standard')
+        ->assertSee('webhosting-standard');
+});

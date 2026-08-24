@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 /**
@@ -31,6 +32,9 @@ class CustomerServiceDetail extends Component
     public Customer $customer;
 
     public CustomerService $service;
+
+    #[Url(as: 'bereich', except: 'preise')]
+    public string $tab = 'preise';
 
     public bool $showDoNotBillForm = false;
 
@@ -163,6 +167,46 @@ class CustomerServiceDetail extends Component
         $this->service->refresh();
 
         $this->dispatch('leistung-reaktiviert');
+    }
+
+    /**
+     * Vertragsdaten fuer die rechte Spalte, in der Reihenfolge des Entwurfs.
+     *
+     * @return array<string, ?string>
+     */
+    public function contractData(): array
+    {
+        $intervall = $this->service->billingInterval();
+
+        return [
+            'Status' => $this->service->status->label(),
+            'Turnus' => $intervall->label(),
+            'Leistungsbeginn' => $this->service->service_start_date?->format('d.m.Y'),
+            'Abrechnungsbeginn' => $this->service->billing_start_date?->format('d.m.Y'),
+            'Erste Abrechnung' => $this->service->first_billing_date?->format('d.m.Y'),
+            'Einkaufspreis' => $this->service->purchasePrice()->format(),
+            'Verkaufspreis' => $this->service->salesPrice()->format(),
+            'Marge' => $this->service->margin()->format().($this->service->marginPercentage() !== null
+                ? ' ('.number_format($this->service->marginPercentage(), 1, ',', '.').' %)'
+                : ''),
+            'Umsatz / Jahr' => $this->service->yearlyRevenue()->format(),
+            'Verantwortlich' => $this->service->responsibleUser?->name,
+        ];
+    }
+
+    /**
+     * Abweichung des Verkaufspreises vom Listenpreis des Basisartikels, in Cent.
+     *
+     * Positiv bedeutet teurer als der Katalog, negativ guenstiger. Ohne
+     * Basisartikel gibt es nichts zu vergleichen.
+     */
+    public function priceDeviation(): int
+    {
+        if (! $this->service->product) {
+            return 0;
+        }
+
+        return $this->service->sales_price_cents - $this->service->product->default_sales_price_cents;
     }
 
     public function render(): View
