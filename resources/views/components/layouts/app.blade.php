@@ -35,12 +35,17 @@
                     <x-brand />
                 </a>
 
-                <button type="button"
-                        class="cursor-pointer text-ink-faint transition hover:text-ink md:hidden"
-                        x-on:click="mobileNav = false"
-                        aria-label="Navigation schließen">
-                    <x-icon name="x-mark" class="h-5 w-5" />
-                </button>
+                <div class="flex items-center gap-1">
+                    {{-- Theme-Umschalter (Desktop): Hell/Dunkel/System, persistiert via TallStackUI localStorage. --}}
+                    <x-theme-switch sm class="hidden md:block" />
+
+                    <button type="button"
+                            class="cursor-pointer text-ink-faint transition hover:text-ink md:hidden"
+                            x-on:click="mobileNav = false"
+                            aria-label="Navigation schließen">
+                        <x-icon name="x-mark" class="h-5 w-5" />
+                    </button>
+                </div>
             </div>
 
             <nav class="flex flex-1 flex-col gap-4 overflow-y-auto px-2 py-3 soft-scrollbar">
