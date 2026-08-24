@@ -87,3 +87,11 @@ it('stellt die Markenspalte auf die vom Farbschema unabhaengigen Tokens', functi
         ->assertSee('bg-brand-shell', escape: false)
         ->assertSee('text-brand-text', escape: false);
 });
+
+it('gibt den Eingabefeldern eine waagerechte Polsterung', function (): void {
+    // TallStackUI liefert fuer das Basisfeld nur `py-1.5`; ohne die
+    // Anpassung in AppServiceProvider klebt der Text am linken Rand.
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('px-3', escape: false);
+});
