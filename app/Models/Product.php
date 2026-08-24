@@ -65,6 +65,16 @@ class Product extends Model
     }
 
     /**
+     * Kundenleistungen, die auf diesem Katalogartikel beruhen.
+     *
+     * @return HasMany<CustomerService, $this>
+     */
+    public function customerServices(): HasMany
+    {
+        return $this->hasMany(CustomerService::class);
+    }
+
+    /**
      * @return MorphMany<ServiceComponent, $this>
      */
     public function serviceComponents(): MorphMany
@@ -122,6 +132,14 @@ class Product extends Model
     public function scopeActive(Builder $query): void
     {
         $query->where('status', CatalogStatus::Active);
+    }
+
+    /**
+     * @param  Builder<Product>  $query
+     */
+    public function scopeArchived(Builder $query): void
+    {
+        $query->where('status', CatalogStatus::Archived);
     }
 
     /**

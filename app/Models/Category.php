@@ -46,6 +46,19 @@ class Category extends Model
         return $this->hasMany(Product::class);
     }
 
+    /**
+     * Artikel, die diese Kategorie als Unterkategorie fuehren.
+     *
+     * Ein Artikel traegt Kategorie und Unterkategorie in zwei Spalten; fuer die
+     * Zaehlung in der Katalogleiste zaehlen beide.
+     *
+     * @return HasMany<Product, $this>
+     */
+    public function subcategoryProducts(): HasMany
+    {
+        return $this->hasMany(Product::class, 'subcategory_id');
+    }
+
     public function isSubcategory(): bool
     {
         return ! is_null($this->parent_id);

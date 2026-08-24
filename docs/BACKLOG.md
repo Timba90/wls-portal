@@ -49,6 +49,7 @@ vortäuschen würde, die keine Daten haben.
 | Reiter „Rechnungen" im Kundendetail | Rechnungserzeugung ist ausdrücklich Zukunft; die Spalten Nummer, Betrag und Fälligkeit hätten keine Quelle. |
 | Panel „Fristen" im Kundendetail samt Schaltflächen „Verlängern" und „Notiz anlegen" | Das Datenmodell kennt weder ein Laufzeitende noch eine Kündigungsfrist. Vertragslogik ist laut Anforderung rückfragepflichtig und wird nicht erfunden. |
 | Spalte „Laufzeit bis" in der Leistungstabelle des Kundendetails | Gleicher Grund; an ihrer Stelle steht „Beginn" aus `service_start_date`. |
+| Spalte „MwSt" im Artikelkatalog samt Netto/Brutto-Umschalter | Es gibt im ganzen Projekt kein Steuerfeld. Steuerdaten kommen laut Datenmodell später aus dem ERP; ein fest verdrahteter Satz von 19 % wäre geraten. |
 
 ## Abweichungen in der Umsetzung
 
@@ -57,6 +58,9 @@ vortäuschen würde, die keine Daten haben.
 | „Letzte Aktivität" in der Kundenliste | Zeigt `updated_at` des Kundendatensatzes als relative Angabe. Der Entwurf lässt offen, worauf sich die Aktivität bezieht; mit der Abrechnungskontrolle lässt sich das später schärfen. |
 | Feste sechs Spalten der Kundenliste | Umgesetzt als Voreinstellung. Die global konfigurierbaren Spalten aus Meilenstein 2 bleiben erhalten: sieben weitere Spalten sind zuschaltbar, das Raster rechnet die Anteile dann neu. |
 | Ansprechpartner-Spalte der Kundenliste | Zeigt bei Firmenkunden den als Hauptansprechpartner markierten Kontakt, bei Privatkunden die Person selbst. |
+| Spalte „Einheit" im Artikelkatalog | Das Modell kennt keine Mengeneinheit, sondern ein Abrechnungsintervall. Die Spalte heißt deshalb „Turnus" und zeigt monatlich, jährlich, einmalig. |
+| Feste sieben Spalten des Artikelkatalogs | Wie bei der Kundenliste als Voreinstellung umgesetzt; Einkaufspreis, Marge, Varianten und Tags bleiben zuschaltbar. |
+| Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
 ## Offene fachliche Rückfragen
 
