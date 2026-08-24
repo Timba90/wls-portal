@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html lang="de"
-      x-data="tallstackui_darkTheme({ default: 'system' })"
-      x-bind:class="{ 'dark': darkTheme }"
-      class="h-full">
+{{--
+    Die Oberfläche ist dauerhaft dunkel. Die Klasse steht fest am <html> statt
+    über eine Alpine-Bindung: es gibt keine Auswahl mehr, also auch nichts, was
+    zur Laufzeit umschalten müsste. Ohne Bindung entfällt zugleich das kurze
+    Aufblitzen der hellen Fassung, bevor Alpine startet.
+--}}
+<html lang="de" class="dark h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -103,9 +106,6 @@
 
                 <x-brand compact />
 
-                <div class="ml-auto flex items-center gap-2">
-                    <x-theme-switch sm />
-                </div>
             </div>
 
             {{ $slot }}

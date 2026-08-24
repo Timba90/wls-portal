@@ -7,10 +7,14 @@ use App\Actions\Catalog\RestoreProduct;
 use App\Actions\Catalog\SaveProductVariant;
 use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
+use App\Models\AuditLog;
+use App\Models\CustomerService;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -201,6 +205,82 @@ class ProductDetail extends Component
         $this->dispatch('artikel-reaktiviert');
     }
 
+    /**
+     * Kundenleistungen, die auf diesem Katalogartikel beruhen.
+     *
+     * @return Collection<int, CustomerService>
+     */
+    public function usage(): Collection
+    {
+        return CustomerService::query()
+            ->with('customer')
+            ->where('product_id', $this->product->id)
+            ->orderByRaw("field(status, 'active', 'planned', 'paused', 'ended', 'archived')")
+            ->orderBy('name')
+            ->get();
+    }
+
+    /**
+     * Preisentwicklung des Listenpreises.
+     *
+     * Ein Katalogartikel hat keinen eigenen Preisverlauf — den fuehrt das
+     * Projekt nur je Kundenleistung. Die Aenderungen am Listenpreis stehen
+     * aber in der Aenderungshistorie, und die ist unveraenderlich. Von dort
+     * kommen die Eintraege.
+     *
+     * @return Collection<int, array{zeitpunkt: ?Carbon, feld: string, alt: ?Money, neu: Money, benutzer: ?string}>
+     */
+    public function priceHistory(): Collection
+    {
+        $felder = [
+            'default_sales_price_cents' => 'Verkaufspreis',
+            'default_purchase_price_cents' => 'Einkaufspreis',
+        ];
+
+        return $this->product->auditLogs()
+            ->with('user')
+            ->get()
+            ->flatMap(function (AuditLog $eintrag) use ($felder): array {
+                $neu = $eintrag->new_values ?? [];
+                $alt = $eintrag->old_values ?? [];
+
+                return collect($felder)
+                    ->filter(fn (string $label, string $feld): bool => array_key_exists($feld, $neu))
+                    ->map(fn (string $label, string $feld): array => [
+                        'zeitpunkt' => $eintrag->created_at,
+                        'feld' => $label,
+                        'alt' => array_key_exists($feld, $alt) ? Money::fromCents((int) $alt[$feld]) : null,
+                        'neu' => Money::fromCents((int) $neu[$feld]),
+                        'benutzer' => $eintrag->user?->name,
+                    ])
+                    ->values()
+                    ->all();
+            })
+            ->values();
+    }
+
+    /**
+     * Stammdaten fuer die rechte Spalte, in der Reihenfolge des Entwurfs.
+     *
+     * @return array<string, ?string>
+     */
+    public function masterData(): array
+    {
+        $intervall = $this->product->defaultBillingInterval();
+
+        return [
+            'Interner Name' => $this->product->internal_name,
+            'Kategorie' => $this->product->category?->name,
+            'Unterkategorie' => $this->product->subcategory?->name,
+            'Turnus' => $intervall->label(),
+            'Einkaufspreis' => $this->product->defaultPurchasePrice()->format(),
+            'Verkaufspreis' => $this->product->defaultSalesPrice()->format(),
+            'Varianten' => (string) $this->product->variants->count(),
+            'Angelegt' => $this->product->created_at?->format('d.m.Y'),
+            'Zuletzt geändert' => $this->product->updated_at?->format('d.m.Y H:i'),
+        ];
+    }
+
     public function render(): View
     {
         $this->product->load(['category', 'subcategory', 'tags', 'serviceComponents', 'variants.serviceComponents']);
@@ -208,6 +288,8 @@ class ProductDetail extends Component
         return view('livewire.catalog.product-detail', [
             'statusOptions' => CatalogStatus::options(),
             'intervalUnitOptions' => BillingIntervalUnit::options(),
+            'verwendung' => $this->usage(),
+            'preisverlauf' => $this->priceHistory(),
         ])->title($this->product->name);
     }
 

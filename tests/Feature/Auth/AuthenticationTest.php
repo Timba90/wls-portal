@@ -63,11 +63,19 @@ it('laesst angemeldete Benutzer auf das Dashboard', function (): void {
         ->assertSee('Dashboard');
 });
 
-it('laesst die Anmeldeseite dem Farbschema folgen', function (): void {
+it('haelt die Formularseite der Anmeldung hell', function (): void {
+    // Ohne die Klasse `dark` am <html> loesen alle Tokens auf ihre hellen
+    // Werte auf — einschliesslich der TallStackUI-Formularfelder.
     $this->get(route('login'))
         ->assertOk()
-        ->assertSee('tallstackui_darkTheme', escape: false)
-        ->assertSee("'dark': darkTheme", escape: false);
+        ->assertSee('<html lang="de" class="h-full">', escape: false)
+        ->assertDontSee('tallstackui_darkTheme', escape: false);
+});
+
+it('bietet auf der Anmeldeseite keine Farbschema-Auswahl an', function (): void {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('theme-switch', escape: false);
 });
 
 it('zeigt das Raster hinter der Markenspalte', function (): void {
@@ -91,4 +99,12 @@ it('gibt den Eingabefeldern eine waagerechte Polsterung', function (): void {
     $this->get(route('login'))
         ->assertOk()
         ->assertSee('px-3', escape: false);
+});
+
+it('zeigt die angemeldete Oberflaeche dauerhaft dunkel', function (): void {
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('<html lang="de" class="dark h-full">', escape: false)
+        ->assertDontSee('theme-switch', escape: false);
 });

@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 {{--
-    Die Anmeldeseite folgt wieder dem Farbschema. Gegen die flache Fläche, die
-    im Dark Mode zuvor entstand, hilft nicht mehr die helle Formularseite,
-    sondern die Markenspalte selbst: sie bleibt auf ihren eigenen Tokens und
-    setzt sich durch Rand und Raster sichtbar vom Formular ab.
+    Die Anmeldeseite ist zweifarbig: links dunkel, rechts hell.
+
+    Am <html> steht bewusst *keine* Klasse `dark` — dadurch lösen alle Tokens
+    auf ihre hellen Werte auf, einschließlich der TallStackUI-Formularfelder,
+    und die Formularseite wird hell. Die Markenspalte links liegt auf den
+    eigenen `--brand-*`-Tokens und bleibt davon unberührt dunkel.
+
+    Die angemeldete Oberfläche ist dagegen durchgängig dunkel; das setzt das
+    App-Layout mit einer festen Klasse.
 --}}
-<html lang="de"
-      x-data="tallstackui_darkTheme({ default: 'system' })"
-      x-bind:class="{ 'dark': darkTheme }"
-      class="h-full">
+<html lang="de" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -67,7 +69,6 @@
 
             <div class="relative z-10 flex flex-wrap items-center gap-4 text-[10.5px] text-brand-dim">
                 <span>© {{ now()->year }} {{ config('portal.brand.name') }}</span>
-                <x-theme-switch xs class="ml-auto" />
             </div>
         </aside>
 
