@@ -545,6 +545,34 @@ werden dabei auch aus dem Object Storage entfernt.
 `MCP_ENABLED=false` schaltet den Endpunkt ab, ohne dass Tokens
 zurückgezogen werden müssen.
 
+### AE-16 — Die Anmeldeseite folgt bewusst nicht dem Farbschema
+Im Dark Mode standen auf der Anmeldeseite zwei fast gleich dunkle Hälften
+nebeneinander — `#101418` für die Formularseite gegen `#14181B` für die
+Markenspalte. Der Unterschied von drei Helligkeitsstufen war auf einem
+gewöhnlichen Bildschirm nicht wahrnehmbar; die Seite las sich als eine große
+flache dunkle Fläche ohne die Trennung, die das zweispaltige Layout tragen
+soll.
+
+Die Markenspalte ist deshalb jetzt eine **Markenfläche, keine Themafläche**:
+sie bleibt konstant dunkel, mit eigenen Tokens (`--brand-*`), die außerhalb von
+`:root`/`.dark` definiert sind. Die Formularseite bleibt konstant hell. Erreicht
+wird das dadurch, dass das `<html>` des Gast-Layouts die Dark-Mode-Bindung gar
+nicht erst trägt — ohne die Klasse `dark` lösen alle Tokens auf ihre hellen
+Werte auf, einschließlich der TallStackUI-Formularfelder. Ein zweiter
+Token-Satz für die Felder wäre sonst nötig gewesen.
+
+Das Farbschema der Anwendung bleibt davon unberührt: Systemerkennung und
+manuelle Umschaltung (§42) sitzen im Kopf der angemeldeten Oberfläche. Der
+Umschalter ist aus der Anmeldeseite entfernt, weil er dort nichts mehr bewirkt
+hätte und wie ein Defekt gewirkt hätte.
+
+Hinter der Markenspalte liegt ein dekoratives Raster (`resources/js/marken-raster.js`):
+ein Canvas, dessen 80-Pixel-Zellen unter dem Mauszeiger aufleuchten und danach
+verblassen. Die Animationsschleife läuft nur, solange überhaupt eine Zelle
+sichtbar ist, das Canvas nimmt keine Zeigerereignisse an, und bei
+`prefers-reduced-motion: reduce` bleibt der Effekt vollständig aus. Die
+Leuchtfarbe kommt aus `--brand-accent`, wird also nicht doppelt gepflegt.
+
 ---
 
 ## 5. Archivierung

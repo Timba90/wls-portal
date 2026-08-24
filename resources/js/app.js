@@ -1,3 +1,12 @@
+import { markenRaster } from './marken-raster';
+
+/**
+ * Raster der Anmeldeseite. Läuft nur dort, wo das Canvas auch vorhanden ist.
+ */
+document.addEventListener('DOMContentLoaded', () => {
+    markenRaster(document.getElementById('marken-raster'));
+});
+
 /**
  * Automatischer Logout nach Inaktivität.
  *

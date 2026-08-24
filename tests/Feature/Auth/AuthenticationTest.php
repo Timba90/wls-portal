@@ -62,3 +62,28 @@ it('laesst angemeldete Benutzer auf das Dashboard', function (): void {
         ->assertOk()
         ->assertSee('Dashboard');
 });
+
+it('haelt die Anmeldeseite unabhaengig vom Farbschema hell', function (): void {
+    $antwort = $this->get(route('login'));
+
+    // Ohne die Dark-Mode-Bindung am <html> loesen alle Tokens — auch die der
+    // Formularfelder — auf ihre hellen Werte auf.
+    $antwort->assertOk()
+        ->assertDontSee('tallstackui_darkTheme', escape: false)
+        ->assertDontSee("'dark': darkTheme", escape: false);
+});
+
+it('zeigt das Raster hinter der Markenspalte', function (): void {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('id="marken-raster"', escape: false)
+        ->assertSee('aria-hidden="true"', escape: false)
+        ->assertSee('pointer-events-none', escape: false);
+});
+
+it('stellt die Markenspalte auf die vom Farbschema unabhaengigen Tokens', function (): void {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertSee('bg-brand-shell', escape: false)
+        ->assertSee('text-brand-text', escape: false);
+});

@@ -183,6 +183,27 @@
     --pill-mute-ink: #98A3A9;
 }
 
+/*
+ * Markenflaeche der Anmeldeseite.
+ *
+ * Bewusst ausserhalb von :root/.dark und damit unabhaengig vom Farbschema: die
+ * linke Spalte ist eine Markenflaeche, keine Themaflaeche. Folgte sie dem
+ * Schema, staenden im Dark Mode zwei fast gleich dunkle Haelften nebeneinander
+ * (#101418 gegen #14181B) — eine flache Flaeche ohne Trennung. So bleibt der
+ * Kontrast zur hellen Formularseite in beiden Schemata erhalten, und das
+ * Raster hat den dunklen Grund, den sein Mintschimmer braucht.
+ */
+:root {
+    --brand-shell: #14181B;
+    --brand-panel: #1B2126;
+    --brand-line: #2C3338;
+    --brand-text: #F0F3F3;
+    --brand-muted: #A6B0B6;
+    --brand-dim: #7E8990;
+    --brand-accent: #4ADE9B;
+    --brand-accent-ink: #0B211B;
+}
+
 @theme inline {
     --color-canvas: var(--surface-canvas);
     --color-shell: var(--surface-shell);
@@ -201,6 +222,15 @@
     --color-accent: var(--accent);
     --color-accent-hover: var(--accent-hover);
     --color-accent-ink: var(--accent-ink);
+
+    --color-brand-shell: var(--brand-shell);
+    --color-brand-panel: var(--brand-panel);
+    --color-brand-line: var(--brand-line);
+    --color-brand-text: var(--brand-text);
+    --color-brand-muted: var(--brand-muted);
+    --color-brand-dim: var(--brand-dim);
+    --color-brand-accent: var(--brand-accent);
+    --color-brand-accent-ink: var(--brand-accent-ink);
 }
 
 [x-cloak] {
