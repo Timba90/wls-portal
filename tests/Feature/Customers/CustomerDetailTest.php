@@ -92,3 +92,22 @@ it('bildet die Initialen aus Vor- und Nachnamen', function (): void {
     expect($privat->initials())->toBe('HR')
         ->and($firma->initials())->toBe('NO');
 });
+
+it('stellt den Hauptansprechpartner an den Anfang', function (): void {
+    $kunde = Customer::factory()->create();
+
+    app(CreateContact::class)(
+        attributes: ['first_name' => 'Beate', 'last_name' => 'Zweitrang'],
+        assignments: [['customer_id' => $kunde->id, 'priority' => 1]],
+    );
+
+    app(CreateContact::class)(
+        attributes: ['first_name' => 'Anton', 'last_name' => 'Hauptkontakt'],
+        assignments: [['customer_id' => $kunde->id, 'is_primary_contact' => true, 'priority' => 9]],
+    );
+
+    // Trotz schlechterer Prioritaet steht der Hauptansprechpartner oben —
+    // dieselbe Reihenfolge wie im Ansprechpartner-Bereich.
+    expect($kunde->fresh()->contactAssignments->first()->contact->last_name)
+        ->toBe('Hauptkontakt');
+});

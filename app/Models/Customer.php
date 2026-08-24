@@ -80,11 +80,18 @@ class Customer extends Model
     /**
      * Zuordnungen von Ansprechpartnern — nur bei Firmenkunden.
      *
+     * Hauptansprechpartner zuerst, dann nach Prioritaet. Dieselbe Reihenfolge
+     * wie im Ansprechpartner-Bereich, damit derselbe Kontakt ueberall oben
+     * steht — und damit `primaryAssignment()` verlaesslich den wichtigsten
+     * trifft, wenn mehrere als Hauptansprechpartner markiert sind.
+     *
      * @return HasMany<ContactAssignment, $this>
      */
     public function contactAssignments(): HasMany
     {
-        return $this->hasMany(ContactAssignment::class)->orderBy('priority');
+        return $this->hasMany(ContactAssignment::class)
+            ->orderByDesc('is_primary_contact')
+            ->orderBy('priority');
     }
 
     /**

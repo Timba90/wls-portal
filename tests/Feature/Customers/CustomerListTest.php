@@ -227,3 +227,25 @@ it('zeigt den Hauptansprechpartner in der Liste', function (): void {
         ->assertSee('Thomas Lindner')
         ->assertSee('thomas.lindner@muller.example.de');
 });
+
+it('laedt den Hauptansprechpartner je Kunde, nicht nur einmal insgesamt', function (): void {
+    $namen = ['Lindner', 'Neumann', 'Achenbach'];
+
+    foreach ($namen as $index => $nachname) {
+        $kunde = Customer::factory()->create([
+            'company_name' => "Firma {$nachname} GmbH",
+            'short_label' => $nachname,
+        ]);
+
+        app(CreateContact::class)(
+            attributes: ['first_name' => 'Test', 'last_name' => $nachname],
+            assignments: [['customer_id' => $kunde->id, 'is_primary_contact' => true]],
+        );
+    }
+
+    $komponente = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
+
+    foreach ($namen as $nachname) {
+        $komponente->assertSee("Test {$nachname}");
+    }
+});

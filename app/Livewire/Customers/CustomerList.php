@@ -89,7 +89,7 @@ class CustomerList extends Component
      * die uebrigen bleiben zuschaltbar, damit die global konfigurierbaren
      * Spalten aus Meilenstein 2 erhalten bleiben.
      *
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     protected function columnDefinitions(): array
     {

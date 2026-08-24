@@ -30,7 +30,7 @@ trait WithConfigurableTable
     /**
      * Alle verfuegbaren Spalten in ihrer Standardreihenfolge.
      *
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     abstract protected function columnDefinitions(): array;
 
