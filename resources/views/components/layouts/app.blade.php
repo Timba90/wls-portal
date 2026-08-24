@@ -53,6 +53,8 @@
                     <x-nav-item route="dashboard" icon="squares-2x2" label="Übersicht" />
                     <x-nav-item route="customers.index" match="customers.*" icon="building-office-2"
                                 label="Kunden" :count="$navCounts['customers']" />
+                    <x-nav-item route="projects.index" match="projects.*" icon="rectangle-group"
+                                label="Projekte" />
                     <x-nav-item route="services.index" icon="clipboard-document-list"
                                 label="Leistungen" :count="$navCounts['services']" />
                     <x-nav-item route="contacts.index" match="contacts.*" icon="user-group"
@@ -64,6 +66,7 @@
                 <x-nav-group label="Katalog">
                     <x-nav-item route="categories.index" icon="folder" label="Kategorien" />
                     <x-nav-item route="contact-roles.index" icon="identification" label="Rollen" />
+                    <x-nav-item route="project-types.index" icon="rectangle-group" label="Projekttypen" />
                     <x-nav-item route="custom-fields.index" icon="rectangle-stack" label="Eigene Felder" />
                 </x-nav-group>
 

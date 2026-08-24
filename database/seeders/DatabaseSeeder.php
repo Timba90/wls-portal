@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             ContactSeeder::class,
             CatalogSeeder::class,
             CustomerServiceSeeder::class,
+            ProjectSeeder::class,
             CustomFieldSeeder::class,
             NoteSeeder::class,
             ArchiveSeeder::class,

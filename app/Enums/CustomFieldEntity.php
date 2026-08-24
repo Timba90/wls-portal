@@ -6,6 +6,7 @@ use App\Enums\Concerns\HasOptions;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
+use App\Models\Project;
 
 /**
  * Bereich, fuer den benutzerdefinierte Felder definiert werden.
@@ -20,6 +21,7 @@ enum CustomFieldEntity: string
     case Customer = 'customer';
     case Product = 'product';
     case CustomerService = 'customer_service';
+    case Project = 'project';
 
     public function label(): string
     {
@@ -27,6 +29,7 @@ enum CustomFieldEntity: string
             self::Customer => 'Kunden',
             self::Product => 'Artikel / Leistungen',
             self::CustomerService => 'Kundenleistungen',
+            self::Project => 'Projekte',
         };
     }
 
@@ -39,6 +42,7 @@ enum CustomFieldEntity: string
             self::Customer => Customer::class,
             self::Product => Product::class,
             self::CustomerService => CustomerService::class,
+            self::Project => Project::class,
         };
     }
 
@@ -48,6 +52,7 @@ enum CustomFieldEntity: string
             Customer::class => self::Customer,
             Product::class => self::Product,
             CustomerService::class => self::CustomerService,
+            Project::class => self::Project,
             default => throw new \InvalidArgumentException(
                 'Für '.$model::class.' sind keine benutzerdefinierten Felder vorgesehen.'
             ),

@@ -345,6 +345,29 @@ sind unveränderlich und über die Anwendung nicht löschbar.
 Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 `table_key` unique, `columns` (json mit Sichtbarkeit, Reihenfolge, Breite).
 
+#### `project_types`
+Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `color`,
+`sort_order`, `is_active`.
+
+#### `projects`
+`project_number` unique und unveränderlich, `name`, `description`,
+`customer_id` (restrict), `project_type_id` / `responsible_user_id` (null on
+delete), `status`, `start_date`, `deadline`, `risk_note`, `archived_at`.
+
+#### `project_milestones`
+`project_id` (cascade), `name`, `note`, `status`, `due_date`, `sort_order`.
+Grundlage des Fortschritts.
+
+#### `project_positions`
+`project_id` (cascade), optional `product_id` / `customer_service_id` (null on
+delete), `name`, `kind` (einmalig / wiederkehrend), `quantity`,
+`unit_price_cents`, `status`, `sort_order`. Name und Preis liegen immer auf der
+Position selbst.
+
+#### `project_members`
+`project_id`, `user_id`, `role` (Freitext), `sort_order`; eindeutig je
+Projekt und Person.
+
 ---
 
 ## Umsetzungsstand
@@ -359,6 +382,7 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 6 | Preisverlauf, geplante Preisänderungen | umgesetzt |
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | umgesetzt |
 | 8 | Dashboard, globale Suche, Leistungsübersicht, Archiv | umgesetzt |
+| — | Projekte: Liste, Detail, Meilensteine, Positionen, Team, Projekttypen | umgesetzt (§61 vorgezogen, siehe AE-17) |
 
 Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
 Jahresumsatz, Kosten, Marge) werden aus den Kundenleistungen berechnet. In die
@@ -578,6 +602,46 @@ verblassen. Die Animationsschleife läuft nur, solange überhaupt eine Zelle
 sichtbar ist, das Canvas nimmt keine Zeigerereignisse an, und bei
 `prefers-reduced-motion: reduce` bleibt der Effekt vollständig aus. Die
 Leuchtfarbe kommt aus `--brand-accent`, wird also nicht doppelt gepflegt.
+
+### AE-17 — Projekte hängen am Kunden, nicht an der Kundenleistung
+§61 führt Projekte als Zukunft. Der Auftraggeber hat die Umsetzung
+ausdrücklich freigegeben, solange die Anwendung noch nicht produktiv läuft, und
+die offene Strukturfrage zur Entscheidung überlassen.
+
+Ein Projekt hängt an genau einem **Kunden** (`projects.customer_id`,
+`restrictOnDelete`), nicht an einer Kundenleistung. Der Grund ist fachlich: ein
+Relaunch berührt Hosting, Wartung und Domain gleichzeitig — hinge das Projekt
+an einer Leistung, müsste man willkürlich eine davon zur Trägerin erklären. Der
+Bezug zu einzelnen Leistungen entsteht stattdessen über die Positionen: eine
+Projektposition verweist wahlweise auf einen Katalogartikel, auf eine bestehende
+Kundenleistung oder auf nichts. Sie speichert Name und Einzelpreis **immer
+selbst**, damit sie lesbar und rechenbar bleibt, wenn der Artikel später
+verschwindet — dieselbe Begründung wie beim Katalog-Snapshot (AE-6).
+
+Weitere Festlegungen:
+
+- **Projektnummer** `PR-00001` über dieselbe Sequenztabelle wie die
+  Kundennummer (AE-1) und nach der Erstellung unveränderlich, erzwungen im
+  Model.
+- **Projekttypen** sind eine Tabelle, kein Enum. §61 nennt Webseite, Shop,
+  Web-App, API und internes Tool ausdrücklich als Beispiele; die Liste ist frei
+  definierbar und über `/projekte/typen` pflegbar.
+- **Fortschritt** wird aus den Meilensteinen gerechnet, nicht von Hand gepflegt.
+  Ohne Meilensteine ist er `null` und die Oberfläche schreibt „Keine
+  Meilensteine" statt einer Prozentzahl ohne Grundlage. Entfallene Meilensteine
+  zählen als erledigt — sonst bliebe der Fortschritt dauerhaft unter hundert
+  Prozent.
+- **Projektvolumen** ist die Summe der *einmaligen* Positionen. Wiederkehrende
+  Positionen stehen daneben als Monatsbetrag, weil sie sich nicht auf denselben
+  Zeitraum beziehen (dieselbe Trennung wie in AE-14).
+- **Status Archiviert** ist im Formular nicht wählbar; er entsteht
+  ausschließlich über das Archivieren, damit der Schreibschutz nicht versehentlich
+  gesetzt oder aufgehoben wird. Die Reaktivierung bringt das Projekt als
+  *pausiert* zurück, nicht als laufend — ob es weiterläuft, entscheidet die
+  Person, die es reaktiviert.
+- **Meilensteine und Positionen** werden hart gelöscht. Sie sind Planung, kein
+  Beleg; der Vorgang steht in der Änderungshistorie. Das Projekt selbst folgt
+  weiter der Regel „kein endgültiges Löschen" und wird archiviert.
 
 ---
 

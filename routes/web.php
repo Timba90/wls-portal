@@ -18,6 +18,10 @@ use App\Livewire\CustomFields\CustomFieldDefinitionList;
 use App\Livewire\Dashboard\DashboardPage;
 use App\Livewire\Profile\ProfilePage;
 use App\Livewire\Profile\SecurityPage;
+use App\Livewire\Projects\ProjectDetail;
+use App\Livewire\Projects\ProjectForm;
+use App\Livewire\Projects\ProjectList;
+use App\Livewire\Projects\ProjectTypeList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Services\ServiceOverview;
@@ -50,6 +54,12 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/artikel/tags', TagList::class)->name('tags.index');
     Route::livewire('/artikel/{product}', ProductDetail::class)->name('products.show');
     Route::livewire('/artikel/{product}/bearbeiten', ProductForm::class)->name('products.edit');
+
+    Route::livewire('/projekte', ProjectList::class)->name('projects.index');
+    Route::livewire('/projekte/neu', ProjectForm::class)->name('projects.create');
+    Route::livewire('/projekte/typen', ProjectTypeList::class)->name('project-types.index');
+    Route::livewire('/projekte/{project}', ProjectDetail::class)->name('projects.show');
+    Route::livewire('/projekte/{project}/bearbeiten', ProjectForm::class)->name('projects.edit');
 
     Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
     Route::livewire('/archiv', ArchivePage::class)->name('archive.index');
