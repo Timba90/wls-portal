@@ -51,6 +51,8 @@ vortäuschen würde, die keine Daten haben.
 | Spalte „Laufzeit bis" in der Leistungstabelle des Kundendetails | Gleicher Grund; an ihrer Stelle steht „Beginn" aus `service_start_date`. |
 | Schaltfläche „Duplizieren" im Artikeldetail | Das Projekt kennt kein Duplizieren von Katalogartikeln. Eine Schaltfläche ohne Funktion wäre schlechter als keine; die Funktion selbst wirft Fragen auf (welcher interne Name, welche Varianten und Tags werden mitkopiert), die zum Katalog gehören und nicht nebenbei entschieden werden sollten. |
 | Spalte „Laufzeit bis" in der Verwendungstabelle des Artikeldetails | Wie im Kundendetail: kein Laufzeitende im Modell. An ihrer Stelle steht „Beginn". |
+| Panel „Abrechnung" im Leistungsdetail samt Rechnungstabelle und „Jetzt abrechnen" | Rechnungserzeugung ist ausdrücklich Zukunft. An seiner Stelle steht der Preisverlauf — die Vertragsposition führt ihn ohnehin vollständig. |
+| Panel „Frist" im Leistungsdetail samt „Verlängern" und „Leistung kündigen" | Kein Laufzeitende und keine Kündigungsfrist im Modell. An seiner Stelle steht ein Aktionen-Panel mit den Vorgängen, die es wirklich gibt: Preis anpassen, Status wechseln, archivieren. |
 | Spalte „MwSt" im Artikelkatalog samt Netto/Brutto-Umschalter | Es gibt im ganzen Projekt kein Steuerfeld. Steuerdaten kommen laut Datenmodell später aus dem ERP; ein fest verdrahteter Satz von 19 % wäre geraten. |
 
 ## Abweichungen in der Umsetzung
@@ -62,6 +64,8 @@ vortäuschen würde, die keine Daten haben.
 | Ansprechpartner-Spalte der Kundenliste | Zeigt bei Firmenkunden den als Hauptansprechpartner markierten Kontakt, bei Privatkunden die Person selbst. |
 | „Preisentwicklung" im Artikeldetail | Ein Katalogartikel führt keinen eigenen Preisverlauf — den gibt es nur je Kundenleistung. Die Einträge kommen deshalb aus der Änderungshistorie, die Änderungen an Einkaufs- und Verkaufspreis ohnehin unveränderlich festhält. Der erste Eintrag ist die Anlage des Artikels. |
 | „Varianten" im Artikeldetail | Im Entwurf nicht vorgesehen, aber die einzige Stelle, an der Varianten verwaltet werden. Als dritte Karte unter den beiden Panels des Entwurfs eingefügt. |
+| Linke Spalte des Leistungsdetails | Der Entwurf zeigt zwei gestapelte Panels. Umgesetzt als Reiterleiste wie im Kundendetail, weil dort zusätzlich Bestandteile, Notizen, Dokumente und eigene Felder unterkommen müssen — gestapelt wäre die Seite mehrere Bildschirme lang geworden. |
+| „Abweichung" im Leistungsdetail | Vergleicht den Verkaufspreis der Leistung mit dem heutigen Listenpreis des Basisartikels. Positiv heißt teurer als der Katalog. |
 | Spalte „Einheit" im Artikelkatalog | Das Modell kennt keine Mengeneinheit, sondern ein Abrechnungsintervall. Die Spalte heißt deshalb „Turnus" und zeigt monatlich, jährlich, einmalig. |
 | Feste sieben Spalten des Artikelkatalogs | Wie bei der Kundenliste als Voreinstellung umgesetzt; Einkaufspreis, Marge, Varianten und Tags bleiben zuschaltbar. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
