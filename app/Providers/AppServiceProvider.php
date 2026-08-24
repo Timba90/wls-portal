@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use TallStackUi\Facades\TallStackUi;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -28,8 +29,40 @@ class AppServiceProvider extends ServiceProvider
         $this->configureModels();
         $this->configureUrls();
         $this->configureNavigationCounts();
+        $this->configureFormFieldPaddings();
 
         Date::use(Carbon::class);
+    }
+
+    /**
+     * Waagerechte Polsterung der Eingabefelder.
+     *
+     * TallStackUI gibt fuer das Basisfeld nur `py-1.5` aus und ueberlaesst die
+     * waagerechte Polsterung dem Forms-Plugin. Das laedt das Paket allerdings
+     * selbst mit `strategy: 'class'`, und seine Felder tragen kein
+     * `form-input` — der Text klebte deshalb am linken Rand.
+     *
+     * Die Korrektur sitzt hier statt an 150 einzelnen Aufrufen. Felder mit
+     * Symbol, Prefix oder Suffix bringen eigene Polsterungsklassen mit
+     * (`pl-3 pr-0`, `pl-8`, `pr-8`); die stehen in Tailwinds Sortierung hinter
+     * `px-3` und behalten deshalb die Oberhand.
+     */
+    private function configureFormFieldPaddings(): void
+    {
+        foreach (['input', 'textarea', 'number', 'tag', 'currency', 'password', 'date', 'time'] as $component) {
+            TallStackUi::customize()
+                ->form($component)
+                ->block('input.base')
+                ->append('px-3');
+        }
+
+        // Die Auswahlfelder haengen an einem eigenen Einstiegspunkt.
+        foreach (['styled', 'native'] as $component) {
+            TallStackUi::customize()
+                ->select($component)
+                ->block('input.base')
+                ->append('px-3');
+        }
     }
 
     /**

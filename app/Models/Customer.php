@@ -22,6 +22,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 /**
  * Firmen- oder Privatkunde.
@@ -79,11 +80,18 @@ class Customer extends Model
     /**
      * Zuordnungen von Ansprechpartnern — nur bei Firmenkunden.
      *
+     * Hauptansprechpartner zuerst, dann nach Prioritaet. Dieselbe Reihenfolge
+     * wie im Ansprechpartner-Bereich, damit derselbe Kontakt ueberall oben
+     * steht — und damit `primaryAssignment()` verlaesslich den wichtigsten
+     * trifft, wenn mehrere als Hauptansprechpartner markiert sind.
+     *
      * @return HasMany<ContactAssignment, $this>
      */
     public function contactAssignments(): HasMany
     {
-        return $this->hasMany(ContactAssignment::class)->orderBy('priority');
+        return $this->hasMany(ContactAssignment::class)
+            ->orderByDesc('is_primary_contact')
+            ->orderBy('priority');
     }
 
     /**
@@ -148,11 +156,65 @@ class Customer extends Model
     }
 
     /**
+     * Initialen fuer die Avatar-Kachel.
+     *
+     * Bei Firmenkunden die ersten beiden Buchstaben des Firmennamens, bei
+     * Privatkunden je der erste Buchstabe von Vor- und Nachname.
+     */
+    public function initials(): string
+    {
+        if ($this->isPrivate() && filled($this->first_name) && filled($this->last_name)) {
+            return Str::upper(Str::substr($this->first_name, 0, 1).Str::substr($this->last_name, 0, 1));
+        }
+
+        return Str::upper(Str::substr(trim($this->displayName()), 0, 2));
+    }
+
+    /**
      * Primaere E-Mail-Adresse, sofern hinterlegt.
      */
     public function primaryEmailAddress(): ?EmailAddress
     {
         return $this->emailAddresses->firstWhere('is_primary', true);
+    }
+
+    /**
+     * Name des Hauptansprechpartners fuer die Listendarstellung.
+     *
+     * Bei Firmenkunden der als Hauptansprechpartner markierte Kontakt, bei
+     * Privatkunden die Person selbst. `null`, wenn keiner hinterlegt ist.
+     */
+    public function primaryContactName(): ?string
+    {
+        if ($this->isPrivate()) {
+            return $this->displayName();
+        }
+
+        return $this->primaryAssignment()?->contact->fullName();
+    }
+
+    /**
+     * E-Mail-Adresse, unter der dieser Kunde regulaer erreichbar ist.
+     */
+    public function primaryContactEmail(): ?string
+    {
+        if ($this->isPrivate()) {
+            return $this->primaryEmailAddress()?->email;
+        }
+
+        return $this->primaryAssignment()?->effectiveEmail()?->email;
+    }
+
+    /**
+     * Erste als Hauptansprechpartner markierte Zuordnung.
+     *
+     * Mehrere Hauptansprechpartner sind zulaessig — fuer die Liste zaehlt der
+     * mit der hoechsten Prioritaet, also der erste der bereits sortierten
+     * Beziehung.
+     */
+    private function primaryAssignment(): ?ContactAssignment
+    {
+        return $this->contactAssignments->firstWhere('is_primary_contact', true);
     }
 
     public function primaryPhoneNumber(): ?PhoneNumber

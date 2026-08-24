@@ -137,8 +137,10 @@ it('zeigt Leistungen und Kennzahlen im Kundenbereich', function (): void {
     Livewire::actingAs(User::factory()->create())
         ->test(CustomerServices::class, ['customer' => $customer])
         ->assertSee('Managed Hosting Müller')
-        ->assertSee('59,00 €')
-        ->assertSee('41,00 €');
+        ->assertSee('59,00 €');
+
+    // Die Marge steht seit der Umstellung auf den Entwurf in der Kopfkarte des
+    // Kundendetails, nicht mehr über der Leistungstabelle.
 });
 
 it('blendet archivierte Leistungen im Kundenbereich standardmaessig aus', function (): void {
@@ -163,9 +165,15 @@ it('zeigt die Kennzahlen in der Kundenliste', function (): void {
         'sales_price_cents' => 5900,
     ]);
 
-    Livewire::actingAs(User::factory()->create())
-        ->test(CustomerList::class)
-        ->assertSee('59,00 €')
+    $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
+
+    // Voreingestellt zeigt die Liste den Monatsumsatz.
+    $component->assertSee('59,00 €');
+
+    // Jahresumsatz, Kosten und Marge sind zuschaltbar.
+    $component->call('toggleColumn', 'yearly_revenue')
+        ->call('toggleColumn', 'monthly_costs')
+        ->call('toggleColumn', 'margin')
         ->assertSee('708,00 €')
         ->assertSee('18,00 €')
         ->assertSee('41,00 €');

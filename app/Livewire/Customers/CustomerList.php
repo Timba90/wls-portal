@@ -83,24 +83,83 @@ class CustomerList extends Component
     }
 
     /**
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * Spalten der Liste.
+     *
+     * Die ersten sechs bilden den Entwurf ab und sind voreingestellt sichtbar;
+     * die uebrigen bleiben zuschaltbar, damit die global konfigurierbaren
+     * Spalten aus Meilenstein 2 erhalten bleiben.
+     *
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     protected function columnDefinitions(): array
     {
         return [
-            'customer_number' => ['label' => 'Kundennummer', 'width' => 150, 'fixed' => true],
-            'name' => ['label' => 'Name', 'sortable' => false, 'fixed' => true],
-            'short_label' => ['label' => 'Kurzbezeichnung'],
-            'internal_code' => ['label' => 'Kürzel', 'width' => 110],
-            'type' => ['label' => 'Typ', 'width' => 140],
-            'status' => ['label' => 'Status', 'width' => 120],
-            'responsible' => ['label' => 'Verantwortlich', 'sortable' => false],
-            'active_services_count' => ['label' => 'Leistungen', 'width' => 120],
-            'monthly_revenue' => ['label' => 'Monatsumsatz', 'sortable' => false, 'width' => 150],
-            'yearly_revenue' => ['label' => 'Jahresumsatz', 'sortable' => false, 'width' => 150],
-            'monthly_costs' => ['label' => 'Kosten', 'sortable' => false, 'width' => 140],
-            'margin' => ['label' => 'Marge', 'sortable' => false, 'width' => 140],
+            'customer' => ['label' => 'Kunde', 'sortable' => false, 'fixed' => true],
+            'contact' => ['label' => 'Ansprechpartner', 'sortable' => false],
+            'active_services_count' => ['label' => 'Leistungen'],
+            'monthly_revenue' => ['label' => 'Umsatz / Mon', 'sortable' => false],
+            'activity' => ['label' => 'Letzte Aktivität', 'sortable' => false],
+            'status' => ['label' => 'Status'],
+            'customer_number' => ['label' => 'Kundennummer', 'default_visible' => false],
+            'internal_code' => ['label' => 'Kürzel', 'default_visible' => false],
+            'type' => ['label' => 'Typ', 'default_visible' => false],
+            'responsible' => ['label' => 'Verantwortlich', 'sortable' => false, 'default_visible' => false],
+            'yearly_revenue' => ['label' => 'Umsatz / Jahr', 'sortable' => false, 'default_visible' => false],
+            'monthly_costs' => ['label' => 'Kosten / Mon', 'sortable' => false, 'default_visible' => false],
+            'margin' => ['label' => 'Marge / Mon', 'sortable' => false, 'default_visible' => false],
         ];
+    }
+
+    /**
+     * Rasteranteil und Ausrichtung je Spalte, entsprechend dem Entwurf.
+     *
+     * @return array<string, array{breite: string, rechts?: bool}>
+     */
+    public function columnLayout(): array
+    {
+        return [
+            'customer' => ['breite' => '1.8fr'],
+            'contact' => ['breite' => '1.3fr'],
+            'active_services_count' => ['breite' => '0.7fr', 'rechts' => true],
+            'monthly_revenue' => ['breite' => '1.1fr', 'rechts' => true],
+            'activity' => ['breite' => '0.9fr'],
+            'status' => ['breite' => '0.9fr'],
+            'customer_number' => ['breite' => '0.9fr'],
+            'internal_code' => ['breite' => '0.7fr'],
+            'type' => ['breite' => '0.8fr'],
+            'responsible' => ['breite' => '1fr'],
+            'yearly_revenue' => ['breite' => '0.9fr', 'rechts' => true],
+            'monthly_costs' => ['breite' => '0.9fr', 'rechts' => true],
+            'margin' => ['breite' => '0.9fr', 'rechts' => true],
+        ];
+    }
+
+    /**
+     * Zaehler der Statusfilter fuer die Schnellauswahl ueber der Tabelle.
+     *
+     * Beruecksichtigt Suche, Typ und Verantwortlichen, damit die Zahlen zu dem
+     * passen, was der Statuswechsel tatsaechlich zeigen wuerde.
+     *
+     * @return array<int, array{wert: string, label: string, anzahl: int}>
+     */
+    public function statusFilters(): array
+    {
+        $basis = fn (): Builder => Customer::query()
+            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
+            ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
+            ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
+
+        return [
+            ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
+            ['wert' => CustomerStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $basis()->active()->count()],
+            ['wert' => CustomerStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $basis()->archived()->count()],
+        ];
+    }
+
+    public function setStatus(string $status): void
+    {
+        $this->status = $status;
+        $this->resetPage();
     }
 
     /**
@@ -109,7 +168,13 @@ class CustomerList extends Component
     private function customers(): LengthAwarePaginator
     {
         return Customer::query()
-            ->with(['responsibleUser', 'services' => fn ($query) => $query->billable()])
+            ->with([
+                'responsibleUser',
+                'services' => fn ($query) => $query->billable(),
+                'emailAddresses',
+                'contactAssignments' => fn ($query) => $query->where('is_primary_contact', true)->limit(1),
+                'contactAssignments.contact.emailAddresses',
+            ])
             ->withCount(['services as active_services_count' => fn (Builder $query) => $query->active()])
             ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
             ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
@@ -143,7 +208,7 @@ class CustomerList extends Component
     {
         $sortable = [
             'customer_number', 'short_label', 'internal_code', 'type', 'status',
-            'active_services_count', 'created_at',
+            'active_services_count', 'created_at', 'updated_at',
         ];
 
         return in_array($this->sort['column'], $sortable, strict: true)

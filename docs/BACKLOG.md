@@ -46,7 +46,17 @@ vortäuschen würde, die keine Daten haben.
 | Geschäftsjahr-Umschalter in der Seitenleiste | Es gibt keine Geschäftsjahre im Datenmodell. |
 | „Mit Passkey anmelden" auf dem Login | Passkeys wurden bewusst deaktiviert; vorgesehen sind Passwort und TOTP. |
 | Balken- und Anteilsdiagramme auf der Übersicht | Charts sind ausdrücklich als spätere Erweiterung vermerkt. |
-| Kennzahl „Letzte Aktivität" in der Kundenliste | Wird erst mit der Abrechnungskontrolle sinnvoll befüllbar. |
+| Reiter „Rechnungen" im Kundendetail | Rechnungserzeugung ist ausdrücklich Zukunft; die Spalten Nummer, Betrag und Fälligkeit hätten keine Quelle. |
+| Panel „Fristen" im Kundendetail samt Schaltflächen „Verlängern" und „Notiz anlegen" | Das Datenmodell kennt weder ein Laufzeitende noch eine Kündigungsfrist. Vertragslogik ist laut Anforderung rückfragepflichtig und wird nicht erfunden. |
+| Spalte „Laufzeit bis" in der Leistungstabelle des Kundendetails | Gleicher Grund; an ihrer Stelle steht „Beginn" aus `service_start_date`. |
+
+## Abweichungen in der Umsetzung
+
+| Element im Entwurf | Umsetzung |
+|---|---|
+| „Letzte Aktivität" in der Kundenliste | Zeigt `updated_at` des Kundendatensatzes als relative Angabe. Der Entwurf lässt offen, worauf sich die Aktivität bezieht; mit der Abrechnungskontrolle lässt sich das später schärfen. |
+| Feste sechs Spalten der Kundenliste | Umgesetzt als Voreinstellung. Die global konfigurierbaren Spalten aus Meilenstein 2 bleiben erhalten: sieben weitere Spalten sind zuschaltbar, das Raster rechnet die Anteile dann neu. |
+| Ansprechpartner-Spalte der Kundenliste | Zeigt bei Firmenkunden den als Hauptansprechpartner markierten Kontakt, bei Privatkunden die Person selbst. |
 
 ## Offene fachliche Rückfragen
 

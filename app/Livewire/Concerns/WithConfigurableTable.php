@@ -30,7 +30,7 @@ trait WithConfigurableTable
     /**
      * Alle verfuegbaren Spalten in ihrer Standardreihenfolge.
      *
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     abstract protected function columnDefinitions(): array;
 
@@ -189,7 +189,9 @@ trait WithConfigurableTable
             ->reject(fn (array $definition, string $key): bool => $storedByKey->has($key))
             ->map(fn (array $definition, string $key): array => [
                 'key' => $key,
-                'visible' => true,
+                // Spalten duerfen sich abgeschaltet einreihen; ohne Angabe
+                // bleibt es beim bisherigen Verhalten.
+                'visible' => $definition['default_visible'] ?? true,
                 'width' => $definition['width'] ?? null,
             ])
             ->values();

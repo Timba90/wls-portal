@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Contacts\CreateContact;
 use App\Enums\CustomerType;
 use App\Livewire\Customers\CustomerList;
 use App\Models\Customer;
@@ -107,48 +108,144 @@ it('setzt alle Filter zurueck', function (): void {
         ->assertSet('type', '');
 });
 
-it('zeigt standardmaessig alle Spalten', function (): void {
+it('zeigt standardmaessig die sechs Spalten des Entwurfs', function (): void {
+    $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
+
+    $sichtbar = array_column($component->instance()->tableHeaders(), 'index');
+
+    expect($sichtbar)->toBe([
+        'customer', 'contact', 'active_services_count', 'monthly_revenue', 'activity', 'status',
+    ]);
+});
+
+it('haelt die uebrigen Spalten zuschaltbar bereit', function (): void {
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
     expect(array_column($component->get('tableColumns'), 'key'))
-        ->toContain('customer_number', 'name', 'short_label', 'internal_code', 'status', 'active_services_count', 'margin');
+        ->toContain('customer_number', 'internal_code', 'type', 'responsible', 'yearly_revenue', 'monthly_costs', 'margin')
+        ->and($component->instance()->isColumnVisible('margin'))->toBeFalse();
 });
 
 it('blendet eine Spalte global aus und merkt sich das', function (): void {
     Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('toggleColumn', 'internal_code');
+        ->call('toggleColumn', 'contact');
 
     expect(TableConfiguration::query()->where('table_key', 'customers')->exists())->toBeTrue();
 
     // Auch fuer einen anderen Benutzer, denn die Konfiguration gilt global.
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
-    expect($component->instance()->isColumnVisible('internal_code'))->toBeFalse();
+    expect($component->instance()->isColumnVisible('contact'))->toBeFalse();
 });
 
 it('blendet feste Spalten nicht aus', function (): void {
     $component = Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('toggleColumn', 'customer_number');
+        ->call('toggleColumn', 'customer');
 
-    expect($component->instance()->isColumnVisible('customer_number'))->toBeTrue();
+    expect($component->instance()->isColumnVisible('customer'))->toBeTrue();
 });
 
 it('aendert die Spaltenreihenfolge', function (): void {
     $component = Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('moveColumn', 'short_label', -1);
+        ->call('moveColumn', 'active_services_count', -1);
 
-    expect(array_column($component->get('tableColumns'), 'key')[1])->toBe('short_label');
+    expect(array_column($component->get('tableColumns'), 'key')[1])->toBe('active_services_count');
 });
 
 it('setzt die Tabellenkonfiguration auf den Standard zurueck', function (): void {
     $component = Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('toggleColumn', 'internal_code')
+        ->call('toggleColumn', 'contact')
         ->call('resetTableConfiguration');
 
     expect(TableConfiguration::query()->where('table_key', 'customers')->exists())->toBeFalse()
-        ->and($component->instance()->isColumnVisible('internal_code'))->toBeTrue();
+        ->and($component->instance()->isColumnVisible('contact'))->toBeTrue();
+});
+
+it('zaehlt die Kunden je Statusfilter', function (): void {
+    Customer::factory()->count(3)->create();
+    Customer::factory()->archived()->count(2)->create();
+
+    $filter = collect(
+        Livewire::actingAs(User::factory()->create())
+            ->test(CustomerList::class)
+            ->instance()
+            ->statusFilters()
+    )->keyBy('wert');
+
+    expect($filter['']['anzahl'])->toBe(5)
+        ->and($filter['active']['anzahl'])->toBe(3)
+        ->and($filter['archived']['anzahl'])->toBe(2);
+});
+
+it('beruecksichtigt Suche und Typ in den Zaehlern', function (): void {
+    Customer::factory()->create(['company_name' => 'Nordlicht Werbeagentur GmbH', 'short_label' => 'Nordlicht']);
+    Customer::factory()->count(4)->create();
+
+    $filter = collect(
+        Livewire::actingAs(User::factory()->create())
+            ->test(CustomerList::class)
+            ->set('search', 'Nordlicht')
+            ->instance()
+            ->statusFilters()
+    )->keyBy('wert');
+
+    expect($filter['']['anzahl'])->toBe(1);
+});
+
+it('wechselt den Status ueber die Schnellauswahl', function (): void {
+    Customer::factory()->archived()->create(['company_name' => 'Altbestand GmbH', 'short_label' => 'Alt']);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(CustomerList::class)
+        ->call('setStatus', 'archived')
+        ->assertSet('status', 'archived')
+        ->assertSee('Altbestand GmbH');
+});
+
+it('nennt den Leerzustand des Entwurfs', function (): void {
+    Livewire::actingAs(User::factory()->create())
+        ->test(CustomerList::class)
+        ->set('search', 'gibtesnicht')
+        ->assertSee('Kein Kunde passt zu Filter und Suche.');
+});
+
+it('zeigt den Hauptansprechpartner in der Liste', function (): void {
+    $kunde = Customer::factory()->create(['company_name' => 'Müller Elektrotechnik GmbH', 'short_label' => 'Müller']);
+
+    app(CreateContact::class)(
+        attributes: ['first_name' => 'Thomas', 'last_name' => 'Lindner'],
+        assignments: [['customer_id' => $kunde->id, 'is_primary_contact' => true]],
+        emails: [['email' => 'thomas.lindner@muller.example.de', 'type' => 'business', 'is_primary' => true]],
+    );
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(CustomerList::class)
+        ->assertSee('Thomas Lindner')
+        ->assertSee('thomas.lindner@muller.example.de');
+});
+
+it('laedt den Hauptansprechpartner je Kunde, nicht nur einmal insgesamt', function (): void {
+    $namen = ['Lindner', 'Neumann', 'Achenbach'];
+
+    foreach ($namen as $index => $nachname) {
+        $kunde = Customer::factory()->create([
+            'company_name' => "Firma {$nachname} GmbH",
+            'short_label' => $nachname,
+        ]);
+
+        app(CreateContact::class)(
+            attributes: ['first_name' => 'Test', 'last_name' => $nachname],
+            assignments: [['customer_id' => $kunde->id, 'is_primary_contact' => true]],
+        );
+    }
+
+    $komponente = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
+
+    foreach ($namen as $nachname) {
+        $komponente->assertSee("Test {$nachname}");
+    }
 });
