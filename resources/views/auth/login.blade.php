@@ -1,12 +1,18 @@
 <x-layouts.guest title="Anmelden">
-    {{-- Systemstatus-Panel der Markenspalte. --}}
+    {{--
+        Systemstatus-Panel der Markenspalte. Nutzt die Marken-Tokens, weil die
+        Spalte konstant dunkel bleibt und nicht dem Farbschema folgt.
+    --}}
     <x-slot:aside>
-        <div class="rounded-[10px] border border-line bg-panel p-4">
+        <div class="max-w-[430px] rounded-[10px] border border-brand-line bg-brand-panel/90 p-4">
             <div class="mb-3 flex items-center justify-between gap-3">
-                <span class="text-[10px] font-semibold uppercase tracking-[0.11em] text-ink-faint">
+                <span class="text-[10px] font-semibold uppercase tracking-[0.11em] text-brand-dim">
                     Systemstatus
                 </span>
-                <x-status-pill kind="ok" label="Alle Dienste in Betrieb" />
+                <span class="inline-flex items-center gap-[7px] text-[11px] font-medium text-brand-accent">
+                    <span class="h-[5px] w-[5px] rounded-full bg-brand-accent"></span>
+                    Alle Dienste in Betrieb
+                </span>
             </div>
 
             <dl class="flex flex-col gap-2">
@@ -16,8 +22,8 @@
                     'Letzte Sicherung' => 'heute',
                 ] as $label => $value)
                     <div class="flex items-center justify-between gap-4 text-[11.5px]">
-                        <dt class="text-ink-muted">{{ $label }}</dt>
-                        <dd class="font-mono text-ink-base">{{ $value }}</dd>
+                        <dt class="text-brand-muted">{{ $label }}</dt>
+                        <dd class="font-mono tabular-nums text-brand-text">{{ $value }}</dd>
                     </div>
                 @endforeach
             </dl>
