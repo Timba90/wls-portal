@@ -95,14 +95,26 @@
                                         <span class="truncate text-[12.5px] font-medium text-ink-base">
                                             {{ $leistung->customer->displayName() }}
                                         </span>
-                                        <span class="truncate text-[10.5px] text-ink-faint">{{ $leistung->name }}</span>
+                                        @php
+                                            $istVeraltet = in_array($leistung->id, $veraltet, true);
+                                        @endphp
+
+                                        <span class="truncate text-[10.5px] text-ink-faint">
+                                            {{ $leistung->name }}@if ($istVeraltet) <span class="text-[color:var(--pill-warn-ink)]">· Katalog geändert</span>@endif
+                                        </span>
                                     </span>
 
                                     <span class="truncate text-[12px] text-ink-muted">{{ $leistung->billingInterval()->label() }}</span>
 
-                                    <span class="truncate tabular text-right text-[12.5px] text-ink">
-                                        {{ $leistung->salesPrice()->format() }}
-                                    </span>
+                                    {{--
+                                        Wer gerade den Listenpreis geändert hat, will hier sehen,
+                                        wen es betrifft — nicht erst beim Öffnen jeder einzelnen Leistung.
+                                    --}}
+                                    <span @class([
+                                        'truncate tabular text-right text-[12.5px]',
+                                        'font-medium text-[color:var(--pill-warn-ink)]' => $istVeraltet,
+                                        'text-ink' => ! $istVeraltet,
+                                    ])>{{ $leistung->salesPrice()->format() }}</span>
 
                                     <span class="truncate text-[12px] text-ink-muted">
                                         {{ $leistung->service_start_date?->format('d.m.Y') ?? '—' }}

@@ -34,6 +34,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
     'product_id',
     'product_variant_id',
     'catalog_snapshot',
+    'catalog_reviewed_snapshot',
+    'catalog_reviewed_at',
     'name',
     'billing_label',
     'description',
@@ -235,6 +237,28 @@ class CustomerService extends Model
     }
 
     /**
+     * Der Katalogstand, gegen den verglichen wird.
+     *
+     * Solange niemand eine Katalogaenderung entschieden hat, ist das der
+     * Verknuepfungszeitpunkt (AE-6). Danach der zuletzt gesehene Stand — sonst
+     * gaelte dieselbe Aenderung fuer immer als offen.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function catalogBaseline(): ?array
+    {
+        return $this->catalog_reviewed_snapshot ?? $this->catalog_snapshot;
+    }
+
+    /**
+     * Beruht diese Leistung ueberhaupt auf einem Katalogartikel?
+     */
+    public function hasCatalogOrigin(): bool
+    {
+        return $this->product_id !== null && filled($this->catalog_snapshot);
+    }
+
+    /**
      * Abweichungen gegenueber den Katalogwerten zum Verknuepfungszeitpunkt.
      *
      * @return array<string, array{katalog: string, kunde: string}>
@@ -338,6 +362,8 @@ class CustomerService extends Model
             'billing_interval_unit' => BillingIntervalUnit::class,
             'do_not_bill_reason' => DoNotBillReason::class,
             'catalog_snapshot' => 'array',
+            'catalog_reviewed_snapshot' => 'array',
+            'catalog_reviewed_at' => 'datetime',
             'purchase_price_cents' => 'integer',
             'sales_price_cents' => 'integer',
             'billing_interval_count' => 'integer',

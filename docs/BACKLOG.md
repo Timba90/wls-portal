@@ -23,7 +23,7 @@ berücksichtigt sie, Phase 1 implementiert sie nicht.
 
 | Thema                                     | Entscheidung                                                                                                                        |
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Katalogänderungen übernehmen              | `catalog_snapshot` und `product_id` bleiben erhalten, damit Unterschiede später angezeigt und einzeln übernommen werden können. Die Vergleichs- und Übernahme-Oberfläche fehlt noch. |
+| Katalogänderungen übernehmen              | Umgesetzt: Reiter „Katalog" im Leistungsdetail, Hinweis mit Filter in der Leistungsübersicht, Markierung im Artikeldetail, zwei MCP-Werkzeuge. Siehe AE-18. |
 | Bedingte Sichtbarkeit von Custom Fields   | Die Spalte `visibility_condition` existiert, es gibt bewusst keinen Rule Builder.                                                    |
 | Mehrere interne Verantwortliche           | Kunde und Kundenleistung tragen je einen `responsible_user_id`. Ein Wechsel auf n:m ist eine reine Pivot-Migration.                  |
 | Office-Dokumentvorschau                   | Bilder und PDF werden angezeigt. Office-Formate werden zum Download angeboten — kein eigener Renderer.                               |

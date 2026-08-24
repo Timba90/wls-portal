@@ -54,7 +54,7 @@ it('beschreibt jedes Werkzeug mit Name, Titel und Beschreibung', function (): vo
 
     $werkzeuge = $antwort->json('result.tools');
 
-    expect($werkzeuge)->toHaveCount(36);
+    expect($werkzeuge)->toHaveCount(38);
 
     foreach ($werkzeuge as $werkzeug) {
         expect($werkzeug['name'])->toMatch('/^[a-z]+(-[a-z]+)*$/')

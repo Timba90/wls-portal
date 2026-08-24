@@ -6,6 +6,8 @@ use App\Actions\Pricing\CancelPriceChange;
 use App\Actions\Pricing\SchedulePriceChange;
 use App\Actions\Services\ArchiveCustomerService;
 use App\Actions\Services\ChangeCustomerServiceStatus;
+use App\Actions\Services\CompareWithCatalog;
+use App\Actions\Services\ResolveCatalogChange;
 use App\Actions\Services\RestoreCustomerService;
 use App\Actions\Services\SetDoNotBill;
 use App\Enums\CustomerServiceStatus;
@@ -149,6 +151,56 @@ class CustomerServiceDetail extends Component
         $this->service->refresh();
 
         $this->dispatch('nicht-abrechnen-entfernt');
+    }
+
+    /**
+     * Uebernimmt eine Katalogaenderung fuer ein Feld oder behaelt den
+     * bisherigen Kundenwert. Beides schliesst den Vorgang ab.
+     */
+    public function resolveCatalogChange(string $field, bool $adopt, ResolveCatalogChange $resolveCatalogChange): void
+    {
+        $resolveCatalogChange($this->service, $field, $adopt, auth()->user());
+
+        $this->service->refresh();
+
+        $this->dispatch($adopt ? 'katalog-uebernommen' : 'katalog-behalten');
+    }
+
+    /**
+     * Uebernimmt alle offenen Katalogaenderungen auf einmal.
+     */
+    public function adoptAllCatalogChanges(ResolveCatalogChange $resolveCatalogChange): void
+    {
+        $felder = collect($this->catalogComparison())
+            ->filter(fn (array $zeile): bool => $zeile['uebernehmbar'])
+            ->pluck('feld')
+            ->all();
+
+        $resolveCatalogChange->all($this->service, $felder, adopt: true, user: auth()->user());
+
+        $this->service->refresh();
+
+        $this->dispatch('katalog-uebernommen');
+    }
+
+    /**
+     * Gegenueberstellung von gesehenem Stand, heutigem Katalog und Leistung.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function catalogComparison(): array
+    {
+        return app(CompareWithCatalog::class)($this->service);
+    }
+
+    /**
+     * Zahl der offenen Katalogaenderungen fuer die Marke am Reiter.
+     */
+    public function openCatalogChangeCount(): int
+    {
+        return collect($this->catalogComparison())
+            ->filter(fn (array $zeile): bool => $zeile['katalogGeaendert'])
+            ->count();
     }
 
     public function archive(ArchiveCustomerService $archiveCustomerService): void

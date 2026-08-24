@@ -383,6 +383,7 @@ Projekt und Person.
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | umgesetzt |
 | 8 | Dashboard, globale Suche, Leistungsübersicht, Archiv | umgesetzt |
 | — | Projekte: Liste, Detail, Meilensteine, Positionen, Team, Projekttypen | umgesetzt (§61 vorgezogen, siehe AE-17) |
+| — | Katalogabgleich: Änderungen am Katalog sichtbar machen und einzeln übernehmen | umgesetzt (siehe AE-18) |
 
 Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
 Jahresumsatz, Kosten, Marge) werden aus den Kundenleistungen berechnet. In die
@@ -645,6 +646,54 @@ Weitere Festlegungen:
 - **Meilensteine und Positionen** werden hart gelöscht. Sie sind Planung, kein
   Beleg; der Vorgang steht in der Änderungshistorie. Das Projekt selbst folgt
   weiter der Regel „kein endgültiges Löschen" und wird archiviert.
+
+---
+
+### AE-18 — Katalogänderungen werden gezeigt, nie automatisch übernommen
+
+AE-6 hält fest, dass bestehende Kundenleistungen bei Katalogänderungen niemals
+automatisch verändert werden. Bis hierher war das nur die halbe Wahrheit: die
+Änderung wurde auch niemandem *gezeigt*. Wer den Listenpreis erhöhte, erfuhr
+nirgends, welche laufenden Verträge noch auf dem alten Stand liefen.
+
+Der Vergleich braucht **drei** Stände, nicht zwei:
+
+| Stand | Bedeutung |
+|---|---|
+| zuletzt gesehen | Der Katalog, über den zuletzt jemand entschieden hat; anfangs der Verknüpfungszeitpunkt. |
+| Katalog heute | Was derzeit im Katalog steht. |
+| Diese Leistung | Was beim Kunden tatsächlich gilt. |
+
+Erst daraus lassen sich zwei Aussagen trennen, die sonst verschwimmen: „der
+Katalog hat sich seither geändert" (Stand ≠ Katalog heute) und „der Kunde weicht
+bewusst ab" (Stand ≠ Leistung). Eine Oberfläche, die nur zwei Werte zeigt, kann
+den bewusst gewährten Rabatt nicht von der verpassten Preiserhöhung
+unterscheiden.
+
+**Der zweite Snapshot.** `catalog_snapshot` bleibt unangetastet der Stand des
+Verknüpfungszeitpunkts. Der Abgleich schreibt stattdessen
+`catalog_reviewed_snapshot` fort. Ohne diese Trennung hätte entweder AE-6 seine
+Bedeutung verloren oder dieselbe Katalogänderung hätte für immer als offen
+gegolten — auch nachdem jemand entschieden hat, den Kundenwert bewusst zu
+behalten.
+
+**Zwei gleichwertige Ausgänge.** *Übernehmen* setzt den heutigen Katalogwert auf
+die Leistung, *Behalten* lässt sie unverändert. Beides schließt den Vorgang ab
+und wird je Feld entschieden — wer über den Verkaufspreis entscheidet, hat nicht
+über den Einkauf entschieden.
+
+**Übernommene Preise laufen über den Preisverlauf.** Eine übernommene
+Katalogerhöhung ist eine Preisänderung wie jede andere und gehört in die
+Historie (AE-5), nicht in einen stillen Schreibzugriff.
+
+**Die Bezeichnung wird nicht übernommen.** Die Leistung trägt bewusst einen
+eigenen Namen („Hosting Webseite Müller" statt „Managed Hosting"). Dass der
+Artikel jetzt anders heißt, wird gezeigt; ändern muss man den Namen selbst.
+
+**Gefiltert wird in PHP.** Der gesehene Stand liegt als JSON vor, die heutigen
+Werte hängen an Artikel und Variante — in SQL ist das nicht zu vergleichen. Die
+Kandidatenmenge ist eng (nur nicht archivierte Leistungen mit Katalogherkunft)
+und wird mit ihren Beziehungen in einem Zug geladen. Dieselbe Linie wie AE-13a.
 
 ---
 

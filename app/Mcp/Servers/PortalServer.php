@@ -33,6 +33,8 @@ use App\Mcp\Tools\Projects\ProjektLoeschen;
 use App\Mcp\Tools\Projects\ProjektSpeichern;
 use App\Mcp\Tools\Projects\ProjektTeamSetzen;
 use App\Mcp\Tools\Projects\ProjekttypenVerwalten;
+use App\Mcp\Tools\Services\KatalogabgleichLesen;
+use App\Mcp\Tools\Services\KatalogaenderungEntscheiden;
 use App\Mcp\Tools\Services\LeistungenSuchen;
 use App\Mcp\Tools\Services\LeistungLesen;
 use App\Mcp\Tools\Services\LeistungLoeschen;
@@ -104,6 +106,8 @@ class PortalServer extends Server
         LeistungSpeichern::class,
         LeistungStatusSetzen::class,
         LeistungLoeschen::class,
+        KatalogabgleichLesen::class,
+        KatalogaenderungEntscheiden::class,
 
         ProjekteSuchen::class,
         ProjektLesen::class,

@@ -62,6 +62,38 @@
                 </div>
             </div>
 
+            {{--
+                Der Hinweis steht bewusst über der Tabelle und nicht in einer Spalte:
+                eine geänderte Katalogposition betrifft mehrere Kunden gleichzeitig und
+                geht in einer Zeile unter.
+            --}}
+            @if ($catalogChangeCount > 0)
+                <button type="button"
+                        wire:click="toggleCatalogFilter"
+                        @class([
+                            'mb-3 flex w-full items-center gap-3 rounded-[10px] border px-4 py-3 text-left transition',
+                            'border-[color:var(--pill-warn-ink)] bg-[color:var(--pill-warn-bg)]' => $catalogFilter === 'changed',
+                            'border-line bg-panel hover:border-line-strong' => $catalogFilter !== 'changed',
+                        ])>
+                    <x-icon name="arrow-path" class="h-4 w-4 flex-none text-[color:var(--pill-warn-ink)]" />
+
+                    <span class="flex min-w-0 flex-col">
+                        <span class="text-[12.5px] font-medium text-ink">
+                            {{ trans_choice(
+                                'Bei :count Leistung hat sich der Katalog seither geändert|Bei :count Leistungen hat sich der Katalog seither geändert',
+                                $catalogChangeCount,
+                                ['count' => $catalogChangeCount],
+                            ) }}
+                        </span>
+                        <span class="text-[11.5px] text-ink-muted">
+                            {{ $catalogFilter === 'changed'
+                                ? 'Auswahl zeigt nur diese Leistungen — erneut klicken, um alle zu sehen.'
+                                : 'Bestehende Leistungen werden nie automatisch angepasst. Klicken, um sie zu sehen.' }}
+                        </span>
+                    </span>
+                </button>
+            @endif
+
             <p class="mb-3 text-sm text-ink-muted">
                 {{ number_format($services->total(), 0, ',', '.') }} Leistungen in der Auswahl,
                 davon {{ number_format($summe['count'], 0, ',', '.') }} in den Kennzahlen berücksichtigt.

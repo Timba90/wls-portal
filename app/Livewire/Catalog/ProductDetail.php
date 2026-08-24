@@ -5,6 +5,7 @@ namespace App\Livewire\Catalog;
 use App\Actions\Catalog\ArchiveProduct;
 use App\Actions\Catalog\RestoreProduct;
 use App\Actions\Catalog\SaveProductVariant;
+use App\Actions\Services\FindServicesWithCatalogChanges;
 use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
 use App\Models\AuditLog;
@@ -289,6 +290,7 @@ class ProductDetail extends Component
             'statusOptions' => CatalogStatus::options(),
             'intervalUnitOptions' => BillingIntervalUnit::options(),
             'verwendung' => $this->usage(),
+            'veraltet' => app(FindServicesWithCatalogChanges::class)->forProduct($this->product->getKey()),
             'preisverlauf' => $this->priceHistory(),
         ])->title($this->product->name);
     }
