@@ -54,7 +54,7 @@ it('beschreibt jedes Werkzeug mit Name, Titel und Beschreibung', function (): vo
 
     $werkzeuge = $antwort->json('result.tools');
 
-    expect($werkzeuge)->toHaveCount(27);
+    expect($werkzeuge)->toHaveCount(36);
 
     foreach ($werkzeuge as $werkzeug) {
         expect($werkzeug['name'])->toMatch('/^[a-z]+(-[a-z]+)*$/')
@@ -87,6 +87,7 @@ it('kennzeichnet die löschenden Werkzeuge als destruktiv', function (): void {
         'leistung-loeschen',
         'preis-direkt-setzen',
         'produkt-loeschen',
+        'projekt-loeschen',
     ]);
 });
 

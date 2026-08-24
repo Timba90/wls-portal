@@ -24,6 +24,15 @@ use App\Mcp\Tools\Pricing\PreisaenderungAbbrechen;
 use App\Mcp\Tools\Pricing\PreisaenderungPlanen;
 use App\Mcp\Tools\Pricing\PreisDirektSetzen;
 use App\Mcp\Tools\Pricing\PreisverlaufLesen;
+use App\Mcp\Tools\Projects\MeilensteinSpeichern;
+use App\Mcp\Tools\Projects\PositionSpeichern;
+use App\Mcp\Tools\Projects\ProjektArchivieren;
+use App\Mcp\Tools\Projects\ProjekteSuchen;
+use App\Mcp\Tools\Projects\ProjektLesen;
+use App\Mcp\Tools\Projects\ProjektLoeschen;
+use App\Mcp\Tools\Projects\ProjektSpeichern;
+use App\Mcp\Tools\Projects\ProjektTeamSetzen;
+use App\Mcp\Tools\Projects\ProjekttypenVerwalten;
 use App\Mcp\Tools\Services\LeistungenSuchen;
 use App\Mcp\Tools\Services\LeistungLesen;
 use App\Mcp\Tools\Services\LeistungLoeschen;
@@ -50,6 +59,16 @@ use Laravel\Mcp\Server\Attributes\Version;
       und sind nicht umkehrbar; sie verlangen deshalb eine Bestaetigung.
     - Jede Aenderung wird mit dem Benutzer des verwendeten Tokens in der
       Aenderungshistorie festgehalten.
+
+    Zu Projekten:
+
+    - Ein Projekt haengt an genau einem Kunden, nicht an einer Kundenleistung.
+      Der Bezug zu einzelnen Leistungen entsteht ueber die Positionen.
+    - Das Projektvolumen ist die Summe der *einmaligen* Positionen.
+      Wiederkehrende stehen getrennt daneben, weil sie einen Monatsbetrag
+      meinen.
+    - Der Fortschritt kommt aus den Meilensteinen und ist `null`, solange es
+      keine gibt.
 
     Zum Einstieg eignen sich `kennzahlen-lesen` fuer den Gesamtueberblick und
     `global-suchen`, wenn nur ein Stichwort bekannt ist.
@@ -85,6 +104,16 @@ class PortalServer extends Server
         LeistungSpeichern::class,
         LeistungStatusSetzen::class,
         LeistungLoeschen::class,
+
+        ProjekteSuchen::class,
+        ProjektLesen::class,
+        ProjektSpeichern::class,
+        ProjektArchivieren::class,
+        ProjektLoeschen::class,
+        MeilensteinSpeichern::class,
+        PositionSpeichern::class,
+        ProjektTeamSetzen::class,
+        ProjekttypenVerwalten::class,
 
         PreisverlaufLesen::class,
         PreisaenderungPlanen::class,

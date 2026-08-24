@@ -526,7 +526,7 @@ Jahresumsatz ein.
 
 ### AE-15 — MCP-Server mit vollen Schreibrechten
 Der Datenbestand ist über einen MCP-Server für KI-Clients erreichbar
-(`app/Mcp`, Route `mcp/portal`, 27 Werkzeuge). Der Auftraggeber hat sich
+(`app/Mcp`, Route `mcp/portal`, 36 Werkzeuge). Der Auftraggeber hat sich
 ausdrücklich für den vollen Umfang **ohne Leitplanken** entschieden: neben
 Lesen und Schreiben auch endgültiges Löschen und das direkte Überschreiben von
 Preisen am Preisverlauf vorbei. Das steht bewusst quer zu den Grundsätzen
@@ -551,17 +551,20 @@ den Actions:
   `preisaenderung-planen`; `preis-direkt-setzen` umgeht es naturgemäß, weil es
   gar keinen Verlaufseintrag schreibt.
 
-Die fünf gefährlichen Werkzeuge (`kunde-loeschen`,
+Die sechs gefährlichen Werkzeuge (`kunde-loeschen`,
 `ansprechpartner-loeschen`, `produkt-loeschen`, `leistung-loeschen`,
-`preis-direkt-setzen`) tragen die MCP-Annotation `destructiveHint` und
-verlangen eine inhaltliche Bestätigung — die Kundennummer, den Nachnamen, den
-internen Namen, den Leistungsnamen beziehungsweise die Zeichenkette
-`ohne-preisverlauf`. Das schützt nicht vor Absicht, aber vor einem falsch
-aufgelösten Datensatz.
+`projekt-loeschen`, `preis-direkt-setzen`) tragen die MCP-Annotation
+`destructiveHint` und verlangen eine inhaltliche Bestätigung — die
+Kundennummer, den Nachnamen, den internen Namen, den Leistungsnamen, die
+Projektnummer beziehungsweise die Zeichenkette `ohne-preisverlauf`. Das
+schützt nicht vor Absicht, aber vor einem falsch aufgelösten Datensatz.
+
+Meilensteine und Projektpositionen fallen bewusst **nicht** darunter: sie sind
+Planung, kein Beleg, und werden auch in der Oberfläche endgültig entfernt.
 
 `App\Actions\Maintenance\DeletePermanently` bündelt das Löschen an einer
-Stelle. Nötig ist das, weil `customer_services.customer_id` auf
-`restrictOnDelete` steht und die polymorphen Anhänge — Notizen, Dokumente,
+Stelle. Nötig ist das, weil `customer_services.customer_id` und
+`projects.customer_id` auf `restrictOnDelete` stehen und die polymorphen Anhänge — Notizen, Dokumente,
 benutzerdefinierte Felder, Tags, Kontaktkanäle — überhaupt keinen
 Fremdschlüssel besitzen und sonst als Waisen zurückblieben. Dokumentdateien
 werden dabei auch aus dem Object Storage entfernt.

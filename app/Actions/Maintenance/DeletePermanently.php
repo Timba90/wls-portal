@@ -13,6 +13,7 @@ use App\Models\DocumentVersion;
 use App\Models\EmailAddress;
 use App\Models\PhoneNumber;
 use App\Models\Product;
+use App\Models\Project;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -55,6 +56,7 @@ class DeletePermanently
     {
         if ($model instanceof Customer) {
             $leistungen = 0;
+            $projekte = 0;
 
             // Einzeln, damit jede Leistung ihre eigenen Anhaenge mitnimmt und
             // ihr Loeschen in der Historie erscheint.
@@ -63,7 +65,15 @@ class DeletePermanently
                 $leistungen++;
             });
 
-            return ['leistungen' => $leistungen];
+            // Projekte haengen mit `restrictOnDelete` am Kunden und wuerden das
+            // Loeschen sonst blockieren. Meilensteine, Positionen und
+            // Teameintraege raeumt die Datenbank per Kaskade ab.
+            $model->projects()->cursor()->each(function (Project $projekt) use (&$projekte): void {
+                $this->__invoke($projekt);
+                $projekte++;
+            });
+
+            return ['leistungen' => $leistungen, 'projekte' => $projekte];
         }
 
         if ($model instanceof Product) {
