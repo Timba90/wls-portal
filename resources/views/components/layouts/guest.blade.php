@@ -1,14 +1,11 @@
 <!DOCTYPE html>
-{{--
-    Die Anmeldeseite folgt wieder dem Farbschema. Gegen die flache Fläche, die
-    im Dark Mode zuvor entstand, hilft nicht mehr die helle Formularseite,
-    sondern die Markenspalte selbst: sie bleibt auf ihren eigenen Tokens und
-    setzt sich durch Rand und Raster sichtbar vom Formular ab.
+{{-- 
+    Die Anmeldeseite folgt bewusst NICHT dem Farbschema: die Markenspalte bleibt
+    immer dunkel, die Formularseite immer hell — unabhängig vom gewählten Theme.
+    Das Farbschema wird ausschließlich in der Anwendung umgeschaltet (Theme-Switch
+    in der Sidebar). Deshalb keine tallstackui_darkTheme-Bindung an diesem Layout.
 --}}
-<html lang="de"
-      x-data="tallstackui_darkTheme({ default: 'system' })"
-      x-bind:class="{ 'dark': darkTheme }"
-      class="h-full">
+<html lang="de" class="h-full">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -67,7 +64,6 @@
 
             <div class="relative z-10 flex flex-wrap items-center gap-4 text-[10.5px] text-brand-dim">
                 <span>© {{ now()->year }} {{ config('portal.brand.name') }}</span>
-                <x-theme-switch xs class="ml-auto" />
             </div>
         </aside>
 

@@ -63,11 +63,11 @@ it('laesst angemeldete Benutzer auf das Dashboard', function (): void {
         ->assertSee('Dashboard');
 });
 
-it('laesst die Anmeldeseite dem Farbschema folgen', function (): void {
+it('haelt die Anmeldeseite unabhaengig vom Farbschema', function (): void {
     $this->get(route('login'))
         ->assertOk()
-        ->assertSee('tallstackui_darkTheme', escape: false)
-        ->assertSee("'dark': darkTheme", escape: false);
+        ->assertDontSee('tallstackui_darkTheme', escape: false)
+        ->assertDontSee("'dark': darkTheme", escape: false);
 });
 
 it('zeigt das Raster hinter der Markenspalte', function (): void {
