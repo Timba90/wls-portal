@@ -8,6 +8,7 @@ use App\Exceptions\ReadOnlyRecordException;
 use App\Mcp\Tools\PortalTool;
 use App\Models\Customer;
 use App\Models\Project;
+use Carbon\CarbonImmutable as Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 use Laravel\Mcp\Request;
@@ -39,36 +40,8 @@ class ProjektSpeichern extends PortalTool
             'risiko' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $attribute = [
-            'name' => $eingabe['name'],
-            'description' => $eingabe['beschreibung'] ?? null,
-            'project_type_id' => $eingabe['projekttyp_id'] ?? null,
-            'responsible_user_id' => $eingabe['verantwortlich_id'] ?? null,
-            'status' => $eingabe['status'] ?? null,
-            'start_date' => $eingabe['beginn'] ?? null,
-            'deadline' => $eingabe['deadline'] ?? null,
-            'risk_note' => $eingabe['risiko'] ?? null,
-        ];
-
         if (filled($eingabe['id'] ?? null)) {
-            $projekt = Project::query()->find($eingabe['id']);
-
-            if (! $projekt instanceof Project) {
-                return Response::error('Projekt nicht gefunden.');
-            }
-
-            try {
-                // Ohne Statusangabe bleibt der bisherige stehen.
-                $projekt = ($this->updateProject)($projekt, array_filter(
-                    $attribute,
-                    fn (mixed $wert, string $schluessel): bool => $schluessel !== 'status' || ! is_null($wert),
-                    ARRAY_FILTER_USE_BOTH,
-                ));
-            } catch (ReadOnlyRecordException $ausnahme) {
-                return Response::error($ausnahme->getMessage());
-            }
-
-            return $this->antwort($projekt, 'geändert');
+            return $this->update($eingabe);
         }
 
         if (blank($eingabe['kunde_id'] ?? null)) {
@@ -81,7 +54,69 @@ class ProjektSpeichern extends PortalTool
             return Response::error('Kunde nicht gefunden.');
         }
 
-        return $this->antwort(($this->createProject)($kunde, $attribute), 'angelegt');
+        return $this->antwort(($this->createProject)($kunde, $this->attribute($eingabe)), 'angelegt');
+    }
+
+    /**
+     * @param  array<string, mixed>  $eingabe
+     */
+    private function update(array $eingabe): Response
+    {
+        $projekt = Project::query()->find($eingabe['id']);
+
+        if (! $projekt instanceof Project) {
+            return Response::error('Projekt nicht gefunden.');
+        }
+
+        // Fehlende Felder aus dem Bestand ergaenzen, damit ein Aufruf mit nur
+        // einem geaenderten Feld nicht den Rest leert — dieselbe Regel wie bei
+        // „kunde-speichern". Die Actions schreiben immer alle Felder; ein
+        // nicht gesendetes Feld waere sonst stillschweigend eine Loeschung.
+        $eingabe['beschreibung'] ??= $projekt->description;
+        $eingabe['projekttyp_id'] ??= $projekt->project_type_id;
+        $eingabe['verantwortlich_id'] ??= $projekt->responsible_user_id;
+        $eingabe['status'] ??= $projekt->status->value;
+        $eingabe['beginn'] ??= $this->date($projekt->start_date);
+        $eingabe['deadline'] ??= $this->date($projekt->deadline);
+        $eingabe['risiko'] ??= $projekt->risk_note;
+
+        // Die Regel „deadline nicht vor beginn" greift bei der Validierung nur,
+        // wenn beide Felder gesendet wurden. Nach dem Ergaenzen aus dem Bestand
+        // koennen sie sich trotzdem widersprechen.
+        // Nicht als Zeichenketten vergleichen: die Validierung laesst jedes von
+        // `date` akzeptierte Format zu, nicht nur JJJJ-MM-TT.
+        if (filled($eingabe['beginn']) && filled($eingabe['deadline'])
+            && Carbon::parse($eingabe['deadline'])->lt(Carbon::parse($eingabe['beginn']))) {
+            return Response::error('Die Deadline darf nicht vor dem Beginn liegen.');
+        }
+
+        try {
+            $projekt = ($this->updateProject)($projekt, $this->attribute($eingabe));
+        } catch (ReadOnlyRecordException $ausnahme) {
+            return Response::error($ausnahme->getMessage());
+        }
+
+        return $this->antwort($projekt, 'geändert');
+    }
+
+    /**
+     * Uebersetzt die deutschen Feldnamen des Werkzeugs in die Struktur der Action.
+     *
+     * @param  array<string, mixed>  $eingabe
+     * @return array<string, mixed>
+     */
+    private function attribute(array $eingabe): array
+    {
+        return [
+            'name' => $eingabe['name'],
+            'description' => $eingabe['beschreibung'] ?? null,
+            'project_type_id' => $eingabe['projekttyp_id'] ?? null,
+            'responsible_user_id' => $eingabe['verantwortlich_id'] ?? null,
+            'status' => $eingabe['status'] ?? null,
+            'start_date' => $eingabe['beginn'] ?? null,
+            'deadline' => $eingabe['deadline'] ?? null,
+            'risk_note' => $eingabe['risiko'] ?? null,
+        ];
     }
 
     private function antwort(Project $projekt, string $vorgang): Response

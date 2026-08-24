@@ -151,7 +151,7 @@ class ProjectList extends Component
 
         $filter = [
             ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
-            ['wert' => self::OPEN_FILTER, 'label' => 'Offen', 'anzahl' => $basis()->whereIn('status', $this->openStatusValues())->count()],
+            ['wert' => self::OPEN_FILTER, 'label' => 'Offen', 'anzahl' => $basis()->open()->count()],
         ];
 
         foreach (ProjectStatus::cases() as $status) {
@@ -173,7 +173,7 @@ class ProjectList extends Component
         $query = Project::query()
             ->with(['customer', 'projectType', 'responsibleUser', 'milestones', 'positions'])
             ->when($this->search !== '', fn (Builder $q) => $this->applySearch($q))
-            ->when($this->status === self::OPEN_FILTER, fn (Builder $q) => $q->whereIn('status', $this->openStatusValues()))
+            ->when($this->status === self::OPEN_FILTER, fn (Builder $q) => $q->open())
             ->when(
                 $this->status !== '' && $this->status !== self::OPEN_FILTER,
                 fn (Builder $q) => $q->where('status', $this->status),
@@ -200,7 +200,7 @@ class ProjectList extends Component
             ->with('project.customer')
             ->open()
             ->whereNotNull('due_date')
-            ->whereHas('project', fn (Builder $query) => $query->whereIn('status', $this->openStatusValues()))
+            ->whereHas('project', fn (Builder $query) => $query->open())
             ->orderBy('due_date')
             ->limit(8)
             ->get();
@@ -253,17 +253,6 @@ class ProjectList extends Component
         return in_array($this->sort['column'], $sortable, strict: true)
             ? $this->sort['column']
             : 'deadline';
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function openStatusValues(): array
-    {
-        return array_values(array_map(
-            fn (ProjectStatus $status): string => $status->value,
-            array_filter(ProjectStatus::cases(), fn (ProjectStatus $status): bool => $status->isOpen()),
-        ));
     }
 
     /**

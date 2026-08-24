@@ -180,6 +180,24 @@ it('liefert die Kennzahlen der Projektliste', function (): void {
         ->and($kennzahlen['dueSoon'])->toBe(1);
 });
 
+it('zaehlt keine Termine abgebrochener Projekte als anstehend', function (): void {
+    $abgebrochen = Project::factory()->create(['status' => ProjectStatus::Cancelled]);
+    ProjectMilestone::factory()->for($abgebrochen)->create(['due_date' => now()->addDays(3)]);
+
+    // Ein Termin in einem abgebrochenen Projekt steht niemandem mehr bevor.
+    expect(app(CalculateProjectMetrics::class)()['dueSoon'])->toBe(0);
+});
+
+it('trennt offene Projekte von allen nicht archivierten', function (): void {
+    Project::factory()->create(['status' => ProjectStatus::Active]);
+    Project::factory()->completed()->create();
+    Project::factory()->create(['status' => ProjectStatus::Cancelled]);
+    Project::factory()->archived()->create();
+
+    expect(Project::query()->open()->count())->toBe(1)
+        ->and(Project::query()->notArchived()->count())->toBe(3);
+});
+
 it('bietet frei definierbare Projekttypen', function (): void {
     ProjectType::factory()->create(['name' => 'Barrierefreiheits-Audit']);
 

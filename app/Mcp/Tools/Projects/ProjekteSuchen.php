@@ -2,7 +2,6 @@
 
 namespace App\Mcp\Tools\Projects;
 
-use App\Enums\ProjectStatus;
 use App\Mcp\Tools\PortalTool;
 use App\Models\Project;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
@@ -35,7 +34,7 @@ class ProjekteSuchen extends PortalTool
 
         $query = Project::query()
             ->with(['customer', 'projectType', 'responsibleUser', 'milestones', 'positions'])
-            ->when($status === 'offen', fn (Builder $q) => $q->whereIn('status', $this->openStatusValues()))
+            ->when($status === 'offen', fn (Builder $q) => $q->open())
             ->when(
                 ! in_array($status, ['offen', 'alle'], true),
                 fn (Builder $q) => $q->where('status', $status),
@@ -75,17 +74,6 @@ class ProjekteSuchen extends PortalTool
                 'ueberfaellig' => $projekt->isOverdue(),
             ])->all(),
         ]);
-    }
-
-    /**
-     * @return array<int, string>
-     */
-    private function openStatusValues(): array
-    {
-        return array_values(array_map(
-            fn (ProjectStatus $status): string => $status->value,
-            array_filter(ProjectStatus::cases(), fn (ProjectStatus $status): bool => $status->isOpen()),
-        ));
     }
 
     /**

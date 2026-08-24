@@ -187,11 +187,41 @@ class Project extends Model
     }
 
     /**
+     * Projekte, die noch laufen: geplant, laufend oder pausiert.
+     *
+     * Bewusst nicht `active()` genannt. Im ganzen Projekt heisst `active()`
+     * „Status ist Aktiv" (Kunde, Artikel, Kundenleistung); ein Projekt hat
+     * dagegen drei offene Status, und ein abgebrochenes waere unter dem Namen
+     * `active()` beinahe zwangslaeufig irgendwann mitgezaehlt worden.
+     *
      * @param  Builder<Project>  $query
      */
-    public function scopeActive(Builder $query): void
+    public function scopeOpen(Builder $query): void
+    {
+        $query->whereIn('status', self::openStatusValues());
+    }
+
+    /**
+     * Alles ausser dem Archiv — auch abgeschlossen und abgebrochen.
+     *
+     * @param  Builder<Project>  $query
+     */
+    public function scopeNotArchived(Builder $query): void
     {
         $query->where('status', '!=', ProjectStatus::Archived);
+    }
+
+    /**
+     * Die Werte der offenen Status, fuer Abfragen ausserhalb des Scopes.
+     *
+     * @return array<int, string>
+     */
+    public static function openStatusValues(): array
+    {
+        return array_values(array_map(
+            fn (ProjectStatus $status): string => $status->value,
+            array_filter(ProjectStatus::cases(), fn (ProjectStatus $status): bool => $status->isOpen()),
+        ));
     }
 
     /**

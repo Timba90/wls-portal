@@ -54,6 +54,57 @@ it('legt ein Projekt an und vergibt die Projektnummer', function (): void {
         ->and($projekt->status)->toBe(ProjectStatus::Planned);
 });
 
+it('laesst beim Aendern die nicht gesendeten Felder stehen', function (): void {
+    $typ = ProjectType::factory()->create();
+    $verantwortlich = User::factory()->create();
+
+    $projekt = Project::factory()->for($this->kunde)->create([
+        'name' => 'Relaunch',
+        'description' => 'Vollständiger Neuaufbau',
+        'project_type_id' => $typ->id,
+        'responsible_user_id' => $verantwortlich->id,
+        'status' => ProjectStatus::Active,
+        'start_date' => '2026-03-01',
+        'deadline' => '2026-09-30',
+        'risk_note' => 'Zulieferung der Texte offen',
+    ]);
+
+    // Nur der Name wird geschickt. Alles andere muss unberührt bleiben —
+    // sonst wäre ein Umbenennen stillschweigend eine Löschung.
+    PortalServer::actingAs($this->benutzer)
+        ->tool(ProjektSpeichern::class, ['id' => $projekt->id, 'name' => 'Relaunch 2027'])
+        ->assertOk();
+
+    $projekt->refresh();
+
+    expect($projekt->name)->toBe('Relaunch 2027')
+        ->and($projekt->description)->toBe('Vollständiger Neuaufbau')
+        ->and($projekt->project_type_id)->toBe($typ->id)
+        ->and($projekt->responsible_user_id)->toBe($verantwortlich->id)
+        ->and($projekt->status)->toBe(ProjectStatus::Active)
+        ->and($projekt->start_date->toDateString())->toBe('2026-03-01')
+        ->and($projekt->deadline->toDateString())->toBe('2026-09-30')
+        ->and($projekt->risk_note)->toBe('Zulieferung der Texte offen');
+});
+
+it('weist eine Deadline vor dem bestehenden Beginn zurueck', function (): void {
+    $projekt = Project::factory()->for($this->kunde)->create([
+        'start_date' => '2026-06-01',
+        'deadline' => '2026-12-01',
+    ]);
+
+    // Der Beginn wird nicht mitgeschickt; die Prüfung muss ihn trotzdem kennen.
+    PortalServer::actingAs($this->benutzer)
+        ->tool(ProjektSpeichern::class, [
+            'id' => $projekt->id,
+            'name' => $projekt->name,
+            'deadline' => '2026-05-01',
+        ])
+        ->assertHasErrors();
+
+    expect($projekt->refresh()->deadline->toDateString())->toBe('2026-12-01');
+});
+
 it('verlangt zum Anlegen einen Kunden', function (): void {
     PortalServer::actingAs($this->benutzer)
         ->tool(ProjektSpeichern::class, ['name' => 'Projekt ohne Kunde'])

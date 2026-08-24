@@ -2,10 +2,10 @@
 
 namespace App\Actions\Projects;
 
-use App\Enums\ProjectStatus;
 use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Support\Money;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Kennzahlen fuer den Kopf der Projektliste.
@@ -26,13 +26,7 @@ class CalculateProjectMetrics
      */
     public function __invoke(): array
     {
-        $offene = Project::query()
-            ->with('positions')
-            ->whereIn('status', array_column(
-                array_filter(ProjectStatus::cases(), fn (ProjectStatus $status): bool => $status->isOpen()),
-                'value',
-            ))
-            ->get();
+        $offene = Project::query()->with('positions')->open()->get();
 
         $volumen = $offene->reduce(
             fn (Money $summe, Project $projekt): Money => $summe->plus($projekt->oneTimeVolume()),
@@ -48,7 +42,7 @@ class CalculateProjectMetrics
                 ->whereNotNull('due_date')
                 ->whereDate('due_date', '>=', now()->toDateString())
                 ->whereDate('due_date', '<=', now()->addDays(14)->toDateString())
-                ->whereHas('project', fn ($query) => $query->active())
+                ->whereHas('project', fn (Builder $query) => $query->open())
                 ->count(),
         ];
     }
