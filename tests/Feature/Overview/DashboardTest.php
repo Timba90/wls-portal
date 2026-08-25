@@ -2,10 +2,12 @@
 
 use App\Actions\Reporting\CalculatePortalMetrics;
 use App\Livewire\Dashboard\DashboardPage;
+use App\Models\Category;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
+use App\Models\Project;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -83,4 +85,48 @@ it('zeigt die Kennzahlen auf dem Dashboard', function (): void {
         ->assertSee('59,00 €')
         ->assertSee('708,00 €')
         ->assertSee('41,00 €');
+});
+
+it('zeigt den Verlauf der Abrechnung und seine Zusammensetzung', function (): void {
+    $hosting = Category::factory()->create(['name' => 'Hosting']);
+
+    CustomerService::factory()->create([
+        'category_id' => $hosting->id,
+        'sales_price_cents' => 5900,
+        'billing_start_date' => now()->subYear()->startOfMonth(),
+        'service_start_date' => now()->subYear()->startOfMonth(),
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(DashboardPage::class)
+        ->assertSee('Abrechnung je Monat')
+        ->assertSee('Woraus sich das zusammensetzt')
+        ->assertSee('Hosting')
+        // Zwoelf Monatswerte von 59 EUR.
+        ->assertSee('708,00 €');
+});
+
+it('zeigt weder Bestandsliste noch die Ausnahmen der Kennzahlen', function (): void {
+    // Beide Panels hat der Auftraggeber aus der Uebersicht genommen.
+    Livewire::actingAs(User::factory()->create())
+        ->test(DashboardPage::class)
+        ->assertDontSee('Nicht in den Kennzahlen')
+        ->assertDontSee('Archivierte Kunden');
+});
+
+it('zeigt die Zahl der offenen Projekte in der Navigation', function (): void {
+    Project::factory()->count(3)->create();
+    Project::factory()->completed()->create();
+    Project::factory()->archived()->create();
+
+    // Der Zaehler haengt am Layout, nicht an der Komponente — deshalb ueber
+    // eine echte Anfrage.
+    $this->actingAs(User::factory()->create())
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('Projekte</span>', escape: false)
+        ->assertSeeInOrder([
+            'Projekte</span>',
+            '<span class="font-mono text-[10px] tabular-nums text-ink-faint">3</span>',
+        ], escape: false);
 });

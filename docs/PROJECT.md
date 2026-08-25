@@ -345,6 +345,12 @@ sind unveränderlich und über die Anwendung nicht löschbar.
 Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 `table_key` unique, `columns` (json mit Sichtbarkeit, Reihenfolge, Breite).
 
+Auswertungen liegen in `app/Actions/Reporting/`:
+`CalculatePortalMetrics` liefert die auf einen Monat normalisierten
+Kennzahlen, `CalculateBillingForecast` die tatsächliche Fälligkeit je Monat
+über die kommenden zwölf Monate samt Aufteilung nach Kategorie. Die Summe
+der zwölf Monate entspricht dem normalisierten Jahresumsatz.
+
 #### `project_types`
 Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,
 `color`, `sort_order`, `is_active`. Fest angelegt sind Laravel, Shopify und
