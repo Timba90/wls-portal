@@ -96,18 +96,18 @@ class CustomerList extends Component
     {
         return [
             'customer' => ['label' => 'Kunde', 'sortable' => false, 'fixed' => true],
-            'contact' => ['label' => 'Ansprechpartner', 'sortable' => false],
-            'active_services_count' => ['label' => 'Leistungen'],
             'monthly_revenue' => ['label' => 'Umsatz / Mon', 'sortable' => false],
-            'activity' => ['label' => 'Letzte Aktivität', 'sortable' => false],
+            'yearly_revenue' => ['label' => 'Umsatz / Jahr', 'sortable' => false],
+            'monthly_costs' => ['label' => 'Kosten / Mon', 'sortable' => false],
+            'margin' => ['label' => 'Marge / Mon', 'sortable' => false],
             'status' => ['label' => 'Status'],
+            'contact' => ['label' => 'Ansprechpartner', 'sortable' => false, 'default_visible' => false],
+            'active_services_count' => ['label' => 'Leistungen', 'default_visible' => false],
+            'activity' => ['label' => 'Letzte Aktivität', 'sortable' => false, 'default_visible' => false],
             'customer_number' => ['label' => 'Kundennummer', 'default_visible' => false],
             'internal_code' => ['label' => 'Kürzel', 'default_visible' => false],
             'type' => ['label' => 'Typ', 'default_visible' => false],
             'responsible' => ['label' => 'Verantwortlich', 'sortable' => false, 'default_visible' => false],
-            'yearly_revenue' => ['label' => 'Umsatz / Jahr', 'sortable' => false, 'default_visible' => false],
-            'monthly_costs' => ['label' => 'Kosten / Mon', 'sortable' => false, 'default_visible' => false],
-            'margin' => ['label' => 'Marge / Mon', 'sortable' => false, 'default_visible' => false],
         ];
     }
 
@@ -119,19 +119,19 @@ class CustomerList extends Component
     public function columnLayout(): array
     {
         return [
-            'customer' => ['breite' => '1.8fr'],
+            'customer' => ['breite' => '1.9fr'],
+            'monthly_revenue' => ['breite' => '1fr', 'rechts' => true],
+            'yearly_revenue' => ['breite' => '1fr', 'rechts' => true],
+            'monthly_costs' => ['breite' => '1fr', 'rechts' => true],
+            'margin' => ['breite' => '1fr', 'rechts' => true],
+            'status' => ['breite' => '0.9fr'],
             'contact' => ['breite' => '1.3fr'],
             'active_services_count' => ['breite' => '0.7fr', 'rechts' => true],
-            'monthly_revenue' => ['breite' => '1.1fr', 'rechts' => true],
             'activity' => ['breite' => '0.9fr'],
-            'status' => ['breite' => '0.9fr'],
             'customer_number' => ['breite' => '0.9fr'],
             'internal_code' => ['breite' => '0.7fr'],
             'type' => ['breite' => '0.8fr'],
             'responsible' => ['breite' => '1fr'],
-            'yearly_revenue' => ['breite' => '0.9fr', 'rechts' => true],
-            'monthly_costs' => ['breite' => '0.9fr', 'rechts' => true],
-            'margin' => ['breite' => '0.9fr', 'rechts' => true],
         ];
     }
 
