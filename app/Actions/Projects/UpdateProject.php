@@ -31,12 +31,36 @@ class UpdateProject
                 'start_date' => $attributes['start_date'] ?? null,
                 'deadline' => $attributes['deadline'] ?? null,
                 'risk_note' => $attributes['risk_note'] ?? null,
+                ...$this->operationsAttributes($project, $attributes),
             ]);
 
             $project->save();
 
             return $project;
         });
+    }
+
+    /**
+     * Die Betriebsfelder folgen nicht dem Muster der uebrigen: wer sie nicht
+     * mitsendet, will sie nicht aendern. Ein Aufrufer, der nur den Namen
+     * setzt, soll kein Pruefdatum loeschen.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function operationsAttributes(Project $project, array $attributes): array
+    {
+        $felder = ['backup_status', 'security_status', 'update_status', 'operations_checked_on'];
+
+        $werte = [];
+
+        foreach ($felder as $feld) {
+            if (array_key_exists($feld, $attributes)) {
+                $werte[$feld] = $attributes[$feld];
+            }
+        }
+
+        return $werte;
     }
 
     private function guardAgainstArchived(Project $project): void

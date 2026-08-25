@@ -316,7 +316,16 @@
                     <dl class="divide-y divide-line">
                         <x-detail-row label="Projektnummer" :value="$project->project_number" />
                         <x-detail-row label="Kunde" :value="$project->customer->displayName()" />
-                        <x-detail-row label="Typ" :value="$project->projectType?->name" />
+                        <x-detail-row label="Typ">
+                            @if ($project->projectType)
+                                <span class="flex items-center gap-2">
+                                    <x-project-type-icon :type="$project->projectType" size="sm" />
+                                    {{ $project->projectType->name }}
+                                </span>
+                            @else
+                                —
+                            @endif
+                        </x-detail-row>
                         <x-detail-row label="Verantwortlich" :value="$project->responsibleUser?->name" />
                         <x-detail-row label="Beginn" :value="$project->start_date?->format('d.m.Y')" />
                         <x-detail-row label="Deadline" :value="$project->deadline?->format('d.m.Y')" />
@@ -371,6 +380,19 @@
                             </x-button>
                         </div>
                     @endunless
+                </x-panel>
+
+                <x-panel title="Betrieb" subtitle="Von Hand gepflegt, keine Überwachung">
+                    <dl class="divide-y divide-line">
+                        @foreach ($project->operationsStatuses() as $bereich => $betriebsstatus)
+                            <x-detail-row :label="$bereich" wire:key="betrieb-{{ $bereich }}">
+                                <x-status-pill :kind="$betriebsstatus->pillKind()" :label="$betriebsstatus->label()" />
+                            </x-detail-row>
+                        @endforeach
+
+                        <x-detail-row label="Geprüft am"
+                                      :value="$project->operations_checked_on?->format('d.m.Y')" />
+                    </dl>
                 </x-panel>
 
                 <x-panel title="Status & Risiko">

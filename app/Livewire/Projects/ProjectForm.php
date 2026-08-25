@@ -4,6 +4,7 @@ namespace App\Livewire\Projects;
 
 use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\UpdateProject;
+use App\Enums\OperationsStatus;
 use App\Enums\ProjectStatus;
 use App\Models\Customer;
 use App\Models\Project;
@@ -44,6 +45,14 @@ class ProjectForm extends Component
 
     public string $risk_note = '';
 
+    public string $backup_status = OperationsStatus::Unknown->value;
+
+    public string $security_status = OperationsStatus::Unknown->value;
+
+    public string $update_status = OperationsStatus::Unknown->value;
+
+    public string $operations_checked_on = '';
+
     public function mount(?Project $project = null): void
     {
         if (! $project?->exists) {
@@ -65,6 +74,10 @@ class ProjectForm extends Component
         $this->start_date = $project->start_date?->format('Y-m-d') ?? '';
         $this->deadline = $project->deadline?->format('Y-m-d') ?? '';
         $this->risk_note = (string) $project->risk_note;
+        $this->backup_status = $project->backup_status->value;
+        $this->security_status = $project->security_status->value;
+        $this->update_status = $project->update_status->value;
+        $this->operations_checked_on = $project->operations_checked_on?->format('Y-m-d') ?? '';
     }
 
     public function isEditing(): bool
@@ -85,6 +98,10 @@ class ProjectForm extends Component
             'start_date' => $validated['start_date'] ?: null,
             'deadline' => $validated['deadline'] ?: null,
             'risk_note' => $validated['risk_note'] ?: null,
+            'backup_status' => $validated['backup_status'],
+            'security_status' => $validated['security_status'],
+            'update_status' => $validated['update_status'],
+            'operations_checked_on' => $validated['operations_checked_on'] ?: null,
         ];
 
         $projekt = $this->isEditing()
@@ -113,6 +130,11 @@ class ProjectForm extends Component
             // Eine Deadline vor dem Beginn wäre ein Planungsfehler, kein Ziel.
             'deadline' => ['nullable', 'date', 'after_or_equal:start_date'],
             'risk_note' => ['nullable', 'string', 'max:2000'],
+            'backup_status' => ['required', Rule::enum(OperationsStatus::class)],
+            'security_status' => ['required', Rule::enum(OperationsStatus::class)],
+            'update_status' => ['required', Rule::enum(OperationsStatus::class)],
+            // Eine Pruefung in der Zukunft hat noch niemand durchgefuehrt.
+            'operations_checked_on' => ['nullable', 'date', 'before_or_equal:today'],
         ];
     }
 
@@ -131,6 +153,10 @@ class ProjectForm extends Component
             'start_date' => 'Beginn',
             'deadline' => 'Deadline',
             'risk_note' => 'Risiko',
+            'backup_status' => 'Backup',
+            'security_status' => 'Security',
+            'update_status' => 'Updates',
+            'operations_checked_on' => 'Betrieb geprüft am',
         ];
     }
 
@@ -141,6 +167,7 @@ class ProjectForm extends Component
             'projectTypes' => $this->projectTypes(),
             'responsibleUsers' => $this->responsibleUsers(),
             'statusOptions' => ProjectStatus::options(ProjectStatus::selectable()),
+            'operationsOptions' => OperationsStatus::options(),
         ]);
     }
 

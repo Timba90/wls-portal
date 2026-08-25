@@ -2,6 +2,7 @@
 
 use App\Enums\CustomerServiceStatus;
 use App\Enums\MilestoneStatus;
+use App\Enums\OperationsStatus;
 use App\Enums\ProjectPositionKind;
 use App\Enums\ProjectStatus;
 use App\Livewire\Projects\ProjectDetail;
@@ -64,17 +65,66 @@ it('sortiert Projekte ohne Deadline ans Ende', function (): void {
     expect($projekte->pluck('name')->all())->toBe(['Mit Termin', 'Ohne Termin']);
 });
 
-it('zeigt die naechsten Termine unabhaengig vom Statusfilter', function (): void {
+it('zeigt die Betriebsampeln in der Uebersicht', function (): void {
+    Project::factory()->create([
+        'name' => 'Portalrelaunch',
+        'status' => ProjectStatus::Active,
+        'backup_status' => OperationsStatus::Ok,
+        'security_status' => OperationsStatus::Critical,
+        'update_status' => OperationsStatus::Attention,
+    ]);
+
+    Livewire::actingAs($this->benutzer)
+        ->test(ProjectList::class)
+        ->assertSee('Portalrelaunch')
+        ->assertSee('Backup')
+        ->assertSee('Security')
+        ->assertSee('Updates')
+        ->assertSee('Kritisch');
+});
+
+it('zeigt in der Uebersicht weder Termine noch Fortschritt', function (): void {
     $projekt = Project::factory()->create(['status' => ProjectStatus::Active]);
     ProjectMilestone::factory()->for($projekt)->create([
         'name' => 'Design abgenommen',
         'due_date' => now()->addDays(4),
     ]);
 
+    // Deadline, Fortschritt und Termine hat der Auftraggeber aus der
+    // Uebersicht genommen — sie stehen im Projekt selbst.
     Livewire::actingAs($this->benutzer)
         ->test(ProjectList::class)
-        ->call('setStatus', ProjectStatus::Cancelled->value)
-        ->assertSee('Design abgenommen');
+        ->assertDontSee('Design abgenommen')
+        ->assertDontSee('Nächste Termine');
+});
+
+it('nimmt die Betriebsampeln ueber das Formular entgegen', function (): void {
+    $projekt = Project::factory()->create();
+
+    Livewire::actingAs($this->benutzer)
+        ->test(ProjectForm::class, ['project' => $projekt])
+        ->set('backup_status', OperationsStatus::Ok->value)
+        ->set('security_status', OperationsStatus::Attention->value)
+        ->set('update_status', OperationsStatus::Critical->value)
+        ->set('operations_checked_on', now()->toDateString())
+        ->call('save')
+        ->assertHasNoErrors();
+
+    expect($projekt->fresh())
+        ->backup_status->toBe(OperationsStatus::Ok)
+        ->security_status->toBe(OperationsStatus::Attention)
+        ->update_status->toBe(OperationsStatus::Critical)
+        ->and($projekt->fresh()->operations_checked_on->isToday())->toBeTrue();
+});
+
+it('weist eine Betriebspruefung in der Zukunft zurueck', function (): void {
+    $projekt = Project::factory()->create();
+
+    Livewire::actingAs($this->benutzer)
+        ->test(ProjectForm::class, ['project' => $projekt])
+        ->set('operations_checked_on', now()->addDay()->toDateString())
+        ->call('save')
+        ->assertHasErrors(['operations_checked_on']);
 });
 
 it('legt ueber das Formular ein Projekt mit Nummer an', function (): void {

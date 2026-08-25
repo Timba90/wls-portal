@@ -85,8 +85,13 @@ vortäuschen würde, die keine Daten haben.
 | „Budget & Stunden" im Projektdetail | Nicht übernommen. Es gibt weder Zeiterfassung noch Rechnungsstellung; das Panel hätte nur erfundene Zahlen zeigen können. Der Geldteil steht als Projektvolumen aus den Positionen im Kopf und in der Positionstabelle. |
 | Fortschrittsbalken ohne Meilensteine | Der Entwurf zeigt immer einen Balken. Ohne Meilensteine gibt es nichts zu messen — Liste und Detail schreiben dort „Keine Meilensteine". |
 | Linke Spalte des Projektdetails | Der Entwurf stapelt „Plan & Meilensteine" und „Positionen". Umgesetzt als Reiterleiste wie im Kunden- und Leistungsdetail, weil zusätzlich Notizen, Dokumente, eigene Felder und Verlauf unterkommen müssen. |
-| Spalte „Nächste Termine" | Zeigt bewusst alle offenen Meilensteine laufender Projekte, unabhängig vom Statusfilter der Tabelle. Sie ist ein Terminkalender, kein zweites Abbild der gefilterten Liste. |
-| Feste sechs Spalten der Projektliste | Wie bei Kundenliste und Artikelkatalog als Voreinstellung umgesetzt; Projektnummer, Typ, Verantwortlich, Beginn, laufendes Volumen und Meilensteinzahl bleiben zuschaltbar. |
+| Spalte „Nächste Termine" | Entfernt. Der Auftraggeber hat sie aus der Übersicht genommen; Meilensteine stehen im Projektdetail unter „Plan & Meilensteine". |
+| Deadline und Fortschritt in der Übersicht | Ebenfalls auf Ansage entfernt, aber nicht gelöscht: beide Spalten bleiben zuschaltbar, damit niemand die Information verliert, der sie braucht. |
+| Kunde in der Übersicht | Auf Ansage aus der Voreinstellung genommen. Die Spalte bleibt zuschaltbar, und die Suche findet Projekte weiterhin über den Kundennamen. |
+| Feste sieben Spalten der Projektliste | Projekt, Umsatz, Umsatz/Mon., Backup, Security, Updates, Status. Kunde, Projektnummer, Typ, Verantwortlich, Beginn, Deadline, Fortschritt, „Betrieb geprüft" und Meilensteinzahl bleiben zuschaltbar. |
+| Betriebsampeln Backup, Security, Updates | Es gibt keine Überwachung, die diese Werte liefern könnte — Hosting-Systeme und Backup-Oberfläche sind §61-Zukunft. Die drei Ampeln werden von Hand gepflegt und tragen deshalb das Datum der letzten Prüfung. Voreinstellung ist „Ungeprüft", ausdrücklich **kein** Grün: ein nie geprüftes Projekt ist nicht in Ordnung, sondern ungeprüft — und zählt in der Kachel „Betrieb prüfen" mit. |
+| Kennzahlen der Projektübersicht | „Überfällig" und „Termine 14 Tage" sind mit Deadlines und Terminen entfallen. An ihrer Stelle stehen Umsatz, Umsatz/Mon. und die Zahl der offenen Projekte mit einer Ampel abseits von Grün. |
+| Projekttypen | Auf Ansage fest auf Laravel, Shopify und WordPress gesetzt und mit den Markenzeichen in ihren Markenfarben hinterlegt (Pfade aus simple-icons, CC0). Die Tabelle bleibt erweiterbar; ein Typ ohne bekanntes Zeichen bekommt seine Initialenkachel. |
 
 ## Offene fachliche Rückfragen
 

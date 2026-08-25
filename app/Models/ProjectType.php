@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Webseite, Shop, Web-App, API und internes Tool sind Beispiele aus der
  * Anforderung, keine feste Liste — deshalb eine Tabelle statt eines Enums.
  */
-#[Fillable(['name', 'short_label', 'color', 'sort_order', 'is_active'])]
+#[Fillable(['name', 'short_label', 'icon', 'color', 'sort_order', 'is_active'])]
 class ProjectType extends Model
 {
     /** @use HasFactory<ProjectTypeFactory> */

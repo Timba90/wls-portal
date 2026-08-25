@@ -2,6 +2,7 @@
 
 namespace App\Actions\Projects;
 
+use App\Enums\OperationsStatus;
 use App\Enums\ProjectStatus;
 use App\Models\Customer;
 use App\Models\Project;
@@ -19,6 +20,10 @@ use Illuminate\Support\Facades\DB;
  *     start_date?: ?string,
  *     deadline?: ?string,
  *     risk_note?: ?string,
+ *     backup_status?: ?string,
+ *     security_status?: ?string,
+ *     update_status?: ?string,
+ *     operations_checked_on?: ?string,
  * }
  */
 class CreateProject
@@ -42,6 +47,10 @@ class CreateProject
                 'start_date' => $attributes['start_date'] ?? null,
                 'deadline' => $attributes['deadline'] ?? null,
                 'risk_note' => $attributes['risk_note'] ?? null,
+                'backup_status' => $attributes['backup_status'] ?? OperationsStatus::Unknown,
+                'security_status' => $attributes['security_status'] ?? OperationsStatus::Unknown,
+                'update_status' => $attributes['update_status'] ?? OperationsStatus::Unknown,
+                'operations_checked_on' => $attributes['operations_checked_on'] ?? null,
             ]);
 
             $project->customer_id = $customer->getKey();

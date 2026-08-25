@@ -6,6 +6,7 @@ use App\Actions\Projects\CreateProject;
 use App\Actions\Projects\RestoreProject;
 use App\Actions\Projects\SyncProjectMembers;
 use App\Actions\Projects\UpdateProject;
+use App\Enums\OperationsStatus;
 use App\Enums\ProjectStatus;
 use App\Exceptions\ImmutableAttributeException;
 use App\Exceptions\ReadOnlyRecordException;
@@ -16,6 +17,7 @@ use App\Models\ProjectPosition;
 use App\Models\ProjectType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\MassAssignmentException;
+use Illuminate\Support\Facades\DB;
 
 it('vergibt beim Anlegen eine fortlaufende Projektnummer', function (): void {
     $kunde = Customer::factory()->create();
@@ -164,28 +166,94 @@ it('setzt das Team auf die uebergebene Liste', function (): void {
 it('liefert die Kennzahlen der Projektliste', function (): void {
     $offen = Project::factory()->create();
     ProjectPosition::factory()->for($offen)->create(['unit_price_cents' => 100000, 'quantity' => 1]);
+    ProjectPosition::factory()->for($offen)->recurring()->create(['unit_price_cents' => 9900, 'quantity' => 1]);
 
-    Project::factory()->overdue()->create();
+    Project::factory()->create(['backup_status' => OperationsStatus::Critical]);
     Project::factory()->completed()->create();
     Project::factory()->archived()->create();
-
-    ProjectMilestone::factory()->for($offen)->create(['due_date' => now()->addDays(3)]);
-    ProjectMilestone::factory()->for($offen)->create(['due_date' => now()->addDays(60)]);
 
     $kennzahlen = app(CalculateProjectMetrics::class)();
 
     expect($kennzahlen['open'])->toBe(2)
-        ->and($kennzahlen['overdue'])->toBe(1)
-        ->and($kennzahlen['volume']->cents)->toBe(100000)
-        ->and($kennzahlen['dueSoon'])->toBe(1);
+        ->and($kennzahlen['revenue']->cents)->toBe(100000)
+        ->and($kennzahlen['monthlyRevenue']->cents)->toBe(9900);
 });
 
-it('zaehlt keine Termine abgebrochener Projekte als anstehend', function (): void {
-    $abgebrochen = Project::factory()->create(['status' => ProjectStatus::Cancelled]);
-    ProjectMilestone::factory()->for($abgebrochen)->create(['due_date' => now()->addDays(3)]);
+it('zaehlt jedes offene Projekt mit einer Ampel abseits von gruen', function (): void {
+    // Ungeprueft zaehlt mit: niemand hat bestaetigt, dass der Betrieb stimmt.
+    Project::factory()->create();
 
-    // Ein Termin in einem abgebrochenen Projekt steht niemandem mehr bevor.
-    expect(app(CalculateProjectMetrics::class)()['dueSoon'])->toBe(0);
+    Project::factory()->create([
+        'backup_status' => OperationsStatus::Ok,
+        'security_status' => OperationsStatus::Ok,
+        'update_status' => OperationsStatus::Ok,
+    ]);
+
+    Project::factory()->create([
+        'backup_status' => OperationsStatus::Ok,
+        'security_status' => OperationsStatus::Critical,
+        'update_status' => OperationsStatus::Ok,
+    ]);
+
+    // Abgeschlossene und archivierte Projekte betreibt niemand mehr.
+    Project::factory()->completed()->create(['backup_status' => OperationsStatus::Critical]);
+    Project::factory()->archived()->create(['backup_status' => OperationsStatus::Critical]);
+
+    expect(app(CalculateProjectMetrics::class)()['needsAttention'])->toBe(2);
+});
+
+it('legt die drei festen Projekttypen an, ohne vorhandene neu zu datieren', function (): void {
+    // Die Migration hat sie beim Aufbau der Testdatenbank bereits angelegt.
+    DB::table('project_types')
+        ->where('name', 'Laravel')
+        ->update(['created_at' => '2020-01-01 00:00:00', 'icon' => null]);
+
+    $migration = require database_path('migrations/2026_08_25_100000_add_operations_status_to_projects.php');
+    (new ReflectionMethod($migration, 'seedFixedProjectTypes'))->invoke($migration);
+
+    $laravel = DB::table('project_types')->where('name', 'Laravel')->first();
+
+    expect($laravel->icon)->toBe('laravel')
+        ->and($laravel->created_at)->toStartWith('2020-01-01')
+        ->and(DB::table('project_types')->whereIn('name', ['Laravel', 'Shopify', 'WordPress'])->count())->toBe(3);
+});
+
+it('laesst die Betriebsfelder in Ruhe, wenn ein Aufrufer sie nicht mitsendet', function (): void {
+    $projekt = Project::factory()->create([
+        'backup_status' => OperationsStatus::Ok,
+        'security_status' => OperationsStatus::Attention,
+        'update_status' => OperationsStatus::Critical,
+        'operations_checked_on' => '2026-08-01',
+    ]);
+
+    // So ruft das MCP-Werkzeug an: es kennt die Betriebsfelder gar nicht.
+    app(UpdateProject::class)($projekt, ['name' => 'Neuer Name']);
+
+    expect($projekt->fresh())
+        ->name->toBe('Neuer Name')
+        ->backup_status->toBe(OperationsStatus::Ok)
+        ->security_status->toBe(OperationsStatus::Attention)
+        ->update_status->toBe(OperationsStatus::Critical)
+        ->and($projekt->fresh()->operations_checked_on->toDateString())->toBe('2026-08-01');
+});
+
+it('loescht das Pruefdatum, wenn es ausdruecklich geleert wird', function (): void {
+    $projekt = Project::factory()->create(['operations_checked_on' => '2026-08-01']);
+
+    app(UpdateProject::class)($projekt, ['name' => $projekt->name, 'operations_checked_on' => null]);
+
+    expect($projekt->fresh()->operations_checked_on)->toBeNull();
+});
+
+it('setzt jede Betriebsampel auf ungeprueft, solange sie niemand pflegt', function (): void {
+    $projekt = Project::factory()->create();
+
+    expect($projekt->operationsStatuses())
+        ->toBe([
+            'Backup' => OperationsStatus::Unknown,
+            'Security' => OperationsStatus::Unknown,
+            'Updates' => OperationsStatus::Unknown,
+        ]);
 });
 
 it('trennt offene Projekte von allen nicht archivierten', function (): void {
