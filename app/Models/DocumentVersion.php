@@ -52,11 +52,29 @@ class DocumentVersion extends Model
     }
 
     /**
-     * Ob die Datei in der Anwendung angezeigt werden kann.
+     * Darf die Datei im Browser eingebettet angezeigt werden?
+     *
+     * SVG zaehlt zwar als Bild, kann aber Skripte tragen. Eingebettet liefe
+     * das im Ursprung der Anwendung. Die Vorschau setzt zwar eine CSP mit
+     * `default-src 'none'`, die genau das blockiert — aber ein Dateiformat
+     * auszuliefern, dessen Ungefaehrlichkeit allein an einem Kopfzeilenfeld
+     * haengt, ist unnoetig. SVG wird deshalb zum Download angeboten.
      */
     public function isPreviewable(): bool
     {
+        if ($this->isScriptableImage()) {
+            return false;
+        }
+
         return $this->isImage() || $this->isPdf();
+    }
+
+    /**
+     * Bildformate, die ausfuehrbaren Inhalt tragen koennen.
+     */
+    public function isScriptableImage(): bool
+    {
+        return in_array($this->mime_type, ['image/svg+xml', 'image/svg'], strict: true);
     }
 
     /**
