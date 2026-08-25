@@ -112,24 +112,55 @@ class ServiceOverview extends Component
     }
 
     /**
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * Spalten der Liste.
+     *
+     * Die ersten sieben sind voreingestellt sichtbar; die uebrigen bleiben
+     * zuschaltbar. „Abrechnung" gehoert bewusst in die Voreinstellung — sie
+     * erklaert, warum eine Leistung *nicht* in den Kennzahlen steht.
+     *
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     protected function columnDefinitions(): array
     {
         return [
             'customer' => ['label' => 'Kunde', 'sortable' => false, 'fixed' => true],
             'name' => ['label' => 'Leistung', 'fixed' => true],
-            'product' => ['label' => 'Katalogartikel', 'sortable' => false],
-            'category' => ['label' => 'Kategorie', 'sortable' => false],
-            'status' => ['label' => 'Status', 'width' => 120],
-            'purchase_price_cents' => ['label' => 'Einkauf', 'width' => 130],
-            'sales_price_cents' => ['label' => 'Verkauf', 'width' => 130],
-            'margin' => ['label' => 'Marge', 'sortable' => false, 'width' => 150],
-            'interval' => ['label' => 'Intervall', 'sortable' => false, 'width' => 140],
-            'monthly' => ['label' => 'Monatswert', 'sortable' => false, 'width' => 140],
-            'billing' => ['label' => 'Abrechnung', 'sortable' => false, 'width' => 160],
-            'responsible' => ['label' => 'Verantwortlich', 'sortable' => false],
-            'service_start_date' => ['label' => 'Leistungsbeginn', 'width' => 150],
+            'interval' => ['label' => 'Turnus', 'sortable' => false],
+            'sales_price_cents' => ['label' => 'Verkauf'],
+            'monthly' => ['label' => 'Monatswert', 'sortable' => false],
+            'status' => ['label' => 'Status'],
+            'billing' => ['label' => 'Abrechnung', 'sortable' => false],
+            'product' => ['label' => 'Katalogartikel', 'sortable' => false, 'default_visible' => false],
+            'category' => ['label' => 'Kategorie', 'sortable' => false, 'default_visible' => false],
+            'purchase_price_cents' => ['label' => 'Einkauf', 'default_visible' => false],
+            'margin' => ['label' => 'Marge', 'sortable' => false, 'default_visible' => false],
+            'responsible' => ['label' => 'Verantwortlich', 'sortable' => false, 'default_visible' => false],
+            'service_start_date' => ['label' => 'Leistungsbeginn', 'default_visible' => false],
+        ];
+    }
+
+    /**
+     * Rasteranteil und Ausrichtung je Spalte — dieselbe Bauart wie Kundenliste,
+     * Artikelkatalog und Projektliste.
+     *
+     * @return array<string, array{breite: string, rechts?: bool}>
+     */
+    public function columnLayout(): array
+    {
+        return [
+            'customer' => ['breite' => '1.25fr'],
+            'name' => ['breite' => '1.8fr'],
+            'interval' => ['breite' => '0.8fr'],
+            'sales_price_cents' => ['breite' => '0.9fr', 'rechts' => true],
+            'monthly' => ['breite' => '0.9fr', 'rechts' => true],
+            'status' => ['breite' => '0.9fr'],
+            'billing' => ['breite' => '0.95fr'],
+            'product' => ['breite' => '1.3fr'],
+            'category' => ['breite' => '1.2fr'],
+            'purchase_price_cents' => ['breite' => '0.9fr', 'rechts' => true],
+            'margin' => ['breite' => '1.1fr', 'rechts' => true],
+            'responsible' => ['breite' => '1fr'],
+            'service_start_date' => ['breite' => '0.9fr'],
         ];
     }
 

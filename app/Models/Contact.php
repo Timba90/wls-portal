@@ -17,6 +17,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Illuminate\Support\Str;
 
 /**
  * Ansprechpartner eines oder mehrerer Firmenkunden.
@@ -89,6 +90,15 @@ class Contact extends Model
         return collect([$this->academic_title, $this->first_name, $this->last_name])
             ->filter()
             ->implode(' ');
+    }
+
+    /**
+     * Initialen fuer die Kachel in der Liste — je der erste Buchstabe von Vor-
+     * und Nachname, wie beim Privatkunden.
+     */
+    public function initials(): string
+    {
+        return Str::upper(Str::substr($this->first_name, 0, 1).Str::substr($this->last_name, 0, 1));
     }
 
     /**

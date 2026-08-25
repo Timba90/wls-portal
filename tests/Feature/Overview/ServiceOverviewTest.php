@@ -164,3 +164,38 @@ it('kennzeichnet den Abrechnungsstatus in der Uebersicht', function (): void {
         ->assertSee('Wird abgerechnet')
         ->assertSee('Inklusive');
 });
+
+it('zeigt voreingestellt die sieben Spalten der Rastertabelle', function (): void {
+    $sichtbar = collect(Livewire::actingAs(User::factory()->create())
+        ->test(ServiceOverview::class)
+        ->instance()
+        ->tableHeaders())
+        ->pluck('index')
+        ->all();
+
+    expect($sichtbar)->toBe([
+        'customer', 'name', 'interval', 'sales_price_cents', 'monthly', 'status', 'billing',
+    ]);
+});
+
+it('haelt Katalogartikel, Marge und Einkauf zuschaltbar bereit', function (): void {
+    $komponente = Livewire::actingAs(User::factory()->create())->test(ServiceOverview::class);
+
+    // Erst unsichtbar, nach dem Zuschalten in der Kopfzeile.
+    expect($komponente->instance()->isColumnVisible('margin'))->toBeFalse();
+
+    $komponente->call('toggleColumn', 'margin');
+
+    expect(collect($komponente->instance()->tableHeaders())->pluck('index'))->toContain('margin');
+});
+
+it('gibt jeder sichtbaren Spalte einen Rasteranteil', function (): void {
+    $komponente = Livewire::actingAs(User::factory()->create())->test(ServiceOverview::class)->instance();
+    $raster = $komponente->columnLayout();
+
+    // Ohne Anteil fiele die Spalte im Raster auf 1fr zurück und das Verhältnis
+    // zur Kopfzeile stimmte nicht mehr.
+    foreach ($komponente->columnSettings() as $spalte) {
+        expect($raster)->toHaveKey($spalte['key']);
+    }
+});

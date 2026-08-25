@@ -78,11 +78,30 @@ class ContactList extends Component
         return [
             'name' => ['label' => 'Name', 'sortable' => false, 'fixed' => true],
             'email' => ['label' => 'E-Mail-Adresse', 'sortable' => false],
-            'phone' => ['label' => 'Telefon', 'sortable' => false, 'width' => 180],
+            'phone' => ['label' => 'Telefon', 'sortable' => false],
             'customers' => ['label' => 'Kunden', 'sortable' => false],
             'roles' => ['label' => 'Rollen', 'sortable' => false],
-            'preferred_contact_method' => ['label' => 'Bevorzugt', 'width' => 130],
-            'status' => ['label' => 'Status', 'sortable' => false, 'width' => 120],
+            'preferred_contact_method' => ['label' => 'Bevorzugt'],
+            'status' => ['label' => 'Status', 'sortable' => false],
+        ];
+    }
+
+    /**
+     * Rasteranteil und Ausrichtung je Spalte — dieselbe Bauart wie Kundenliste,
+     * Artikelkatalog, Projektliste und Leistungsübersicht.
+     *
+     * @return array<string, array{breite: string, rechts?: bool}>
+     */
+    public function columnLayout(): array
+    {
+        return [
+            'name' => ['breite' => '1.6fr'],
+            'email' => ['breite' => '1.7fr'],
+            'phone' => ['breite' => '1.1fr'],
+            'customers' => ['breite' => '1.2fr'],
+            'roles' => ['breite' => '1.2fr'],
+            'preferred_contact_method' => ['breite' => '0.8fr'],
+            'status' => ['breite' => '0.8fr'],
         ];
     }
 

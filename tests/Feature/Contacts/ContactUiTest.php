@@ -230,3 +230,21 @@ it('lehnt eine bereits vergebene Rollenbezeichnung ab', function (): void {
         ->call('save')
         ->assertHasErrors('name');
 });
+
+it('zeigt die Ansprechpartnerliste als Rastertabelle mit Initialen', function (): void {
+    Contact::factory()->create(['first_name' => 'Torsten', 'last_name' => 'Achenbach']);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ContactList::class)
+        ->assertSee('Achenbach, Torsten')
+        ->assertSee('TA');
+});
+
+it('gibt jeder Spalte der Ansprechpartnerliste einen Rasteranteil', function (): void {
+    $komponente = Livewire::actingAs(User::factory()->create())->test(ContactList::class)->instance();
+    $raster = $komponente->columnLayout();
+
+    foreach ($komponente->columnSettings() as $spalte) {
+        expect($raster)->toHaveKey($spalte['key']);
+    }
+});
