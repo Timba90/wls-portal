@@ -28,3 +28,6 @@ Thumbs.db
 
 # Laravel Boost erzeugt diese Datei bei Bedarf neu.
 /.claude/skills
+
+# Die Browser-Suite legt bei Fehlschlaegen Bildschirmfotos ab.
+/tests/Browser/Screenshots
