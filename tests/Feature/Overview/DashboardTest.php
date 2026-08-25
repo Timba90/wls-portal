@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Reporting\CalculatePortalMetrics;
+use App\Enums\ProjectStatus;
 use App\Livewire\Dashboard\DashboardPage;
 use App\Models\Category;
 use App\Models\Contact;
@@ -114,8 +115,13 @@ it('zeigt weder Bestandsliste noch die Ausnahmen der Kennzahlen', function (): v
         ->assertDontSee('Archivierte Kunden');
 });
 
-it('zeigt die Zahl der offenen Projekte in der Navigation', function (): void {
+it('zeigt die Zahl der laufenden Projekte in der Navigation', function (): void {
     Project::factory()->count(3)->create();
+
+    // Geplant und pausiert laufen nicht — der Zaehler nennt, woran gerade
+    // gearbeitet wird.
+    Project::factory()->planned()->create();
+    Project::factory()->create(['status' => ProjectStatus::OnHold]);
     Project::factory()->completed()->create();
     Project::factory()->archived()->create();
 

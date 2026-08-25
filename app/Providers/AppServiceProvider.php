@@ -113,7 +113,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('components.layouts.app', function (ViewContract $view): void {
             $view->with('navCounts', once(fn (): array => [
                 'customers' => Customer::query()->active()->count(),
-                'projects' => Project::query()->open()->count(),
+                'projects' => Project::query()->running()->count(),
                 'services' => CustomerService::query()->active()->count(),
                 'contacts' => Contact::query()->active()->count(),
                 'products' => Product::query()->active()->count(),
