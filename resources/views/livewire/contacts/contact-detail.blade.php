@@ -20,12 +20,12 @@
             <x-button sm color="red"
                       outline
                       icon="archive-box"
-                      x-on:click="$dialog.confirm({
-                          title: 'Ansprechpartner archivieren?',
-                          description: 'Die Kundenzuordnungen bleiben erhalten.',
-                          accept: { text: 'Archivieren', method: 'archive' },
-                          reject: { text: 'Abbrechen' },
-                      })">
+                      x-on:click="$tsui.interaction('dialog')
+                          .question('Ansprechpartner archivieren?', 'Die Kundenzuordnungen bleiben erhalten.')
+                          .wireable($wire.id)
+                          .confirm('Archivieren', 'archive')
+                          .cancel('Abbrechen')
+                          .send()">
                 Archivieren
             </x-button>
                 @endif
@@ -184,8 +184,8 @@
 
         @script
         <script>
-            $wire.on('ansprechpartner-archiviert', () => $tallstackui.toast().success('Ansprechpartner archiviert').send());
-            $wire.on('ansprechpartner-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
+            $wire.on('ansprechpartner-archiviert', () => $tsui.interaction('toast').success('Ansprechpartner archiviert').send());
+            $wire.on('ansprechpartner-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
         </script>
         @endscript
     </x-page>

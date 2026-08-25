@@ -91,7 +91,7 @@
 
         @script
         <script>
-            $wire.on('kategorie-gespeichert', () => $tallstackui.toast().success('Kategorie gespeichert').send());
+            $wire.on('kategorie-gespeichert', () => $tsui.interaction('toast').success('Kategorie gespeichert').send());
         </script>
         @endscript
     </x-page>

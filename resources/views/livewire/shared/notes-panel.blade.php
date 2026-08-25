@@ -41,12 +41,12 @@
                                          icon="trash"
                                          sm
                                          title="Löschen"
-                                         x-on:click="$dialog.confirm({
-                                             title: 'Notiz löschen?',
-                                             description: 'Die Notiz wird endgültig entfernt.',
-                                             accept: { text: 'Löschen', method: 'delete', params: {{ $note->id }} },
-                                             reject: { text: 'Abbrechen' },
-                                         })" />
+                                         x-on:click="$tsui.interaction('dialog')
+                                             .question('Notiz löschen?', 'Die Notiz wird endgültig entfernt.')
+                                             .wireable($wire.id)
+                                             .confirm('Löschen', 'delete', {{ $note->id }})
+                                             .cancel('Abbrechen')
+                                             .send()" />
                     </div>
                 </div>
             </div>
@@ -81,8 +81,8 @@
 
     @script
     <script>
-        $wire.on('notiz-gespeichert', () => $tallstackui.toast().success('Notiz gespeichert').send());
-        $wire.on('notiz-geloescht', () => $tallstackui.toast().success('Notiz gelöscht').send());
+        $wire.on('notiz-gespeichert', () => $tsui.interaction('toast').success('Notiz gespeichert').send());
+        $wire.on('notiz-geloescht', () => $tsui.interaction('toast').success('Notiz gelöscht').send());
     </script>
     @endscript
 </div>

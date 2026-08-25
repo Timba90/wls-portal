@@ -51,7 +51,7 @@
 
         @script
         <script>
-            $wire.on('rolle-gespeichert', () => $tallstackui.toast().success('Rolle gespeichert').send());
+            $wire.on('rolle-gespeichert', () => $tsui.interaction('toast').success('Rolle gespeichert').send());
         </script>
         @endscript
     </x-page>

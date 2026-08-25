@@ -78,6 +78,14 @@ vortäuschen würde, die keine Daten haben.
 | Voreingestellte Spalten der Leistungsübersicht | Sieben statt dreizehn: Kunde, Leistung, Turnus, Verkauf, Monatswert, Status, Abrechnung. Katalogartikel, Kategorie, Einkauf, Marge, Verantwortlich und Leistungsbeginn bleiben zuschaltbar. Die Abrechnungsspalte bleibt voreingestellt, weil sie erklärt, warum eine Leistung *nicht* in den Kennzahlen steht. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### Oberfläche
+
+| Element | Umsetzung |
+|---|---|
+| Bestätigungsdialoge und Hinweise | Riefen durchgehend `$dialog.confirm({...})` und `$tallstackui.toast()` auf — beides die Schnittstelle der Vorgängerversion. TallStackUI 3 bietet `$tsui.interaction('dialog')` beziehungsweise `$tsui.interaction('toast')`. Sämtliche 56 Aufrufe waren dadurch wirkungslos: Archivieren, Löschen, Reaktivieren, jede Erfolgsmeldung. Umgestellt; ein Test in `tests/Feature/Extras/FrontendApiTest.php` hält die Namen fest. |
+| Warum das kein Test fand | Die Aufrufe stehen in Blade-Attributen und laufen erst im Browser. Die Seite lädt, der Knopf ist da, ein Feature-Test sieht keinen Unterschied. Der neue Wächter liest die Ansichten als Text — das ist grob, greift aber genau dort, wo sonst nichts greift, solange die Browser-Suite nicht läuft. |
+| `wireable()` bei Dialogen | TallStackUI weist einen Dialog mit Livewire-Methode ohne Angabe der Komponente still ab. Der zweite Test stellt sicher, dass jeder Dialog mit Methode auch `wireable($wire.id)` nennt. |
+
 ### Übersicht
 
 | Element | Umsetzung |

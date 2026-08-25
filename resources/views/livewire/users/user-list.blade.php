@@ -68,7 +68,7 @@
 
         @script
         <script>
-            $wire.on('benutzer-gespeichert', () => $tallstackui.toast().success('Benutzer gespeichert').send());
+            $wire.on('benutzer-gespeichert', () => $tsui.interaction('toast').success('Benutzer gespeichert').send());
         </script>
         @endscript
     </x-page>

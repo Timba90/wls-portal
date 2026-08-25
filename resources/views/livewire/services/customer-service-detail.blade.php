@@ -321,12 +321,12 @@
                                                          icon="trash"
                                                          sm
                                                          title="Geplante Preisänderung löschen"
-                                                         x-on:click="$dialog.confirm({
-                                                             title: 'Geplante Preisänderung löschen?',
-                                                             description: 'Die Änderung wird zum Wirksamkeitsdatum nicht mehr greifen.',
-                                                             accept: { text: 'Löschen', method: 'cancelPriceChange', params: {{ $change->id }} },
-                                                             reject: { text: 'Abbrechen' },
-                                                         })" />
+                                                         x-on:click="$tsui.interaction('dialog')
+                                                             .question('Geplante Preisänderung löschen?', 'Die Änderung wird zum Wirksamkeitsdatum nicht mehr greifen.')
+                                                             .wireable($wire.id)
+                                                             .confirm('Löschen', 'cancelPriceChange', {{ $change->id }})
+                                                             .cancel('Abbrechen')
+                                                             .send()" />
                                     @endunless
                                 </div>
                             </div>
@@ -475,12 +475,12 @@
                                   block
                                   color="red"
                                   outline
-                                  x-on:click="$dialog.confirm({
-                                      title: 'Leistung archivieren?',
-                                      description: 'Archivierte Leistungen sind vollständig schreibgeschützt und bleiben historisch erhalten.',
-                                      accept: { text: 'Archivieren', method: 'archive' },
-                                      reject: { text: 'Abbrechen' },
-                                  })">
+                                  x-on:click="$tsui.interaction('dialog')
+                                      .question('Leistung archivieren?', 'Archivierte Leistungen sind vollständig schreibgeschützt und bleiben historisch erhalten.')
+                                      .wireable($wire.id)
+                                      .confirm('Archivieren', 'archive')
+                                      .cancel('Abbrechen')
+                                      .send()">
                             Leistung archivieren
                         </x-button>
                     </div>
@@ -539,13 +539,13 @@
 
         @script
         <script>
-            $wire.on('status-geaendert', () => $tallstackui.toast().success('Status geändert').send());
-            $wire.on('nicht-abrechnen-gesetzt', () => $tallstackui.toast().success('Leistung wird bewusst nicht abgerechnet').send());
-            $wire.on('nicht-abrechnen-entfernt', () => $tallstackui.toast().success('Kennzeichnung entfernt').send());
-            $wire.on('leistung-archiviert', () => $tallstackui.toast().success('Leistung archiviert').send());
-            $wire.on('leistung-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
-            $wire.on('preisaenderung-gespeichert', () => $tallstackui.toast().success('Preisänderung gespeichert').send());
-            $wire.on('preisaenderung-geloescht', () => $tallstackui.toast().success('Geplante Preisänderung gelöscht').send());
+            $wire.on('status-geaendert', () => $tsui.interaction('toast').success('Status geändert').send());
+            $wire.on('nicht-abrechnen-gesetzt', () => $tsui.interaction('toast').success('Leistung wird bewusst nicht abgerechnet').send());
+            $wire.on('nicht-abrechnen-entfernt', () => $tsui.interaction('toast').success('Kennzeichnung entfernt').send());
+            $wire.on('leistung-archiviert', () => $tsui.interaction('toast').success('Leistung archiviert').send());
+            $wire.on('leistung-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
+            $wire.on('preisaenderung-gespeichert', () => $tsui.interaction('toast').success('Preisänderung gespeichert').send());
+            $wire.on('preisaenderung-geloescht', () => $tsui.interaction('toast').success('Geplante Preisänderung gelöscht').send());
         </script>
         @endscript
     </x-page>

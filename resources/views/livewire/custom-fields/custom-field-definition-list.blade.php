@@ -109,7 +109,7 @@
 
         @script
         <script>
-            $wire.on('feld-gespeichert', () => $tallstackui.toast().success('Feld gespeichert').send());
+            $wire.on('feld-gespeichert', () => $tsui.interaction('toast').success('Feld gespeichert').send());
         </script>
         @endscript
     </x-page>

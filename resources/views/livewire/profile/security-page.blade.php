@@ -61,12 +61,12 @@
                             </x-button>
 
                             <x-button color="red"
-                                      x-on:click="$dialog.confirm({
-                                          title: 'Zwei-Faktor-Authentifizierung deaktivieren?',
-                                          description: 'Ihr Konto ist danach nur noch durch das Passwort geschützt.',
-                                          accept: { text: 'Deaktivieren', method: 'disableTwoFactor' },
-                                          reject: { text: 'Abbrechen' },
-                                      })">
+                                      x-on:click="$tsui.interaction('dialog')
+                                          .question('Zwei-Faktor-Authentifizierung deaktivieren?', 'Ihr Konto ist danach nur noch durch das Passwort geschützt.')
+                                          .wireable($wire.id)
+                                          .confirm('Deaktivieren', 'disableTwoFactor')
+                                          .cancel('Abbrechen')
+                                          .send()">
                                 Deaktivieren
                             </x-button>
                         </div>
@@ -124,12 +124,12 @@
 
                 @if ($sessions->count() > 1)
                     <x-button color="secondary" outline
-                              x-on:click="$dialog.confirm({
-                                  title: 'Alle anderen Sitzungen beenden?',
-                                  description: 'Sie bleiben nur auf diesem Gerät angemeldet.',
-                                  accept: { text: 'Beenden', method: 'terminateOtherSessions' },
-                                  reject: { text: 'Abbrechen' },
-                              })">
+                              x-on:click="$tsui.interaction('dialog')
+                                  .question('Alle anderen Sitzungen beenden?', 'Sie bleiben nur auf diesem Gerät angemeldet.')
+                                  .wireable($wire.id)
+                                  .confirm('Beenden', 'terminateOtherSessions')
+                                  .cancel('Abbrechen')
+                                  .send()">
                         Alle anderen Sitzungen beenden
                     </x-button>
                 @endif
@@ -138,11 +138,11 @@
 
         @script
         <script>
-            $wire.on('zwei-faktor-aktiviert', () => $tallstackui.toast().success('Zwei-Faktor-Authentifizierung aktiviert').send());
-            $wire.on('zwei-faktor-deaktiviert', () => $tallstackui.toast().success('Zwei-Faktor-Authentifizierung deaktiviert').send());
-            $wire.on('wiederherstellungscodes-erneuert', () => $tallstackui.toast().success('Neue Wiederherstellungscodes erzeugt').send());
-            $wire.on('sitzung-beendet', () => $tallstackui.toast().success('Sitzung beendet').send());
-            $wire.on('sitzungen-beendet', () => $tallstackui.toast().success('Alle anderen Sitzungen wurden beendet').send());
+            $wire.on('zwei-faktor-aktiviert', () => $tsui.interaction('toast').success('Zwei-Faktor-Authentifizierung aktiviert').send());
+            $wire.on('zwei-faktor-deaktiviert', () => $tsui.interaction('toast').success('Zwei-Faktor-Authentifizierung deaktiviert').send());
+            $wire.on('wiederherstellungscodes-erneuert', () => $tsui.interaction('toast').success('Neue Wiederherstellungscodes erzeugt').send());
+            $wire.on('sitzung-beendet', () => $tsui.interaction('toast').success('Sitzung beendet').send());
+            $wire.on('sitzungen-beendet', () => $tsui.interaction('toast').success('Alle anderen Sitzungen wurden beendet').send());
         </script>
         @endscript
     </x-page>

@@ -504,14 +504,14 @@
 
         @script
         <script>
-            $wire.on('projekt-archiviert', () => $tallstackui.toast().success('Projekt archiviert').send());
-            $wire.on('projekt-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
-            $wire.on('meilenstein-gespeichert', () => $tallstackui.toast().success('Meilenstein gespeichert').send());
-            $wire.on('meilenstein-geloescht', () => $tallstackui.toast().success('Meilenstein entfernt').send());
-            $wire.on('position-gespeichert', () => $tallstackui.toast().success('Position gespeichert').send());
-            $wire.on('position-geloescht', () => $tallstackui.toast().success('Position entfernt').send());
-            $wire.on('team-gespeichert', () => $tallstackui.toast().success('Team ergänzt').send());
-            $wire.on('team-entfernt', () => $tallstackui.toast().success('Aus dem Team entfernt').send());
+            $wire.on('projekt-archiviert', () => $tsui.interaction('toast').success('Projekt archiviert').send());
+            $wire.on('projekt-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
+            $wire.on('meilenstein-gespeichert', () => $tsui.interaction('toast').success('Meilenstein gespeichert').send());
+            $wire.on('meilenstein-geloescht', () => $tsui.interaction('toast').success('Meilenstein entfernt').send());
+            $wire.on('position-gespeichert', () => $tsui.interaction('toast').success('Position gespeichert').send());
+            $wire.on('position-geloescht', () => $tsui.interaction('toast').success('Position entfernt').send());
+            $wire.on('team-gespeichert', () => $tsui.interaction('toast').success('Team ergänzt').send());
+            $wire.on('team-entfernt', () => $tsui.interaction('toast').success('Aus dem Team entfernt').send());
         </script>
         @endscript
     </x-page>

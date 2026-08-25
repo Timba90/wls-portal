@@ -48,7 +48,7 @@
 
         @script
         <script>
-            $wire.on('tag-gespeichert', () => $tallstackui.toast().success('Tag gespeichert').send());
+            $wire.on('tag-gespeichert', () => $tsui.interaction('toast').success('Tag gespeichert').send());
         </script>
         @endscript
     </x-page>
