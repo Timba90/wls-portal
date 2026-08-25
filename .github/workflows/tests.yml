@@ -70,8 +70,15 @@ jobs:
           node-version: '22'
           cache: npm
 
+      # `playwright` steckt als Abhaengigkeit der vorbereiteten Browser-Tests
+      # in package.json. Sein Postinstall wuerde bei jedem Lauf Browser
+      # nachladen — solange die Browser-Suite nicht aktiv ist, waere das
+      # reine Wartezeit. Wer sie aktiviert, nimmt die Zeile heraus und
+      # ergaenzt `npx playwright install --with-deps chromium`.
       - name: NPM-Abhängigkeiten installieren
         run: npm ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
 
       # Die Layouts binden Assets über @vite ein; ohne Build fehlt das Manifest
       # und jede Seitenansicht schlägt fehl.
