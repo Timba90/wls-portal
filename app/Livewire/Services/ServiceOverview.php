@@ -112,7 +112,13 @@ class ServiceOverview extends Component
     }
 
     /**
-     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool}>
+     * Spalten der Liste.
+     *
+     * Die ersten sieben sind voreingestellt sichtbar; die uebrigen bleiben
+     * zuschaltbar. „Abrechnung" gehoert bewusst in die Voreinstellung — sie
+     * erklaert, warum eine Leistung *nicht* in den Kennzahlen steht.
+     *
+     * @return array<string, array{label: string, sortable?: bool, width?: int|null, fixed?: bool, default_visible?: bool}>
      */
     protected function columnDefinitions(): array
     {
