@@ -108,13 +108,13 @@ it('setzt alle Filter zurueck', function (): void {
         ->assertSet('type', '');
 });
 
-it('zeigt standardmaessig die sechs Spalten des Entwurfs', function (): void {
+it('zeigt standardmaessig den Kunden, seine geplanten Umsaetze und den Status', function (): void {
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
     $sichtbar = array_column($component->instance()->tableHeaders(), 'index');
 
     expect($sichtbar)->toBe([
-        'customer', 'contact', 'active_services_count', 'monthly_revenue', 'activity', 'status',
+        'customer', 'monthly_revenue', 'yearly_revenue', 'monthly_costs', 'margin', 'status',
     ]);
 });
 
@@ -122,21 +122,21 @@ it('haelt die uebrigen Spalten zuschaltbar bereit', function (): void {
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
     expect(array_column($component->get('tableColumns'), 'key'))
-        ->toContain('customer_number', 'internal_code', 'type', 'responsible', 'yearly_revenue', 'monthly_costs', 'margin')
-        ->and($component->instance()->isColumnVisible('margin'))->toBeFalse();
+        ->toContain('customer_number', 'internal_code', 'type', 'responsible', 'contact', 'active_services_count', 'activity')
+        ->and($component->instance()->isColumnVisible('activity'))->toBeFalse();
 });
 
 it('blendet eine Spalte global aus und merkt sich das', function (): void {
     Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('toggleColumn', 'contact');
+        ->call('toggleColumn', 'monthly_costs');
 
     expect(TableConfiguration::query()->where('table_key', 'customers')->exists())->toBeTrue();
 
     // Auch fuer einen anderen Benutzer, denn die Konfiguration gilt global.
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
-    expect($component->instance()->isColumnVisible('contact'))->toBeFalse();
+    expect($component->instance()->isColumnVisible('monthly_costs'))->toBeFalse();
 });
 
 it('blendet feste Spalten nicht aus', function (): void {
@@ -150,19 +150,19 @@ it('blendet feste Spalten nicht aus', function (): void {
 it('aendert die Spaltenreihenfolge', function (): void {
     $component = Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('moveColumn', 'active_services_count', -1);
+        ->call('moveColumn', 'yearly_revenue', -1);
 
-    expect(array_column($component->get('tableColumns'), 'key')[1])->toBe('active_services_count');
+    expect(array_column($component->get('tableColumns'), 'key')[1])->toBe('yearly_revenue');
 });
 
 it('setzt die Tabellenkonfiguration auf den Standard zurueck', function (): void {
     $component = Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
-        ->call('toggleColumn', 'contact')
+        ->call('toggleColumn', 'monthly_costs')
         ->call('resetTableConfiguration');
 
     expect(TableConfiguration::query()->where('table_key', 'customers')->exists())->toBeFalse()
-        ->and($component->instance()->isColumnVisible('contact'))->toBeTrue();
+        ->and($component->instance()->isColumnVisible('monthly_costs'))->toBeTrue();
 });
 
 it('zaehlt die Kunden je Statusfilter', function (): void {
@@ -222,8 +222,10 @@ it('zeigt den Hauptansprechpartner in der Liste', function (): void {
         emails: [['email' => 'thomas.lindner@muller.example.de', 'type' => 'business', 'is_primary' => true]],
     );
 
+    // Die Spalte ist seit dem Umbau zuschaltbar statt voreingestellt.
     Livewire::actingAs(User::factory()->create())
         ->test(CustomerList::class)
+        ->call('toggleColumn', 'contact')
         ->assertSee('Thomas Lindner')
         ->assertSee('thomas.lindner@muller.example.de');
 });
@@ -243,7 +245,9 @@ it('laedt den Hauptansprechpartner je Kunde, nicht nur einmal insgesamt', functi
         );
     }
 
-    $komponente = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
+    $komponente = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerList::class)
+        ->call('toggleColumn', 'contact');
 
     foreach ($namen as $nachname) {
         $komponente->assertSee("Test {$nachname}");

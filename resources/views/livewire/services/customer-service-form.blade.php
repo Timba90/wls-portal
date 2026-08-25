@@ -88,15 +88,21 @@
                                      label="Abrechnungsintervall"
                                      :options="$intervalUnitOptions"
                                      select="label:label|value:value"
+                                     hint="Ein- und Verkaufspreis werden auf das neue Intervall umgerechnet."
                                      required />
 
                     @if ($this->requiresIntervalCount())
-                        <x-input wire:model="billing_interval_count"
+                        {{--
+                            Live, damit die Preise mitgerechnet werden. Mit
+                            Verzoegerung, damit beim Tippen von „12" nicht
+                            zwischendurch auf „1" umgerechnet wird.
+                        --}}
+                        <x-input wire:model.live.debounce.600ms="billing_interval_count"
                                  type="number"
                                  min="1"
                                  max="999"
                                  label="Anzahl"
-                                 hint="Quartalsweise entspricht 3 Monaten." />
+                                 hint="Quartalsweise entspricht 3 Monaten. Preise werden beim Wechsel umgerechnet." />
                     @endif
 
                     <x-date wire:model="service_start_date" label="Leistungsbeginn" format="DD.MM.YYYY" />

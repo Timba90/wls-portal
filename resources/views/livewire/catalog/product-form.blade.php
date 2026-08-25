@@ -59,7 +59,7 @@
                                      required />
 
                     @if ($this->requiresIntervalCount())
-                        <x-input wire:model="default_billing_interval_count"
+                        <x-input wire:model.live.debounce.600ms="default_billing_interval_count"
                                  type="number"
                                  min="1"
                                  max="999"

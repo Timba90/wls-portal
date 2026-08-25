@@ -13,10 +13,12 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\ServiceComponent;
 use App\Models\User;
+use App\Support\BillingInterval;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -121,6 +123,101 @@ class CustomerServiceForm extends Component
     public function isEditing(): bool
     {
         return $this->service?->exists ?? false;
+    }
+
+    /**
+     * Das Intervall, wie es vor der laufenden Aenderung galt.
+     *
+     * Wird in `updating()` festgehalten und in `updated()` gebraucht — beides
+     * geschieht innerhalb derselben Anfrage.
+     */
+    private ?BillingInterval $intervalBeforeUpdate = null;
+
+    /**
+     * Merkt sich das bisherige Intervall, bevor Livewire den neuen Wert setzt.
+     */
+    public function updating(string $property, mixed $value): void
+    {
+        if ($this->isIntervalProperty($property)) {
+            $this->intervalBeforeUpdate = $this->currentInterval();
+        }
+    }
+
+    /**
+     * Rechnet die Preise auf das neue Intervall um.
+     *
+     * Ein Einkaufspreis von 15,00 EUR im Jahr ist monatlich 1,25 EUR. Ohne
+     * diese Umrechnung wuerde der Wechsel des Intervalls den Preis
+     * stillschweigend verzwoelffachen — der Betrag im Feld gilt je
+     * Abrechnungsperiode.
+     */
+    public function updated(string $property, mixed $value): void
+    {
+        if (! $this->isIntervalProperty($property) || ! $this->intervalBeforeUpdate instanceof BillingInterval) {
+            return;
+        }
+
+        $vorher = $this->intervalBeforeUpdate;
+        $this->intervalBeforeUpdate = null;
+
+        $nachher = $this->currentInterval();
+
+        if ($nachher === null || $vorher->equals($nachher)) {
+            return;
+        }
+
+        $this->purchase_price = $this->convertInput($this->purchase_price, $vorher, $nachher);
+        $this->sales_price = $this->convertInput($this->sales_price, $vorher, $nachher);
+
+        // Die Bestandteile tragen Anteile desselben Preises und folgen ihm.
+        foreach ($this->components as $index => $component) {
+            $this->components[$index]['purchase_price'] = $this->convertInput($component['purchase_price'], $vorher, $nachher);
+            $this->components[$index]['sales_price'] = $this->convertInput($component['sales_price'], $vorher, $nachher);
+        }
+    }
+
+    private function isIntervalProperty(string $property): bool
+    {
+        return in_array($property, ['billing_interval_unit', 'billing_interval_count'], true);
+    }
+
+    /**
+     * Das eingestellte Intervall; `null`, solange die Eingabe unbrauchbar ist.
+     */
+    private function currentInterval(): ?BillingInterval
+    {
+        $einheit = BillingIntervalUnit::tryFrom($this->billing_interval_unit);
+
+        if ($einheit === null) {
+            return null;
+        }
+
+        if ($einheit->requiresCount() && $this->billing_interval_count < 1) {
+            return null;
+        }
+
+        return BillingInterval::make($einheit, $this->billing_interval_count);
+    }
+
+    /**
+     * Rechnet einen Betrag aus einem Eingabefeld um und gibt ihn wieder als
+     * Eingabe zurueck. Leere Felder bleiben leer.
+     */
+    private function convertInput(string $eingabe, BillingInterval $von, BillingInterval $nach): string
+    {
+        if (trim($eingabe) === '') {
+            return $eingabe;
+        }
+
+        try {
+            $betrag = Money::fromEuroInput($eingabe);
+        } catch (InvalidArgumentException) {
+            // Unlesbares bleibt stehen: die Validierung beim Speichern meldet
+            // es. Ein Intervallwechsel darf daran nicht abbrechen.
+            return $eingabe;
+        }
+
+        return $von->convertTo($betrag, $nach)->toInput();
     }
 
     public function requiresIntervalCount(): bool
@@ -336,7 +433,7 @@ class CustomerServiceForm extends Component
 
             try {
                 Money::fromEuroInput($value);
-            } catch (\InvalidArgumentException) {
+            } catch (InvalidArgumentException) {
                 $fail('Der Wert ist kein gültiger Geldbetrag.');
             }
         };

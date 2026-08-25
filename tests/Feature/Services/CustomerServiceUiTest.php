@@ -167,13 +167,8 @@ it('zeigt die Kennzahlen in der Kundenliste', function (): void {
 
     $component = Livewire::actingAs(User::factory()->create())->test(CustomerList::class);
 
-    // Voreingestellt zeigt die Liste den Monatsumsatz.
-    $component->assertSee('59,00 €');
-
-    // Jahresumsatz, Kosten und Marge sind zuschaltbar.
-    $component->call('toggleColumn', 'yearly_revenue')
-        ->call('toggleColumn', 'monthly_costs')
-        ->call('toggleColumn', 'margin')
+    // Voreingestellt zeigt die Liste alle vier geplanten Umsatzzahlen.
+    $component->assertSee('59,00 €')
         ->assertSee('708,00 €')
         ->assertSee('18,00 €')
         ->assertSee('41,00 €');
