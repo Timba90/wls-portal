@@ -1,15 +1,31 @@
+@php
+    $spalten = $this->tableHeaders();
+    $raster = $this->columnLayout();
+
+    // Rastervorlage aus den sichtbaren Spalten, damit die Anteile auch dann
+    // stimmen, wenn Spalten zu- oder abgeschaltet werden.
+    $vorlage = collect($spalten)
+        ->map(fn (array $spalte): string => $raster[$spalte['index']]['breite'] ?? '1fr')
+        ->implode(' ');
+
+    $mindestbreite = max(760, count($spalten) * 150);
+@endphp
+
 <div>
     <x-page title="Leistungsübersicht" subtitle="Alle Kundenleistungen mit vereinbartem Preis, Kosten und Abrechnungsintervall.">
 
-        <div class="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <x-metric-tile label="Monatsumsatz (Auswahl)" :value="$summe['monthlyRevenue']->format()" />
-            <x-metric-tile label="Jahresumsatz (Auswahl)" :value="$summe['yearlyRevenue']->format()" />
-            <x-metric-tile label="Kosten monatlich" :value="$summe['monthlyCosts']->format()" />
-            <x-metric-tile label="Marge monatlich" :value="$summe['monthlyMargin']->format()" />
+        <div class="mb-3.5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
+            <x-kpi-tile label="Umsatz / Monat"
+                        :value="$summe['monthlyRevenue']->format()"
+                        :note="$summe['yearlyRevenue']->format().' im Jahr'" />
+            <x-kpi-tile label="Kosten / Monat" :value="$summe['monthlyCosts']->format()" />
+            <x-kpi-tile label="Marge / Monat" :value="$summe['monthlyMargin']->format()" />
+            <x-kpi-tile label="In den Kennzahlen"
+                        :value="number_format($summe['count'], 0, ',', '.')"
+                        note="aktiv, wiederkehrend, abzurechnen" />
         </div>
 
-        <x-card>
-            <div class="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div class="mb-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 <x-input wire:model.live.debounce.300ms="search"
                          label="Suche"
                          placeholder="Leistung, Rechnungsbezeichnung oder Kunde"
@@ -52,15 +68,16 @@
                                  select="label:label|value:value" />
 
                 <div class="flex items-end gap-2">
-                    <x-button color="secondary" outline wire:click="resetFilters">Filter zurücksetzen</x-button>
+                    <x-button color="secondary" outline sm wire:click="resetFilters">Filter zurücksetzen</x-button>
 
                     <x-button color="secondary"
                               outline
+                              sm
                               icon="adjustments-horizontal"
                               wire:click="$set('showTableSettings', true)"
                               title="Spalten einrichten" />
                 </div>
-            </div>
+        </div>
 
             {{--
                 Der Hinweis steht bewusst über der Tabelle und nicht in einer Spalte:
@@ -94,102 +111,150 @@
                 </button>
             @endif
 
-            <p class="mb-3 text-sm text-ink-muted">
-                {{ number_format($services->total(), 0, ',', '.') }} Leistungen in der Auswahl,
-                davon {{ number_format($summe['count'], 0, ',', '.') }} in den Kennzahlen berücksichtigt.
-            </p>
+        <div class="mb-3.5 flex flex-wrap items-center justify-end gap-2.5">
+            <span class="text-[11.5px] text-ink-faint">
+                {{ trans_choice(':count Leistung|:count Leistungen', $services->total(), ['count' => number_format($services->total(), 0, ',', '.')]) }}
+                in der Auswahl
+            </span>
+        </div>
 
-            <x-table :headers="$this->tableHeaders()" :rows="$services" :sort="$sort" paginate>
-                @interact('column_customer', $row)
-                    <a href="{{ route('customers.show', $row->customer) }}"
-                       wire:navigate
-                       class="text-accent hover:underline">
-                        {{ $row->customer->short_label }}
-                    </a>
-                @endinteract
+        <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
+            <div class="overflow-x-auto">
+                <div style="min-width: {{ $mindestbreite }}px">
+                    {{-- Kopfzeile --}}
+                    <div class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
+                         style="grid-template-columns: {{ $vorlage }}">
+                        @foreach ($spalten as $spalte)
+                            <span @class([
+                                'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
+                                'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                            ])>{{ $spalte['label'] }}</span>
+                        @endforeach
+                    </div>
 
-                @interact('column_name', $row)
-                    <a href="{{ route('customer-services.show', [$row->customer, $row]) }}"
-                       wire:navigate
-                       class="font-medium text-accent hover:underline">
-                        {{ $row->name }}
-                    </a>
-                @endinteract
+                    @forelse ($services as $leistung)
+                        {{-- Die ganze Zeile ist ein Link, damit Mittelklick und Tastatur funktionieren. --}}
+                        <a wire:key="leistung-{{ $leistung->id }}"
+                           href="{{ route('customer-services.show', [$leistung->customer, $leistung]) }}"
+                           wire:navigate
+                           class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
+                           style="grid-template-columns: {{ $vorlage }}">
+                            @foreach ($spalten as $spalte)
+                                @switch($spalte['index'])
+                                    @case('customer')
+                                        <div class="flex min-w-0 items-center gap-[11px]">
+                                            <x-avatar-initials :initials="$leistung->customer->initials()" size="sm" />
 
-                @interact('column_product', $row)
-                    @if ($row->product)
-                        {{ $row->product->name }}@if ($row->productVariant) · {{ $row->productVariant->name }}@endif
-                    @else
-                        <span class="text-ink-faint">Individuell</span>
-                    @endif
-                @endinteract
+                                            <span class="truncate text-[12.5px] text-ink-base">
+                                                {{ $leistung->customer->short_label ?: $leistung->customer->displayName() }}
+                                            </span>
+                                        </div>
+                                        @break
 
-                @interact('column_category', $row)
-                    @if ($row->category && $row->subcategory)
-                        {{ $row->category->name }} <span class="text-ink-faint">&rarr;</span> {{ $row->subcategory->name }}
-                    @else
-                        {{ $row->category?->name ?? '—' }}
-                    @endif
-                @endinteract
+                                    @case('name')
+                                        <div class="flex min-w-0 flex-col">
+                                            <span class="truncate text-[13px] font-medium text-ink-base">{{ $leistung->name }}</span>
 
-                @interact('column_status', $row)
-                    <x-badge :color="$row->status->color()" :text="$row->status->label()" sm />
-                @endinteract
+                                            @if ($leistung->billing_label)
+                                                <span class="truncate text-[10.5px] text-ink-faint">{{ $leistung->billing_label }}</span>
+                                            @endif
+                                        </div>
+                                        @break
 
-                @interact('column_purchase_price_cents', $row)
-                    <span class="tabular-nums">{{ $row->purchasePrice()->format() }}</span>
-                @endinteract
+                                    @case('product')
+                                        <span class="truncate text-[12px] text-ink-muted">
+                                            @if ($leistung->product)
+                                                {{ $leistung->product->name }}@if ($leistung->productVariant) · {{ $leistung->productVariant->name }}@endif
+                                            @else
+                                                <span class="text-ink-faint">Individuell</span>
+                                            @endif
+                                        </span>
+                                        @break
 
-                @interact('column_sales_price_cents', $row)
-                    <span class="tabular-nums">{{ $row->salesPrice()->format() }}</span>
-                @endinteract
+                                    @case('interval')
+                                        <span class="truncate text-[12px] text-ink-muted">{{ $leistung->billingInterval()->label() }}</span>
+                                        @break
 
-                @interact('column_margin', $row)
-                    <span class="tabular-nums {{ $row->margin()->isNegative() ? 'text-[color:var(--pill-bad-ink)]' : '' }}">
-                        {{ $row->margin()->format() }}
-                        @if ($row->marginPercentage() !== null)
-                            <span class="text-ink-faint">({{ number_format($row->marginPercentage(), 1, ',', '.') }} %)</span>
-                        @endif
-                    </span>
-                @endinteract
+                                    @case('sales_price_cents')
+                                        <span class="truncate tabular text-right text-[12.5px] text-ink">{{ $leistung->salesPrice()->format() }}</span>
+                                        @break
 
-                @interact('column_interval', $row)
-                    {{ $row->billingInterval()->label() }}
-                @endinteract
+                                    @case('purchase_price_cents')
+                                        <span class="truncate tabular text-right text-[12.5px] text-ink-muted">{{ $leistung->purchasePrice()->format() }}</span>
+                                        @break
 
-                @interact('column_monthly', $row)
-                    <span class="tabular-nums">
-                        {{ $row->billingInterval()->isRecurring() ? $row->monthlyRevenue()->format() : '—' }}
-                    </span>
-                @endinteract
+                                    @case('monthly')
+                                        <span class="truncate tabular text-right text-[12.5px] text-ink-muted">
+                                            {{ $leistung->billingInterval()->isRecurring() ? $leistung->monthlyRevenue()->format() : '—' }}
+                                        </span>
+                                        @break
 
-                @interact('column_billing', $row)
-                    @if ($row->do_not_bill)
-                        <x-badge color="amber" :text="$row->do_not_bill_reason?->label() ?? 'Nicht abrechnen'" sm />
-                    @elseif (! $row->billingInterval()->isRecurring())
-                        <x-badge color="gray" text="Einmalig" sm />
-                    @elseif ($row->countsTowardsRevenue())
-                        <x-badge color="green" text="Wird abgerechnet" sm />
-                    @else
-                        <x-badge color="gray" text="Ruht" sm />
-                    @endif
-                @endinteract
+                                    @case('margin')
+                                        <span @class([
+                                            'truncate tabular text-right text-[12.5px]',
+                                            'text-[color:var(--pill-bad-ink)]' => $leistung->margin()->isNegative(),
+                                            'text-ink-base' => ! $leistung->margin()->isNegative(),
+                                        ])>
+                                            {{ $leistung->margin()->format() }}@if ($leistung->marginPercentage() !== null)<span class="text-ink-faint"> ({{ number_format($leistung->marginPercentage(), 1, ',', '.') }} %)</span>@endif
+                                        </span>
+                                        @break
 
-                @interact('column_responsible', $row)
-                    {{ $row->responsibleUser?->name ?? '—' }}
-                @endinteract
+                                    @case('status')
+                                        <span>
+                                            <x-status-pill :kind="$leistung->status->pillKind()" :label="$leistung->status->label()" />
+                                        </span>
+                                        @break
 
-                @interact('column_service_start_date', $row)
-                    {{ $row->service_start_date?->format('d.m.Y') ?? '—' }}
-                @endinteract
+                                    @case('category')
+                                        <span class="truncate text-[12px] text-ink-muted">
+                                            @if ($leistung->category && $leistung->subcategory)
+                                                {{ $leistung->category->name }} <span class="text-ink-faint">›</span> {{ $leistung->subcategory->name }}
+                                            @else
+                                                {{ $leistung->category?->name ?? '—' }}
+                                            @endif
+                                        </span>
+                                        @break
 
-                <x-slot:empty>
-                    <p class="py-6 text-center text-sm text-ink-muted">
-                        Keine Leistungen gefunden.
-                    </p>
-                </x-slot:empty>
-            </x-table>
-        </x-card>
+                                    @case('billing')
+                                        <span>
+                                            @if ($leistung->do_not_bill)
+                                                <x-status-pill kind="warn" :label="$leistung->do_not_bill_reason?->label() ?? 'Nicht abrechnen'" />
+                                            @elseif (! $leistung->billingInterval()->isRecurring())
+                                                <x-status-pill kind="mute" label="Einmalig" />
+                                            @elseif ($leistung->countsTowardsRevenue())
+                                                <x-status-pill kind="ok" label="Wird abgerechnet" />
+                                            @else
+                                                <x-status-pill kind="mute" label="Ruht" />
+                                            @endif
+                                        </span>
+                                        @break
+
+                                    @case('responsible')
+                                        <span class="truncate text-[12px] text-ink-muted">{{ $leistung->responsibleUser?->name ?? '—' }}</span>
+                                        @break
+
+                                    @case('service_start_date')
+                                        <span class="truncate text-[12px] text-ink-muted">
+                                            {{ $leistung->service_start_date?->format('d.m.Y') ?? '—' }}
+                                        </span>
+                                        @break
+                                @endswitch
+                            @endforeach
+                        </a>
+                    @empty
+                        <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
+                            Keine Leistung passt zu Filter und Suche.
+                        </div>
+                    @endforelse
+                </div>
+            </div>
+
+            @if ($services->hasPages())
+                <div class="border-t border-line px-[17px] py-3">
+                    {{ $services->links() }}
+                </div>
+            @endif
+        </div>
 
         <x-column-settings :columns="$this->columnSettings()" />
     </x-page>
