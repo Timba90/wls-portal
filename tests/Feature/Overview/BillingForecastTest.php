@@ -201,3 +201,44 @@ it('liefert ohne abzurechnende Leistung ein leeres, aber vollstaendiges Fenster'
         ->and($prognose['peak']->cents)->toBe(0)
         ->and($prognose['composition'])->toBe([]);
 });
+
+it('listet dieselben Leistungen auf, die die Grafik nicht einplanen kann', function (): void {
+    // Ohne Datum und mit Jahresrhythmus: nicht planbar.
+    $ohneDatum = CustomerService::factory()->yearly()->create([
+        'name' => 'Domain ohne Datum',
+        'service_start_date' => null,
+        'billing_start_date' => null,
+        'first_billing_date' => null,
+    ]);
+
+    // Monatlich ohne Datum ist planbar — trifft ohnehin jeden Monat.
+    CustomerService::factory()->create([
+        'name' => 'Monatlich ohne Datum',
+        'service_start_date' => null,
+        'billing_start_date' => null,
+        'first_billing_date' => null,
+    ]);
+
+    // Mit Datum ist planbar.
+    CustomerService::factory()->yearly()->create([
+        'name' => 'Domain mit Datum',
+        'billing_start_date' => '2025-04-01',
+        'service_start_date' => '2025-04-01',
+    ]);
+
+    $gefunden = CustomerService::query()->withoutBillingSchedule()->pluck('name')->all();
+
+    expect($gefunden)->toBe(['Domain ohne Datum'])
+        // Die Zahl unter der Grafik und die Liste müssen dieselbe Menge meinen.
+        ->and(app(CalculateBillingForecast::class)(fenster())['unscheduled'])->toBe(count($gefunden));
+});
+
+it('zaehlt eine bewusst nicht abgerechnete Leistung nicht als fehlend', function (): void {
+    CustomerService::factory()->yearly()->doNotBill()->create([
+        'service_start_date' => null,
+        'billing_start_date' => null,
+        'first_billing_date' => null,
+    ]);
+
+    expect(CustomerService::query()->withoutBillingSchedule()->count())->toBe(0);
+});

@@ -8,6 +8,7 @@ use App\Livewire\Customers\CustomerList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Services\CustomerServices;
+use App\Livewire\Services\ServiceOverview;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
@@ -246,4 +247,25 @@ it('verlinkt den Basisartikel im Leistungsdetail', function (): void {
         ->test(CustomerServiceDetail::class, ['customer' => $customer, 'service' => $service])
         ->assertSee('Webhosting Standard')
         ->assertSee('webhosting-standard');
+});
+
+it('filtert die Leistungen ohne Abrechnungsdatum', function (): void {
+    CustomerService::factory()->yearly()->create([
+        'name' => 'Domain ohne Datum',
+        'service_start_date' => null,
+        'billing_start_date' => null,
+        'first_billing_date' => null,
+    ]);
+
+    CustomerService::factory()->yearly()->create([
+        'name' => 'Domain mit Datum',
+        'billing_start_date' => '2025-04-01',
+        'service_start_date' => '2025-04-01',
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ServiceOverview::class)
+        ->set('billingFilter', 'no_schedule')
+        ->assertSee('Domain ohne Datum')
+        ->assertDontSee('Domain mit Datum');
 });

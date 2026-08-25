@@ -64,6 +64,7 @@
                                      ['label' => 'Wird abgerechnet', 'value' => 'billable'],
                                      ['label' => 'Bewusst nicht abrechnen', 'value' => 'do_not_bill'],
                                      ['label' => 'Einmalige Leistungen', 'value' => 'once'],
+                                     ['label' => 'Ohne Abrechnungsdatum', 'value' => 'no_schedule'],
                                  ]"
                                  select="label:label|value:value" />
 

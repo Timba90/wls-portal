@@ -323,6 +323,31 @@ class CustomerService extends Model
     }
 
     /**
+     * Abzurechnende Leistungen, deren Faelligkeit sich nicht bestimmen laesst.
+     *
+     * Ein Rhythmus jenseits des Monats braucht ein Anfangsdatum, sonst ist
+     * unbekannt, in welchem Monat abgerechnet wird. Ein Monatsrhythmus braucht
+     * keines — er trifft ohnehin jeden Monat, ebenso alles, was oefter als
+     * monatlich faellig wird.
+     *
+     * Dieselbe Menge weist die Abrechnungsgrafik der Uebersicht als nicht
+     * eingeplant aus; ein Test haelt fest, dass beide uebereinstimmen.
+     *
+     * @param  Builder<CustomerService>  $query
+     */
+    public function scopeWithoutBillingSchedule(Builder $query): void
+    {
+        $query->billable()
+            ->whereIn('billing_interval_unit', [BillingIntervalUnit::Month, BillingIntervalUnit::Year])
+            ->where(fn (Builder $inner) => $inner
+                ->where('billing_interval_unit', '!=', BillingIntervalUnit::Month)
+                ->orWhere('billing_interval_count', '>', 1))
+            ->whereNull('first_billing_date')
+            ->whereNull('billing_start_date')
+            ->whereNull('service_start_date');
+    }
+
+    /**
      * @return array<string, string>
      */
     public function auditLabels(): array
