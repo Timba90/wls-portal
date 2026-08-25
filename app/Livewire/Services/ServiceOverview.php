@@ -268,6 +268,9 @@ class ServiceOverview extends Component
             ->when($this->billingFilter === 'do_not_bill', fn (Builder $query) => $query->where('do_not_bill', true))
             ->when($this->billingFilter === 'billable', fn (Builder $query) => $query->where('do_not_bill', false))
             ->when($this->billingFilter === 'once', fn (Builder $query) => $query->where('billing_interval_unit', 'once'))
+            // Genau die Leistungen, die die Abrechnungsgrafik nicht einplanen
+            // kann — die Uebersicht ist der Weg, sie nachzutragen.
+            ->when($this->billingFilter === 'no_schedule', fn (Builder $query) => $query->withoutBillingSchedule())
             ->when(
                 $this->catalogFilter === 'changed',
                 fn (Builder $query) => $query->whereKey($this->servicesWithCatalogChanges()),

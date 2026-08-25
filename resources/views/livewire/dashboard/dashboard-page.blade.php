@@ -7,7 +7,9 @@
 
         <div class="flex flex-col gap-4">
             {{-- Kennzahlreihe --}}
-            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {{-- Sechs Kacheln nebeneinander sind zu schmal: ein sechsstelliger
+                 Betrag bricht dann um. Zwei Reihen zu dritt. --}}
+            <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                 <x-kpi-tile label="Aktive Kunden"
                             :value="number_format($metrics['activeCustomers'], 0, ',', '.')"
                             :note="number_format($metrics['archivedCustomers'], 0, ',', '.').' archiviert'"
@@ -20,7 +22,11 @@
 
                 <x-kpi-tile label="Umsatz / Monat"
                             :value="$metrics['monthlyRevenue']->format()"
-                            :note="$metrics['yearlyRevenue']->format().' im Jahr'" />
+                            note="Soll aus wiederkehrenden Leistungen" />
+
+                <x-kpi-tile label="Umsatz / Jahr"
+                            :value="$metrics['yearlyRevenue']->format()"
+                            note="Zwölffaches des Monatswerts" />
 
                 <x-kpi-tile label="Kosten / Monat"
                             :value="$metrics['monthlyCosts']->format()"
@@ -72,6 +78,10 @@
                                 $forecast['unscheduled'],
                                 ['count' => $forecast['unscheduled']],
                             ) }}
+
+                            <a href="{{ route('services.index', ['abrechnung' => 'no_schedule']) }}"
+                               wire:navigate
+                               class="underline underline-offset-2 hover:no-underline">Auflisten</a>
                         </p>
                     @endif
                 </x-panel>

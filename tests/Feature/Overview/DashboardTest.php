@@ -83,6 +83,8 @@ it('zeigt die Kennzahlen auf dem Dashboard', function (): void {
         ->test(DashboardPage::class)
         ->assertSee('Aktive Kunden')
         ->assertSee('Umsatz / Monat')
+        // Der Jahresumsatz steht als eigene Kachel, nicht mehr nur als Fußnote.
+        ->assertSee('Umsatz / Jahr')
         ->assertSee('59,00 €')
         ->assertSee('708,00 €')
         ->assertSee('41,00 €');
