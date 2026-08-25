@@ -120,12 +120,16 @@
 
         <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
             <div class="overflow-x-auto">
-                <div style="min-width: {{ $mindestbreite }}px">
+                {{--
+                    Das Raster ist aus <div> gebaut. Ohne Rollen wäre es für
+                    Screenreader eine Wand aus Text ohne Spaltenbezug.
+                --}}
+                <div role="table" aria-label="Kundenleistungen" style="min-width: {{ $mindestbreite }}px">
                     {{-- Kopfzeile --}}
-                    <div class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
+                    <div role="row" class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
                          style="grid-template-columns: {{ $vorlage }}">
                         @foreach ($spalten as $spalte)
-                            <span @class([
+                            <span role="columnheader" @class([
                                 'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
                                 'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
                             ])>{{ $spalte['label'] }}</span>
@@ -133,22 +137,32 @@
                     </div>
 
                     @forelse ($services as $leistung)
-                        {{-- Die ganze Zeile ist ein Link, damit Mittelklick und Tastatur funktionieren. --}}
-                        <a wire:key="leistung-{{ $leistung->id }}"
-                           href="{{ route('customer-services.show', [$leistung->customer, $leistung]) }}"
-                           wire:navigate
-                           class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
-                           style="grid-template-columns: {{ $vorlage }}">
+                        {{--
+                            Die Zeile ist ein <div role="row">, kein <a>: ein Anker mit dieser Rolle
+                            verlöre seine Linkrolle. Der Link liegt in der ersten Zelle und spannt
+                            sich per `after` über die ganze Zeile — so bleiben Klick an jeder Stelle,
+                            Mittelklick, neuer Tab und Tastaturbedienung erhalten.
+                        --}}
+                        <div wire:key="leistung-{{ $leistung->id }}"
+                             role="row"
+                             class="relative grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
+                             style="grid-template-columns: {{ $vorlage }}">
                             @foreach ($spalten as $spalte)
+                            <div role="cell" @class([
+                                'min-w-0',
+                                'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                            ])>
                                 @switch($spalte['index'])
                                     @case('customer')
-                                        <div class="flex min-w-0 items-center gap-[11px]">
+                                        <a href="{{ route('customer-services.show', [$leistung->customer, $leistung]) }}"
+                                           wire:navigate
+                                           class="flex min-w-0 items-center gap-[11px] after:absolute after:inset-0 focus-visible:outline-none">
                                             <x-avatar-initials :initials="$leistung->customer->initials()" size="sm" />
 
                                             <span class="truncate text-[12.5px] text-ink-base">
                                                 {{ $leistung->customer->short_label ?: $leistung->customer->displayName() }}
                                             </span>
-                                        </div>
+                                        </a>
                                         @break
 
                                     @case('name')
@@ -239,8 +253,9 @@
                                         </span>
                                         @break
                                 @endswitch
+                            </div>
                             @endforeach
-                        </a>
+                        </div>
                     @empty
                         <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
                             Keine Leistung passt zu Filter und Suche.
