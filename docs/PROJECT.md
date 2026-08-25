@@ -346,13 +346,19 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 `table_key` unique, `columns` (json mit Sichtbarkeit, Reihenfolge, Breite).
 
 #### `project_types`
-Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `color`,
-`sort_order`, `is_active`.
+Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,
+`color`, `sort_order`, `is_active`. Fest angelegt sind Laravel, Shopify und
+WordPress; `icon` benennt das Markenzeichen, das
+`resources/views/components/project-type-icon.blade.php` zeichnet.
 
 #### `projects`
 `project_number` unique und unveränderlich, `name`, `description`,
 `customer_id` (restrict), `project_type_id` / `responsible_user_id` (null on
 delete), `status`, `start_date`, `deadline`, `risk_note`, `archived_at`.
+Betrieb: `backup_status`, `security_status`, `update_status`
+(`App\Enums\OperationsStatus`, Voreinstellung `unknown`) und
+`operations_checked_on`. Die drei Ampeln werden von Hand gepflegt — es gibt
+keine Überwachung, die sie speisen könnte.
 
 #### `project_milestones`
 `project_id` (cascade), `name`, `note`, `status`, `due_date`, `sort_order`.

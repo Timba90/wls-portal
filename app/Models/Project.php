@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\OperationsStatus;
 use App\Enums\ProjectStatus;
 use App\Exceptions\ImmutableAttributeException;
 use App\Models\Concerns\Auditable;
@@ -35,6 +36,10 @@ use Illuminate\Support\Str;
     'start_date',
     'deadline',
     'risk_note',
+    'backup_status',
+    'security_status',
+    'update_status',
+    'operations_checked_on',
 ])]
 class Project extends Model
 {
@@ -155,6 +160,20 @@ class Project extends Model
     }
 
     /**
+     * Die drei Betriebsampeln in fester Reihenfolge.
+     *
+     * @return array<string, OperationsStatus>
+     */
+    public function operationsStatuses(): array
+    {
+        return [
+            'Backup' => $this->backup_status,
+            'Sicherheit' => $this->security_status,
+            'Aktualisierungen' => $this->update_status,
+        ];
+    }
+
+    /**
      * Verbleibende Tage bis zur Deadline. Negativ, wenn sie ueberschritten ist.
      */
     public function daysUntilDeadline(): ?int
@@ -248,6 +267,10 @@ class Project extends Model
             'start_date' => 'Beginn',
             'deadline' => 'Deadline',
             'risk_note' => 'Risiko',
+            'backup_status' => 'Backup',
+            'security_status' => 'Sicherheit',
+            'update_status' => 'Aktualisierungen',
+            'operations_checked_on' => 'Betrieb geprüft am',
             'archived_at' => 'Archiviert am',
         ];
     }
@@ -255,10 +278,26 @@ class Project extends Model
     /**
      * @return array<string, string>
      */
+    /**
+     * Die Ampeln stehen auf „ungeprueft", bis jemand sie setzt — auch bei
+     * einem Projekt, das noch nicht gespeichert wurde.
+     *
+     * @var array<string, string>
+     */
+    protected $attributes = [
+        'backup_status' => 'unknown',
+        'security_status' => 'unknown',
+        'update_status' => 'unknown',
+    ];
+
     protected function casts(): array
     {
         return [
             'status' => ProjectStatus::class,
+            'backup_status' => OperationsStatus::class,
+            'security_status' => OperationsStatus::class,
+            'update_status' => OperationsStatus::class,
+            'operations_checked_on' => 'date',
             'start_date' => 'date',
             'deadline' => 'date',
             'archived_at' => 'datetime',

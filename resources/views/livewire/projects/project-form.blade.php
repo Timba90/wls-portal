@@ -91,6 +91,42 @@
                 </div>
             </x-card>
 
+            {{--
+                Betriebsstatus. Es gibt keine Ueberwachung, die diese Werte
+                liefern koennte — sie werden von Hand gepflegt und tragen
+                deshalb das Datum der letzten Pruefung.
+            --}}
+            <x-card>
+                <x-slot:header>
+                    <h2 class="text-sm font-semibold text-ink">Betrieb</h2>
+                </x-slot:header>
+
+                <div class="grid gap-4 md:grid-cols-3">
+                    <x-select.styled wire:model="backup_status"
+                                     label="Backup"
+                                     :options="$operationsOptions"
+                                     select="label:label|value:value"
+                                     required />
+
+                    <x-select.styled wire:model="security_status"
+                                     label="Security"
+                                     :options="$operationsOptions"
+                                     select="label:label|value:value"
+                                     required />
+
+                    <x-select.styled wire:model="update_status"
+                                     label="Updates"
+                                     :options="$operationsOptions"
+                                     select="label:label|value:value"
+                                     required />
+
+                    <x-date wire:model="operations_checked_on"
+                            label="Geprüft am"
+                            format="DD.MM.YYYY"
+                            hint="Wann der Betrieb zuletzt kontrolliert wurde." />
+                </div>
+            </x-card>
+
             <div class="flex justify-end gap-2">
                 <x-button color="secondary"
                           outline

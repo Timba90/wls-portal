@@ -2,47 +2,44 @@
 
 namespace App\Actions\Projects;
 
+use App\Enums\OperationsStatus;
 use App\Models\Project;
-use App\Models\ProjectMilestone;
 use App\Support\Money;
-use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Kennzahlen fuer den Kopf der Projektliste.
  *
- * Bewusst nur Zahlen mit Datengrundlage: offene Projekte, ueberfaellige
- * Projekte, das Volumen der offenen Projekte und die Meilensteine der
- * naechsten zwei Wochen.
+ * Die Uebersicht beantwortet zwei Fragen: was bringt der Bestand, und wo
+ * stimmt der Betrieb nicht. Termine und Deadlines gehoeren in das jeweilige
+ * Projekt, nicht in den Kopf der Liste.
  */
 class CalculateProjectMetrics
 {
     /**
      * @return array{
      *     open: int,
-     *     overdue: int,
-     *     volume: Money,
-     *     dueSoon: int,
+     *     revenue: Money,
+     *     monthlyRevenue: Money,
+     *     needsAttention: int,
      * }
      */
     public function __invoke(): array
     {
         $offene = Project::query()->with('positions')->open()->get();
 
-        $volumen = $offene->reduce(
-            fn (Money $summe, Project $projekt): Money => $summe->plus($projekt->oneTimeVolume()),
-            Money::zero(),
-        );
-
         return [
             'open' => $offene->count(),
-            'overdue' => $offene->filter(fn (Project $projekt): bool => $projekt->isOverdue())->count(),
-            'volume' => $volumen,
-            'dueSoon' => ProjectMilestone::query()
-                ->open()
-                ->whereNotNull('due_date')
-                ->whereDate('due_date', '>=', now()->toDateString())
-                ->whereDate('due_date', '<=', now()->addDays(14)->toDateString())
-                ->whereHas('project', fn (Builder $query) => $query->open())
+            'revenue' => $offene->reduce(
+                fn (Money $summe, Project $projekt): Money => $summe->plus($projekt->oneTimeVolume()),
+                Money::zero(),
+            ),
+            'monthlyRevenue' => $offene->reduce(
+                fn (Money $summe, Project $projekt): Money => $summe->plus($projekt->recurringVolume()),
+                Money::zero(),
+            ),
+            'needsAttention' => $offene
+                ->filter(fn (Project $projekt): bool => collect($projekt->operationsStatuses())
+                    ->contains(fn (OperationsStatus $status): bool => ! $status->isSettled()))
                 ->count(),
         ];
     }

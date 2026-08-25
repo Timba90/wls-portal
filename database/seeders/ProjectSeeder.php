@@ -93,17 +93,19 @@ class ProjectSeeder extends Seeder
             return;
         }
 
-        // Beispiele aus der Anforderung — die Liste bleibt frei erweiterbar.
+        // Die drei festen Typen. Die Migration legt sie ebenfalls an, damit sie
+        // auch in einem bestehenden Bestand vorhanden sind; hier stehen sie
+        // fuer die frische Entwicklungsdatenbank. Erweiterbar bleibt die
+        // Liste trotzdem (§61).
         foreach ([
-            ['Webseite', 'WEB', 'blue'],
-            ['Onlineshop', 'SHOP', 'green'],
-            ['Web-App', 'APP', 'purple'],
-            ['API', 'API', 'amber'],
-            ['Internes Tool', 'INT', 'gray'],
-        ] as $reihenfolge => [$name, $kuerzel, $farbe]) {
+            ['Laravel', 'LAR', 'laravel', 'red'],
+            ['Shopify', 'SHOP', 'shopify', 'green'],
+            ['WordPress', 'WP', 'wordpress', 'blue'],
+        ] as $reihenfolge => [$name, $kuerzel, $symbol, $farbe]) {
             ProjectType::query()->create([
                 'name' => $name,
                 'short_label' => $kuerzel,
+                'icon' => $symbol,
                 'color' => $farbe,
                 'sort_order' => $reihenfolge,
             ]);

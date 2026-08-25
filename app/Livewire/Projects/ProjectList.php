@@ -6,7 +6,6 @@ use App\Actions\Projects\CalculateProjectMetrics;
 use App\Enums\ProjectStatus;
 use App\Livewire\Concerns\WithConfigurableTable;
 use App\Models\Project;
-use App\Models\ProjectMilestone;
 use App\Models\ProjectType;
 use App\Models\User;
 use App\Support\StatusTally;
@@ -82,7 +81,6 @@ class ProjectList extends Component
         return view('livewire.projects.project-list', [
             'projects' => $this->projects(),
             'metrics' => app(CalculateProjectMetrics::class)(),
-            'upcomingMilestones' => $this->upcomingMilestones(),
             'projectTypes' => $this->projectTypes(),
             'responsibleUsers' => $this->responsibleUsers(),
         ]);
@@ -100,16 +98,20 @@ class ProjectList extends Component
     {
         return [
             'project' => ['label' => 'Projekt', 'sortable' => false, 'fixed' => true],
-            'customer' => ['label' => 'Kunde', 'sortable' => false],
-            'progress' => ['label' => 'Fortschritt', 'sortable' => false],
-            'volume' => ['label' => 'Volumen', 'sortable' => false],
-            'deadline' => ['label' => 'Deadline'],
+            'volume' => ['label' => 'Umsatz', 'sortable' => false],
+            'recurring_volume' => ['label' => 'Umsatz / Mon.', 'sortable' => false],
+            'backup_status' => ['label' => 'Backup'],
+            'security_status' => ['label' => 'Security'],
+            'update_status' => ['label' => 'Updates'],
             'status' => ['label' => 'Status'],
+            'customer' => ['label' => 'Kunde', 'sortable' => false, 'default_visible' => false],
             'project_number' => ['label' => 'Projektnummer', 'default_visible' => false],
             'type' => ['label' => 'Typ', 'sortable' => false, 'default_visible' => false],
             'responsible' => ['label' => 'Verantwortlich', 'sortable' => false, 'default_visible' => false],
             'start_date' => ['label' => 'Beginn', 'default_visible' => false],
-            'recurring_volume' => ['label' => 'Laufend / Mon', 'sortable' => false, 'default_visible' => false],
+            'deadline' => ['label' => 'Deadline', 'default_visible' => false],
+            'progress' => ['label' => 'Fortschritt', 'sortable' => false, 'default_visible' => false],
+            'operations_checked_on' => ['label' => 'Betrieb geprüft', 'default_visible' => false],
             'milestones' => ['label' => 'Meilensteine', 'sortable' => false, 'default_visible' => false],
         ];
     }
@@ -122,17 +124,21 @@ class ProjectList extends Component
     public function columnLayout(): array
     {
         return [
-            'project' => ['breite' => '1.8fr'],
-            'customer' => ['breite' => '1.2fr'],
-            'progress' => ['breite' => '1.1fr'],
-            'volume' => ['breite' => '0.9fr', 'rechts' => true],
-            'deadline' => ['breite' => '1fr'],
+            'project' => ['breite' => '2.2fr'],
+            'volume' => ['breite' => '1fr', 'rechts' => true],
+            'recurring_volume' => ['breite' => '1fr', 'rechts' => true],
+            'backup_status' => ['breite' => '0.85fr'],
+            'security_status' => ['breite' => '0.85fr'],
+            'update_status' => ['breite' => '0.85fr'],
             'status' => ['breite' => '0.9fr'],
+            'customer' => ['breite' => '1.2fr'],
             'project_number' => ['breite' => '0.9fr'],
             'type' => ['breite' => '0.9fr'],
             'responsible' => ['breite' => '1fr'],
             'start_date' => ['breite' => '0.8fr'],
-            'recurring_volume' => ['breite' => '0.9fr', 'rechts' => true],
+            'deadline' => ['breite' => '1fr'],
+            'progress' => ['breite' => '1.1fr'],
+            'operations_checked_on' => ['breite' => '0.95fr'],
             'milestones' => ['breite' => '0.8fr', 'rechts' => true],
         ];
     }
@@ -188,26 +194,6 @@ class ProjectList extends Component
         $this->applySorting($query);
 
         return $query->paginate(25);
-    }
-
-    /**
-     * Die naechsten offenen Meilensteine laufender Projekte.
-     *
-     * Bewusst nicht auf die gefilterte Liste bezogen: die Spalte ist ein
-     * Terminkalender, kein zweites Abbild der Tabelle.
-     *
-     * @return Collection<int, ProjectMilestone>
-     */
-    private function upcomingMilestones(): Collection
-    {
-        return ProjectMilestone::query()
-            ->with('project.customer')
-            ->open()
-            ->whereNotNull('due_date')
-            ->whereHas('project', fn (Builder $query) => $query->open())
-            ->orderBy('due_date')
-            ->limit(8)
-            ->get();
     }
 
     /**
