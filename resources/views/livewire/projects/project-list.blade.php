@@ -108,12 +108,16 @@
 
                 <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
                     <div class="overflow-x-auto">
-                        <div style="min-width: {{ $mindestbreite }}px">
+                        {{--
+                            Das Raster ist aus <div> gebaut. Ohne Rollen wäre es für
+                            Screenreader eine Wand aus Text ohne Spaltenbezug.
+                        --}}
+                        <div role="table" aria-label="Projekte" style="min-width: {{ $mindestbreite }}px">
                             {{-- Kopfzeile --}}
-                            <div class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
+                            <div role="row" class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
                                  style="grid-template-columns: {{ $vorlage }}">
                                 @foreach ($spalten as $spalte)
-                                    <span @class([
+                                    <span role="columnheader" @class([
                                         'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
                                         'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
                                     ])>{{ $spalte['label'] }}</span>
@@ -131,15 +135,20 @@
                                     Mittelklick und Tastaturbedienung wie überall
                                     sonst funktionieren.
                                 --}}
-                                <a wire:key="projekt-{{ $projekt->id }}"
-                                   href="{{ route('projects.show', $projekt) }}"
-                                   wire:navigate
-                                   class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
-                                   style="grid-template-columns: {{ $vorlage }}">
+                                <div wire:key="projekt-{{ $projekt->id }}"
+                                     role="row"
+                                     class="relative grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
+                                     style="grid-template-columns: {{ $vorlage }}">
                                     @foreach ($spalten as $spalte)
+                                    <div role="cell" @class([
+                                        'min-w-0',
+                                        'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                                    ])>
                                         @switch($spalte['index'])
                                             @case('project')
-                                                <div class="flex min-w-0 items-center gap-[11px]">
+                                                <a href="{{ route('projects.show', $projekt) }}"
+                                                   wire:navigate
+                                                   class="flex min-w-0 items-center gap-[11px] after:absolute after:inset-0 focus-visible:outline-none">
                                                     <x-avatar-initials :initials="$projekt->initials()" size="sm" />
 
                                                     <div class="flex min-w-0 flex-col">
@@ -153,7 +162,7 @@
                                                             @endif
                                                         </span>
                                                     </div>
-                                                </div>
+                                                </a>
                                                 @break
 
                                             @case('customer')
@@ -261,8 +270,9 @@
                                                 </span>
                                                 @break
                                         @endswitch
+                                    </div>
                                     @endforeach
-                                </a>
+                                </div>
                             @empty
                                 <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
                                     Kein Projekt passt zu Filter und Suche.

@@ -84,12 +84,19 @@
 
         <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
             <div class="overflow-x-auto">
-                <div style="min-width: {{ $mindestbreite }}px">
-                    {{-- Kopfzeile --}}
-                    <div class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
+                {{--
+                    Das Raster ist aus <div> gebaut, nicht aus <table> — die
+                    Spaltenanteile des Entwurfs lassen sich so sauber setzen.
+                    Ohne Rollen wäre die Tabelle für Screenreader aber eine
+                    Wand aus Text ohne Spaltenbezug, deshalb tragen Rahmen,
+                    Kopfzeile und Zellen sie ausdrücklich.
+                --}}
+                <div role="table" aria-label="Kunden" style="min-width: {{ $mindestbreite }}px">
+                    <div role="row"
+                         class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
                          style="grid-template-columns: {{ $vorlage }}">
                         @foreach ($spalten as $spalte)
-                            <span @class([
+                            <span role="columnheader" @class([
                                 'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
                                 'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
                             ])>{{ $spalte['label'] }}</span>
@@ -98,20 +105,26 @@
 
                     @forelse ($customers as $kunde)
                         {{--
-                            Die ganze Zeile ist der Link. Als <a> statt als
-                            Klick-Handler, damit Mittelklick, Aufklappen in
-                            einem neuen Tab und die Tastaturbedienung
-                            funktionieren.
+                            Die ganze Zeile ist anklickbar, der Link liegt aber
+                            in der ersten Zelle und spannt sich per `after`
+                            darüber. Ein <a> mit `role="row"` verlöre seine
+                            Linkrolle; ein Klick-Handler statt eines Links
+                            verlöre Mittelklick, neuen Tab und Tastatur.
                         --}}
-                        <a wire:key="kunde-{{ $kunde->id }}"
-                           href="{{ route('customers.show', $kunde) }}"
-                           wire:navigate
-                           class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
-                           style="grid-template-columns: {{ $vorlage }}">
+                        <div wire:key="kunde-{{ $kunde->id }}"
+                             role="row"
+                             class="relative grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
+                             style="grid-template-columns: {{ $vorlage }}">
                             @foreach ($spalten as $spalte)
+                            <div role="cell" @class([
+                                'min-w-0',
+                                'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                            ])>
                                 @switch($spalte['index'])
                                     @case('customer')
-                                        <div class="flex min-w-0 items-center gap-[11px]">
+                                        <a href="{{ route('customers.show', $kunde) }}"
+                                           wire:navigate
+                                           class="flex min-w-0 items-center gap-[11px] after:absolute after:inset-0 focus-visible:outline-none">
                                             <x-avatar-initials :initials="$kunde->initials()" size="sm" />
 
                                             <div class="flex min-w-0 flex-col">
@@ -122,7 +135,7 @@
                                                     {{ $kunde->customer_number }} · {{ $kunde->short_label }}
                                                 </span>
                                             </div>
-                                        </div>
+                                        </a>
                                         @break
 
                                     @case('contact')
@@ -199,8 +212,9 @@
                                         ])>{{ $kunde->monthlyMargin()->format() }}</span>
                                         @break
                                 @endswitch
+                            </div>
                             @endforeach
-                        </a>
+                        </div>
                     @empty
                         <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
                             Kein Kunde passt zu Filter und Suche.

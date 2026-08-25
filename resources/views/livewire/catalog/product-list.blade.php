@@ -127,11 +127,15 @@
 
                 <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
                     <div class="overflow-x-auto">
-                        <div style="min-width: {{ $mindestbreite }}px">
-                            <div class="grid gap-3 border-b border-line bg-raised px-[17px] py-2.5"
+                        {{--
+                            Das Raster ist aus <div> gebaut. Ohne Rollen wäre es für
+                            Screenreader eine Wand aus Text ohne Spaltenbezug.
+                        --}}
+                        <div role="table" aria-label="Artikel" style="min-width: {{ $mindestbreite }}px">
+                            <div role="row" class="grid gap-3 border-b border-line bg-raised px-[17px] py-2.5"
                                  style="grid-template-columns: {{ $vorlage }}">
                                 @foreach ($spalten as $spalte)
-                                    <span @class([
+                                    <span role="columnheader" @class([
                                         'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
                                         'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
                                     ])>{{ $spalte['label'] }}</span>
@@ -139,15 +143,20 @@
                             </div>
 
                             @forelse ($products as $artikel)
-                                <a wire:key="artikel-{{ $artikel->id }}"
-                                   href="{{ route('products.show', $artikel) }}"
-                                   wire:navigate
-                                   class="grid items-center gap-3 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
-                                   style="grid-template-columns: {{ $vorlage }}">
+                                <div wire:key="artikel-{{ $artikel->id }}"
+                                     role="row"
+                                     class="relative grid items-center gap-3 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
+                                     style="grid-template-columns: {{ $vorlage }}">
                                     @foreach ($spalten as $spalte)
+                                    <div role="cell" @class([
+                                        'min-w-0',
+                                        'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                                    ])>
                                         @switch($spalte['index'])
                                             @case('article')
-                                                <div class="flex min-w-0 items-center gap-2.5">
+                                                <a href="{{ route('products.show', $artikel) }}"
+                                                   wire:navigate
+                                                   class="flex min-w-0 items-center gap-2.5 after:absolute after:inset-0 focus-visible:outline-none">
                                                     <span class="h-[7px] w-[7px] flex-none rounded-full"
                                                           style="background: var(--pill-{{ $artikel->isArchived() ? 'mute' : 'ok' }}-ink)"></span>
 
@@ -159,7 +168,7 @@
                                                             {{ $artikel->internal_name }}
                                                         </span>
                                                     </div>
-                                                </div>
+                                                </a>
                                                 @break
 
                                             @case('category')
@@ -214,8 +223,9 @@
                                                 @break
 
                                         @endswitch
+                                    </div>
                                     @endforeach
-                                </a>
+                                </div>
                             @empty
                                 <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
                                     Kein Artikel passt zu Kategorie und Suche.

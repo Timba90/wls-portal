@@ -69,12 +69,16 @@
 
         <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
             <div class="overflow-x-auto">
-                <div style="min-width: {{ $mindestbreite }}px">
+                {{--
+                    Das Raster ist aus <div> gebaut. Ohne Rollen wäre es für
+                    Screenreader eine Wand aus Text ohne Spaltenbezug.
+                --}}
+                <div role="table" aria-label="Ansprechpartner" style="min-width: {{ $mindestbreite }}px">
                     {{-- Kopfzeile --}}
-                    <div class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
+                    <div role="row" class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5"
                          style="grid-template-columns: {{ $vorlage }}">
                         @foreach ($spalten as $spalte)
-                            <span @class([
+                            <span role="columnheader" @class([
                                 'truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint',
                                 'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
                             ])>{{ $spalte['label'] }}</span>
@@ -88,21 +92,26 @@
                             Anker sind ungültiges HTML und die Tastaturbedienung
                             würde daran hängenbleiben.
                         --}}
-                        <a wire:key="kontakt-{{ $kontakt->id }}"
-                           href="{{ route('contacts.show', $kontakt) }}"
-                           wire:navigate
-                           class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-visible:bg-raised focus-visible:outline-none"
-                           style="grid-template-columns: {{ $vorlage }}">
+                        <div wire:key="kontakt-{{ $kontakt->id }}"
+                             role="row"
+                             class="relative grid items-center gap-3.5 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
+                             style="grid-template-columns: {{ $vorlage }}">
                             @foreach ($spalten as $spalte)
+                            <div role="cell" @class([
+                                'min-w-0',
+                                'text-right' => $raster[$spalte['index']]['rechts'] ?? false,
+                            ])>
                                 @switch($spalte['index'])
                                     @case('name')
-                                        <div class="flex min-w-0 items-center gap-[11px]">
+                                        <a href="{{ route('contacts.show', $kontakt) }}"
+                                           wire:navigate
+                                           class="flex min-w-0 items-center gap-[11px] after:absolute after:inset-0 focus-visible:outline-none">
                                             <x-avatar-initials :initials="$kontakt->initials()" size="sm" />
 
                                             <span class="truncate text-[13px] font-medium text-ink-base">
                                                 {{ $kontakt->listName() }}
                                             </span>
-                                        </div>
+                                        </a>
                                         @break
 
                                     @case('email')
@@ -146,8 +155,9 @@
                                         </span>
                                         @break
                                 @endswitch
+                            </div>
                             @endforeach
-                        </a>
+                        </div>
                     @empty
                         <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
                             Kein Ansprechpartner passt zu Filter und Suche.
