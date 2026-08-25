@@ -49,18 +49,29 @@ return new class extends Migration
         ];
 
         foreach ($typen as $reihenfolge => [$name, $kuerzel, $symbol, $farbe]) {
-            DB::table('project_types')->updateOrInsert(
-                ['name' => $name],
-                [
-                    'short_label' => $kuerzel,
-                    'icon' => $symbol,
-                    'color' => $farbe,
-                    'sort_order' => $reihenfolge,
-                    'is_active' => true,
-                    'updated_at' => now(),
-                    'created_at' => now(),
-                ],
-            );
+            $werte = [
+                'short_label' => $kuerzel,
+                'icon' => $symbol,
+                'color' => $farbe,
+                'sort_order' => $reihenfolge,
+                'is_active' => true,
+                'updated_at' => now(),
+            ];
+
+            $vorhanden = DB::table('project_types')->where('name', $name);
+
+            // Ein bereits angelegter Typ behaelt sein Anlagedatum — er wird
+            // hier ergaenzt, nicht neu angelegt.
+            if ($vorhanden->exists()) {
+                $vorhanden->update($werte);
+
+                continue;
+            }
+
+            DB::table('project_types')->insert($werte + [
+                'name' => $name,
+                'created_at' => now(),
+            ]);
         }
     }
 

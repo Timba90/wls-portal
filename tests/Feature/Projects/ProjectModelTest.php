@@ -17,6 +17,7 @@ use App\Models\ProjectPosition;
 use App\Models\ProjectType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\MassAssignmentException;
+use Illuminate\Support\Facades\DB;
 
 it('vergibt beim Anlegen eine fortlaufende Projektnummer', function (): void {
     $kunde = Customer::factory()->create();
@@ -201,14 +202,57 @@ it('zaehlt jedes offene Projekt mit einer Ampel abseits von gruen', function ():
     expect(app(CalculateProjectMetrics::class)()['needsAttention'])->toBe(2);
 });
 
+it('legt die drei festen Projekttypen an, ohne vorhandene neu zu datieren', function (): void {
+    // Die Migration hat sie beim Aufbau der Testdatenbank bereits angelegt.
+    DB::table('project_types')
+        ->where('name', 'Laravel')
+        ->update(['created_at' => '2020-01-01 00:00:00', 'icon' => null]);
+
+    $migration = require database_path('migrations/2026_08_25_100000_add_operations_status_to_projects.php');
+    (new ReflectionMethod($migration, 'seedFixedProjectTypes'))->invoke($migration);
+
+    $laravel = DB::table('project_types')->where('name', 'Laravel')->first();
+
+    expect($laravel->icon)->toBe('laravel')
+        ->and($laravel->created_at)->toStartWith('2020-01-01')
+        ->and(DB::table('project_types')->whereIn('name', ['Laravel', 'Shopify', 'WordPress'])->count())->toBe(3);
+});
+
+it('laesst die Betriebsfelder in Ruhe, wenn ein Aufrufer sie nicht mitsendet', function (): void {
+    $projekt = Project::factory()->create([
+        'backup_status' => OperationsStatus::Ok,
+        'security_status' => OperationsStatus::Attention,
+        'update_status' => OperationsStatus::Critical,
+        'operations_checked_on' => '2026-08-01',
+    ]);
+
+    // So ruft das MCP-Werkzeug an: es kennt die Betriebsfelder gar nicht.
+    app(UpdateProject::class)($projekt, ['name' => 'Neuer Name']);
+
+    expect($projekt->fresh())
+        ->name->toBe('Neuer Name')
+        ->backup_status->toBe(OperationsStatus::Ok)
+        ->security_status->toBe(OperationsStatus::Attention)
+        ->update_status->toBe(OperationsStatus::Critical)
+        ->and($projekt->fresh()->operations_checked_on->toDateString())->toBe('2026-08-01');
+});
+
+it('loescht das Pruefdatum, wenn es ausdruecklich geleert wird', function (): void {
+    $projekt = Project::factory()->create(['operations_checked_on' => '2026-08-01']);
+
+    app(UpdateProject::class)($projekt, ['name' => $projekt->name, 'operations_checked_on' => null]);
+
+    expect($projekt->fresh()->operations_checked_on)->toBeNull();
+});
+
 it('setzt jede Betriebsampel auf ungeprueft, solange sie niemand pflegt', function (): void {
     $projekt = Project::factory()->create();
 
     expect($projekt->operationsStatuses())
         ->toBe([
             'Backup' => OperationsStatus::Unknown,
-            'Sicherheit' => OperationsStatus::Unknown,
-            'Aktualisierungen' => OperationsStatus::Unknown,
+            'Security' => OperationsStatus::Unknown,
+            'Updates' => OperationsStatus::Unknown,
         ]);
 });
 

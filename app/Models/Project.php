@@ -168,8 +168,8 @@ class Project extends Model
     {
         return [
             'Backup' => $this->backup_status,
-            'Sicherheit' => $this->security_status,
-            'Aktualisierungen' => $this->update_status,
+            'Security' => $this->security_status,
+            'Updates' => $this->update_status,
         ];
     }
 
@@ -268,16 +268,13 @@ class Project extends Model
             'deadline' => 'Deadline',
             'risk_note' => 'Risiko',
             'backup_status' => 'Backup',
-            'security_status' => 'Sicherheit',
-            'update_status' => 'Aktualisierungen',
+            'security_status' => 'Security',
+            'update_status' => 'Updates',
             'operations_checked_on' => 'Betrieb geprüft am',
             'archived_at' => 'Archiviert am',
         ];
     }
 
-    /**
-     * @return array<string, string>
-     */
     /**
      * Die Ampeln stehen auf „ungeprueft", bis jemand sie setzt — auch bei
      * einem Projekt, das noch nicht gespeichert wurde.

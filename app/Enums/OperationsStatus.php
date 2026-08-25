@@ -5,7 +5,7 @@ namespace App\Enums;
 use App\Enums\Concerns\HasOptions;
 
 /**
- * Ampel fuer Backup, Sicherheit und Aktualisierungen eines Projekts.
+ * Ampel fuer Backup, Security und Updates eines Projekts.
  *
  * Wird von Hand gepflegt. „Unbekannt" ist die Voreinstellung und bewusst kein
  * Gruen: ein Projekt, das nie jemand geprueft hat, ist nicht in Ordnung — es
