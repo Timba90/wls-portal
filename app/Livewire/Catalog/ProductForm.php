@@ -7,6 +7,7 @@ use App\Enums\BillingIntervalUnit;
 use App\Enums\CatalogStatus;
 use App\Models\Category;
 use App\Models\Product;
+use App\Support\BillingInterval;
 use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -85,6 +86,79 @@ class ProductForm extends Component
     public function isEditing(): bool
     {
         return $this->product?->exists ?? false;
+    }
+
+    /**
+     * Das Intervall, wie es vor der laufenden Aenderung galt.
+     */
+    private ?BillingInterval $intervalBeforeUpdate = null;
+
+    public function updating(string $property, mixed $value): void
+    {
+        if ($this->isIntervalProperty($property)) {
+            $this->intervalBeforeUpdate = $this->currentInterval();
+        }
+    }
+
+    /**
+     * Rechnet die Vorgabepreise auf das neue Intervall um.
+     *
+     * Wie bei der Kundenleistung gilt der Betrag je Abrechnungsperiode. Ohne
+     * Umrechnung wuerde ein Wechsel von jaehrlich auf monatlich den Vorgabe-
+     * preis verzwoelffachen — und von dort in jede neu angelegte Leistung
+     * wandern.
+     */
+    public function updated(string $property, mixed $value): void
+    {
+        if (! $this->isIntervalProperty($property) || ! $this->intervalBeforeUpdate instanceof BillingInterval) {
+            return;
+        }
+
+        $vorher = $this->intervalBeforeUpdate;
+        $this->intervalBeforeUpdate = null;
+
+        $nachher = $this->currentInterval();
+
+        if ($nachher === null || (string) $vorher === (string) $nachher) {
+            return;
+        }
+
+        $this->default_purchase_price = $this->convertInput($this->default_purchase_price, $vorher, $nachher);
+        $this->default_sales_price = $this->convertInput($this->default_sales_price, $vorher, $nachher);
+
+        foreach ($this->components as $index => $component) {
+            $this->components[$index]['purchase_price'] = $this->convertInput($component['purchase_price'], $vorher, $nachher);
+            $this->components[$index]['sales_price'] = $this->convertInput($component['sales_price'], $vorher, $nachher);
+        }
+    }
+
+    private function isIntervalProperty(string $property): bool
+    {
+        return in_array($property, ['default_billing_interval_unit', 'default_billing_interval_count'], true);
+    }
+
+    private function currentInterval(): ?BillingInterval
+    {
+        $einheit = BillingIntervalUnit::tryFrom($this->default_billing_interval_unit);
+
+        if ($einheit === null) {
+            return null;
+        }
+
+        if ($einheit->requiresCount() && $this->default_billing_interval_count < 1) {
+            return null;
+        }
+
+        return BillingInterval::make($einheit, $this->default_billing_interval_count);
+    }
+
+    private function convertInput(string $eingabe, BillingInterval $von, BillingInterval $nach): string
+    {
+        if (trim($eingabe) === '') {
+            return $eingabe;
+        }
+
+        return $von->convertTo(Money::fromEuroInput($eingabe), $nach)->toInput();
     }
 
     public function requiresIntervalCount(): bool

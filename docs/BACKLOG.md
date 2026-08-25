@@ -78,6 +78,16 @@ vortäuschen würde, die keine Daten haben.
 | Voreingestellte Spalten der Leistungsübersicht | Sieben statt dreizehn: Kunde, Leistung, Turnus, Verkauf, Monatswert, Status, Abrechnung. Katalogartikel, Kategorie, Einkauf, Marge, Verantwortlich und Leistungsbeginn bleiben zuschaltbar. Die Abrechnungsspalte bleibt voreingestellt, weil sie erklärt, warum eine Leistung *nicht* in den Kennzahlen steht. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### Preise
+
+| Element | Umsetzung |
+|---|---|
+| Umrechnung beim Wechsel des Abrechnungsintervalls | Die Preisfelder gelten je Abrechnungsperiode. Ein Wechsel von jährlich auf monatlich ließ den Betrag bisher unangetastet — aus 15,00 € im Jahr wurden stillschweigend 15,00 € im Monat. Ein- und Verkaufspreis werden jetzt umgerechnet, in beiden Formularen (Kundenleistung und Katalogartikel) und einschließlich der Bestandteile. |
+| Automatisch statt Vorschlag | Auf Ansage des Auftraggebers. Wer nach dem Wechsel einen anderen Preis will, überschreibt ihn von Hand. |
+| Rundung | Kaufmännisch auf ganze Cent, ebenfalls auf Ansage. 14,99 € im Jahr ergeben 1,25 € im Monat und damit 15,00 € im Jahr — der Jahreswert kann um wenige Cent abweichen, weil sich nicht jeder Betrag zwölfteln lässt. Beträge liegen als ganze Cent vor (§ Geldbeträge), ein exakter Zwölftelwert ist nicht speicherbar. |
+| Einmalige Beträge | Bleiben unverändert. Ein einmaliger Preis bezieht sich auf keinen Zeitraum, den man umrechnen könnte; aus 500 € einmalig werden beim Wechsel auf monatlich nicht 41,67 €. |
+| Vorgaben aus dem Katalog | Werden nicht umgerechnet. Der Artikel liefert Preis und Intervall gemeinsam und passend zueinander — eine Umrechnung machte den Vorschlag sofort falsch. Ein Test hält das fest. |
+
 ### Oberfläche
 
 | Element | Umsetzung |

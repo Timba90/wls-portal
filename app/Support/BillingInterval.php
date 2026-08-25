@@ -86,6 +86,25 @@ final readonly class BillingInterval implements Stringable
     }
 
     /**
+     * Rechnet einen Betrag dieses Intervalls auf ein anderes um.
+     *
+     * Eine Domain fuer 15,00 EUR im Jahr kostet monatlich 1,25 EUR. Gerundet
+     * wird kaufmaennisch auf ganze Cent; der Jahreswert kann dadurch um
+     * wenige Cent abweichen, weil sich nicht jeder Betrag teilen laesst.
+     *
+     * Einmalige Betraege bleiben unveraendert: ein einmaliger Preis bezieht
+     * sich auf keinen Zeitraum, den man umrechnen koennte.
+     */
+    public function convertTo(Money $amount, self $target): Money
+    {
+        if (! $this->isRecurring() || ! $target->isRecurring()) {
+            return $amount;
+        }
+
+        return $amount->multipliedBy($this->monthlyFactor() / $target->monthlyFactor());
+    }
+
+    /**
      * Deutsche Bezeichnung, zum Beispiel "monatlich" oder "alle 3 Monate".
      */
     public function label(): string
