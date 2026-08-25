@@ -17,7 +17,9 @@ class ProjectTypeFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->unique()->randomElement(['Webseite', 'Shop', 'Web-App', 'API', 'Internes Tool'])
+        // Eindeutig macht die Nummer. `unique()` auf der Liste selbst deckelte
+        // die Factory bei fuenf Typen je Test — der sechste Aufruf brach ab.
+        $name = fake()->randomElement(['Webseite', 'Shop', 'Web-App', 'API', 'Internes Tool'])
             .' '.fake()->unique()->numberBetween(1, 9999);
 
         return [

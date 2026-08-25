@@ -78,6 +78,16 @@ vortäuschen würde, die keine Daten haben.
 | Voreingestellte Spalten der Leistungsübersicht | Sieben statt dreizehn: Kunde, Leistung, Turnus, Verkauf, Monatswert, Status, Abrechnung. Katalogartikel, Kategorie, Einkauf, Marge, Verantwortlich und Leistungsbeginn bleiben zuschaltbar. Die Abrechnungsspalte bleibt voreingestellt, weil sie erklärt, warum eine Leistung *nicht* in den Kennzahlen steht. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### Übersicht
+
+| Element | Umsetzung |
+|---|---|
+| Panels „Bestand" und „Nicht in den Kennzahlen" | Auf Ansage entfernt. Die Bestandszahlen stehen unverändert in den Kennzahlkacheln und in den Zählern der Navigation. Warum eine Leistung nicht in den Umsatz zählt, sagt weiterhin die Abrechnungsspalte der Leistungsübersicht — sie ist genau deshalb voreingestellt. |
+| Grafik „Abrechnung je Monat" | Zeigt bewusst nur die kommenden zwölf Monate. Rückwärts wäre die Reihe falsch: seither archivierte Leistungen fehlen im heutigen Bestand, die vergangenen Monate sähen dadurch zu niedrig aus. Für einen echten Rückblick bräuchte es eine Historie der Leistungen, die es nicht gibt (§61). |
+| Kennzahlkachel gegen Grafik | Die Kachel „Umsatz / Monat" normalisiert: eine Jahresleistung steht dort mit einem Zwölftel. Die Grafik zeigt stattdessen den Rhythmus — dieselbe Leistung fällt in genau einem Monat an. Beide Zahlen sind richtig und beantworten verschiedene Fragen; die Summe der zwölf Monate deckt sich mit dem Jahreswert der Kachel. |
+| Leistungen ohne Abrechnungsdatum | Ein Rhythmus jenseits des Monats lässt sich ohne Anfangsdatum nicht auf einen Monat legen. Solche Leistungen werden unter der Grafik als Fehlbetrag ausgewiesen statt in einen geratenen Monat gelegt. Ein Monatsrhythmus braucht kein Datum — er trifft ohnehin jeden Monat. |
+| Diagramme ohne Bibliothek | Beide Grafiken sind Balken aus `<div>`. Eine Diagrammbibliothek wäre eine neue Abhängigkeit für zwei Darstellungen, die sich mit den vorhandenen Tokens zeichnen lassen. Für Screenreader liegt unter dem Säulendiagramm dieselbe Reihe als Tabelle. |
+
 ### Projekte
 
 | Element im Entwurf | Umsetzung |

@@ -54,7 +54,7 @@
                     <x-nav-item route="customers.index" match="customers.*" icon="building-office-2"
                                 label="Kunden" :count="$navCounts['customers']" />
                     <x-nav-item route="projects.index" match="projects.*" icon="rectangle-group"
-                                label="Projekte" />
+                                label="Projekte" :count="$navCounts['projects']" />
                     <x-nav-item route="services.index" icon="clipboard-document-list"
                                 label="Leistungen" :count="$navCounts['services']" />
                     <x-nav-item route="contacts.index" match="contacts.*" icon="user-group"

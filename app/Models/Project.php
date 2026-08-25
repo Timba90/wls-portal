@@ -221,6 +221,19 @@ class Project extends Model
     }
 
     /**
+     * Nur die laufenden Projekte — weder geplant noch pausiert.
+     *
+     * Der Zaehler der Navigation nennt, woran gerade gearbeitet wird; ein
+     * geplantes Projekt ist noch nicht angefangen, ein pausiertes ruht.
+     *
+     * @param  Builder<Project>  $query
+     */
+    public function scopeRunning(Builder $query): void
+    {
+        $query->where('status', ProjectStatus::Active);
+    }
+
+    /**
      * Alles ausser dem Archiv — auch abgeschlossen und abgebrochen.
      *
      * @param  Builder<Project>  $query

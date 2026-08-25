@@ -6,6 +6,7 @@ use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
+use App\Models\Project;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -112,6 +113,7 @@ class AppServiceProvider extends ServiceProvider
         View::composer('components.layouts.app', function (ViewContract $view): void {
             $view->with('navCounts', once(fn (): array => [
                 'customers' => Customer::query()->active()->count(),
+                'projects' => Project::query()->running()->count(),
                 'services' => CustomerService::query()->active()->count(),
                 'contacts' => Contact::query()->active()->count(),
                 'products' => Product::query()->active()->count(),
