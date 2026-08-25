@@ -87,10 +87,12 @@
 
                     @forelse ($contacts as $kontakt)
                         {{--
-                            Die ganze Zeile ist der Link. Die Kundenspalte enthält
-                            deshalb bewusst keine eigenen Links: verschachtelte
-                            Anker sind ungültiges HTML und die Tastaturbedienung
-                            würde daran hängenbleiben.
+                            Die Zeile ist ein <div role="row">, kein <a>: ein Anker mit dieser Rolle
+                            verlöre seine Linkrolle. Der Link liegt in der ersten Zelle und spannt
+                            sich per `after` über die ganze Zeile.
+
+                            Die Kundenspalte enthält bewusst keine eigenen Links: verschachtelte
+                            Anker sind ungültiges HTML und die Tastaturbedienung bliebe daran hängen.
                         --}}
                         <div wire:key="kontakt-{{ $kontakt->id }}"
                              role="row"

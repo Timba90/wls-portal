@@ -131,9 +131,10 @@
                                 @endphp
 
                                 {{--
-                                    Die ganze Zeile ist der Link — als <a>, damit
-                                    Mittelklick und Tastaturbedienung wie überall
-                                    sonst funktionieren.
+                                    Die Zeile ist ein <div role="row">, kein <a>: ein Anker mit dieser Rolle
+                                    verlöre seine Linkrolle. Der Link liegt in der ersten Zelle und spannt
+                                    sich per `after` über die ganze Zeile — so bleiben Klick an jeder Stelle,
+                                    Mittelklick, neuer Tab und Tastaturbedienung erhalten.
                                 --}}
                                 <div wire:key="projekt-{{ $projekt->id }}"
                                      role="row"

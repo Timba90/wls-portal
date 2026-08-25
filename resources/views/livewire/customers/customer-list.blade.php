@@ -105,11 +105,10 @@
 
                     @forelse ($customers as $kunde)
                         {{--
-                            Die ganze Zeile ist anklickbar, der Link liegt aber
-                            in der ersten Zelle und spannt sich per `after`
-                            darüber. Ein <a> mit `role="row"` verlöre seine
-                            Linkrolle; ein Klick-Handler statt eines Links
-                            verlöre Mittelklick, neuen Tab und Tastatur.
+                            Die Zeile ist ein <div role="row">, kein <a>: ein Anker mit dieser Rolle
+                            verlöre seine Linkrolle. Der Link liegt in der ersten Zelle und spannt
+                            sich per `after` über die ganze Zeile — so bleiben Klick an jeder Stelle,
+                            Mittelklick, neuer Tab und Tastaturbedienung erhalten.
                         --}}
                         <div wire:key="kunde-{{ $kunde->id }}"
                              role="row"

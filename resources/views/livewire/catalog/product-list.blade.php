@@ -143,6 +143,12 @@
                             </div>
 
                             @forelse ($products as $artikel)
+                                {{--
+                                    Die Zeile ist ein <div role="row">, kein <a>: ein Anker mit dieser Rolle
+                                    verlöre seine Linkrolle. Der Link liegt in der ersten Zelle und spannt
+                                    sich per `after` über die ganze Zeile — so bleiben Klick an jeder Stelle,
+                                    Mittelklick, neuer Tab und Tastaturbedienung erhalten.
+                                --}}
                                 <div wire:key="artikel-{{ $artikel->id }}"
                                      role="row"
                                      class="relative grid items-center gap-3 border-b border-line px-[17px] py-3 transition hover:bg-raised focus-within:bg-raised"
