@@ -191,3 +191,32 @@ it('archiviert ein Dokument und hebt die Archivierung auf', function (): void {
     $component->call('restore', $document->id);
     expect($document->fresh()->isArchived())->toBeFalse();
 });
+
+it('bietet SVG zum Download an statt es einzubetten', function (): void {
+    $document = app(UploadDocument::class)(
+        Customer::factory()->create(),
+        UploadedFile::fake()->create('logo.svg', 10, 'image/svg+xml'),
+    );
+
+    // SVG zählt als Bild, kann aber Skripte tragen. Eingebettet liefe das im
+    // Ursprung der Anwendung.
+    $this->actingAs(User::factory()->create())
+        ->get(route('documents.preview', [$document, $document->currentVersion]))
+        ->assertOk()
+        ->assertDownload('logo.svg');
+});
+
+it('setzt bei der Vorschau eine Inhaltsrichtlinie', function (): void {
+    $document = app(UploadDocument::class)(
+        Customer::factory()->create(),
+        UploadedFile::fake()->create('vertrag.pdf', 10, 'application/pdf'),
+    );
+
+    $antwort = $this->actingAs(User::factory()->create())
+        ->get(route('documents.preview', [$document, $document->currentVersion]))
+        ->assertOk();
+
+    // Ohne `default-src 'none'` dürfte eingebetteter Inhalt Skripte ausführen
+    // und externe Ressourcen laden.
+    expect($antwort->headers->get('Content-Security-Policy'))->toContain("default-src 'none'");
+});
