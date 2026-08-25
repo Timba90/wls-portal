@@ -7,6 +7,7 @@ use App\Enums\CustomerType;
 use App\Livewire\Concerns\WithConfigurableTable;
 use App\Models\Customer;
 use App\Models\User;
+use App\Support\StatusTally;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -149,10 +150,13 @@ class CustomerList extends Component
             ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
             ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
 
+        // Eine gruppierte Abfrage statt einer je Schaltflaeche.
+        $gezaehlt = StatusTally::from($basis());
+
         return [
-            ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
-            ['wert' => CustomerStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $basis()->active()->count()],
-            ['wert' => CustomerStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $basis()->archived()->count()],
+            ['wert' => '', 'label' => 'Alle', 'anzahl' => $gezaehlt->total()],
+            ['wert' => CustomerStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $gezaehlt->of(CustomerStatus::Active->value)],
+            ['wert' => CustomerStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $gezaehlt->of(CustomerStatus::Archived->value)],
         ];
     }
 

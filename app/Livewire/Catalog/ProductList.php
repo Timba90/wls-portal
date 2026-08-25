@@ -7,6 +7,7 @@ use App\Livewire\Concerns\WithConfigurableTable;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Tag;
+use App\Support\StatusTally;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -142,10 +143,13 @@ class ProductList extends Component
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ));
 
+        // Eine gruppierte Abfrage statt einer je Schaltflaeche.
+        $gezaehlt = StatusTally::from($basis());
+
         return [
-            ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
-            ['wert' => CatalogStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $basis()->active()->count()],
-            ['wert' => CatalogStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $basis()->archived()->count()],
+            ['wert' => '', 'label' => 'Alle', 'anzahl' => $gezaehlt->total()],
+            ['wert' => CatalogStatus::Active->value, 'label' => 'Aktiv', 'anzahl' => $gezaehlt->of(CatalogStatus::Active->value)],
+            ['wert' => CatalogStatus::Archived->value, 'label' => 'Archiviert', 'anzahl' => $gezaehlt->of(CatalogStatus::Archived->value)],
         ];
     }
 

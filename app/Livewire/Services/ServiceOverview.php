@@ -60,6 +60,14 @@ class ServiceOverview extends Component
     public array $sort = ['column' => 'name', 'direction' => 'asc'];
 
     /**
+     * Zwischenspeicher fuer den Katalogabgleich; nur fuer die Dauer eines
+     * Aufbaus gueltig und deshalb bewusst nicht oeffentlich.
+     *
+     * @var array<int, int>|null
+     */
+    private ?array $catalogChangeIds = null;
+
+    /**
      * @param  array<string, mixed>  $properties
      */
     public function updated(string $property): void
@@ -97,7 +105,22 @@ class ServiceOverview extends Component
      */
     public function catalogChangeCount(): int
     {
-        return count(app(FindServicesWithCatalogChanges::class)());
+        return count($this->servicesWithCatalogChanges());
+    }
+
+    /**
+     * Die Leistungen mit offener Katalogaenderung, einmal je Aufbau ermittelt.
+     *
+     * Der Vergleich laesst sich nicht in SQL fuehren und laedt deshalb alle
+     * nicht archivierten Leistungen mit Katalogherkunft. Ohne diesen Zwischen-
+     * speicher liefe er zweimal: einmal fuer den Hinweis ueber der Tabelle und
+     * einmal fuer den Filter darunter.
+     *
+     * @return array<int, int>
+     */
+    private function servicesWithCatalogChanges(): array
+    {
+        return $this->catalogChangeIds ??= app(FindServicesWithCatalogChanges::class)();
     }
 
     public function toggleCatalogFilter(): void
@@ -247,7 +270,7 @@ class ServiceOverview extends Component
             ->when($this->billingFilter === 'once', fn (Builder $query) => $query->where('billing_interval_unit', 'once'))
             ->when(
                 $this->catalogFilter === 'changed',
-                fn (Builder $query) => app(FindServicesWithCatalogChanges::class)->applyTo($query),
+                fn (Builder $query) => $query->whereKey($this->servicesWithCatalogChanges()),
             );
     }
 

@@ -9,6 +9,7 @@ use App\Models\Project;
 use App\Models\ProjectMilestone;
 use App\Models\ProjectType;
 use App\Models\User;
+use App\Support\StatusTally;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
@@ -149,16 +150,19 @@ class ProjectList extends Component
             ->when($this->projectTypeId !== '', fn (Builder $query) => $query->where('project_type_id', $this->projectTypeId))
             ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
 
+        // Eine gruppierte Abfrage statt einer je Schaltflaeche.
+        $gezaehlt = StatusTally::from($basis());
+
         $filter = [
-            ['wert' => '', 'label' => 'Alle', 'anzahl' => $basis()->count()],
-            ['wert' => self::OPEN_FILTER, 'label' => 'Offen', 'anzahl' => $basis()->open()->count()],
+            ['wert' => '', 'label' => 'Alle', 'anzahl' => $gezaehlt->total()],
+            ['wert' => self::OPEN_FILTER, 'label' => 'Offen', 'anzahl' => $gezaehlt->of(...Project::openStatusValues())],
         ];
 
         foreach (ProjectStatus::cases() as $status) {
             $filter[] = [
                 'wert' => $status->value,
                 'label' => $status->label(),
-                'anzahl' => $basis()->where('status', $status)->count(),
+                'anzahl' => $gezaehlt->of($status->value),
             ];
         }
 
