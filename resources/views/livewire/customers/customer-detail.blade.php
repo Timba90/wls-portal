@@ -102,12 +102,17 @@
         <div class="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
             {{-- Linke Spalte: Reiter mit den umfangreichen Inhalten. --}}
             <div class="flex min-w-0 flex-col gap-3.5">
-                <div class="flex gap-1 rounded-[9px] border border-line bg-panel p-1">
+                {{--
+                    Die Reiter füllen die Breite, solange sie passen. Bei schmalen
+                    Fenstern schrumpfen Flex-Elemente nicht unter ihre Textbreite —
+                    dann scrollt die Leiste in sich, statt die Seite zu verbreitern.
+                --}}
+                <div class="flex gap-1 overflow-x-auto rounded-[9px] border border-line bg-panel p-1">
                     @foreach ($reiter as $schluessel => $beschriftung)
                         <button type="button"
                                 wire:click="$set('tab', '{{ $schluessel }}')"
                                 @class([
-                                    'flex-1 rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition',
+                                    'flex-1 whitespace-nowrap rounded-[6px] px-3 py-1.5 text-[12px] font-medium transition',
                                     'bg-accent text-accent-ink' => $tab === $schluessel,
                                     'text-ink-muted hover:bg-raised hover:text-ink-base' => $tab !== $schluessel,
                                 ])>{{ $beschriftung }}</button>

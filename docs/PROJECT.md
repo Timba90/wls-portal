@@ -345,6 +345,29 @@ sind unveränderlich und über die Anwendung nicht löschbar.
 Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 `table_key` unique, `columns` (json mit Sichtbarkeit, Reihenfolge, Breite).
 
+#### `project_types`
+Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `color`,
+`sort_order`, `is_active`.
+
+#### `projects`
+`project_number` unique und unveränderlich, `name`, `description`,
+`customer_id` (restrict), `project_type_id` / `responsible_user_id` (null on
+delete), `status`, `start_date`, `deadline`, `risk_note`, `archived_at`.
+
+#### `project_milestones`
+`project_id` (cascade), `name`, `note`, `status`, `due_date`, `sort_order`.
+Grundlage des Fortschritts.
+
+#### `project_positions`
+`project_id` (cascade), optional `product_id` / `customer_service_id` (null on
+delete), `name`, `kind` (einmalig / wiederkehrend), `quantity`,
+`unit_price_cents`, `status`, `sort_order`. Name und Preis liegen immer auf der
+Position selbst.
+
+#### `project_members`
+`project_id`, `user_id`, `role` (Freitext), `sort_order`; eindeutig je
+Projekt und Person.
+
 ---
 
 ## Umsetzungsstand
@@ -359,6 +382,8 @@ Globale (nicht benutzerspezifische) Tabellenkonfiguration:
 | 6 | Preisverlauf, geplante Preisänderungen | umgesetzt |
 | 7 | Notizen, Dokumente, Custom Fields, Audit Log | umgesetzt |
 | 8 | Dashboard, globale Suche, Leistungsübersicht, Archiv | umgesetzt |
+| — | Projekte: Liste, Detail, Meilensteine, Positionen, Team, Projekttypen | umgesetzt (§61 vorgezogen, siehe AE-17) |
+| — | Katalogabgleich: Änderungen am Katalog sichtbar machen und einzeln übernehmen | umgesetzt (siehe AE-18) |
 
 Die Kennzahlen der Kundenliste (Anzahl aktiver Leistungen, Monats- und
 Jahresumsatz, Kosten, Marge) werden aus den Kundenleistungen berechnet. In die
@@ -502,7 +527,7 @@ Jahresumsatz ein.
 
 ### AE-15 — MCP-Server mit vollen Schreibrechten
 Der Datenbestand ist über einen MCP-Server für KI-Clients erreichbar
-(`app/Mcp`, Route `mcp/portal`, 27 Werkzeuge). Der Auftraggeber hat sich
+(`app/Mcp`, Route `mcp/portal`, 36 Werkzeuge). Der Auftraggeber hat sich
 ausdrücklich für den vollen Umfang **ohne Leitplanken** entschieden: neben
 Lesen und Schreiben auch endgültiges Löschen und das direkte Überschreiben von
 Preisen am Preisverlauf vorbei. Das steht bewusst quer zu den Grundsätzen
@@ -527,17 +552,20 @@ den Actions:
   `preisaenderung-planen`; `preis-direkt-setzen` umgeht es naturgemäß, weil es
   gar keinen Verlaufseintrag schreibt.
 
-Die fünf gefährlichen Werkzeuge (`kunde-loeschen`,
+Die sechs gefährlichen Werkzeuge (`kunde-loeschen`,
 `ansprechpartner-loeschen`, `produkt-loeschen`, `leistung-loeschen`,
-`preis-direkt-setzen`) tragen die MCP-Annotation `destructiveHint` und
-verlangen eine inhaltliche Bestätigung — die Kundennummer, den Nachnamen, den
-internen Namen, den Leistungsnamen beziehungsweise die Zeichenkette
-`ohne-preisverlauf`. Das schützt nicht vor Absicht, aber vor einem falsch
-aufgelösten Datensatz.
+`projekt-loeschen`, `preis-direkt-setzen`) tragen die MCP-Annotation
+`destructiveHint` und verlangen eine inhaltliche Bestätigung — die
+Kundennummer, den Nachnamen, den internen Namen, den Leistungsnamen, die
+Projektnummer beziehungsweise die Zeichenkette `ohne-preisverlauf`. Das
+schützt nicht vor Absicht, aber vor einem falsch aufgelösten Datensatz.
+
+Meilensteine und Projektpositionen fallen bewusst **nicht** darunter: sie sind
+Planung, kein Beleg, und werden auch in der Oberfläche endgültig entfernt.
 
 `App\Actions\Maintenance\DeletePermanently` bündelt das Löschen an einer
-Stelle. Nötig ist das, weil `customer_services.customer_id` auf
-`restrictOnDelete` steht und die polymorphen Anhänge — Notizen, Dokumente,
+Stelle. Nötig ist das, weil `customer_services.customer_id` und
+`projects.customer_id` auf `restrictOnDelete` stehen und die polymorphen Anhänge — Notizen, Dokumente,
 benutzerdefinierte Felder, Tags, Kontaktkanäle — überhaupt keinen
 Fremdschlüssel besitzen und sonst als Waisen zurückblieben. Dokumentdateien
 werden dabei auch aus dem Object Storage entfernt.
@@ -578,6 +606,94 @@ verblassen. Die Animationsschleife läuft nur, solange überhaupt eine Zelle
 sichtbar ist, das Canvas nimmt keine Zeigerereignisse an, und bei
 `prefers-reduced-motion: reduce` bleibt der Effekt vollständig aus. Die
 Leuchtfarbe kommt aus `--brand-accent`, wird also nicht doppelt gepflegt.
+
+### AE-17 — Projekte hängen am Kunden, nicht an der Kundenleistung
+§61 führt Projekte als Zukunft. Der Auftraggeber hat die Umsetzung
+ausdrücklich freigegeben, solange die Anwendung noch nicht produktiv läuft, und
+die offene Strukturfrage zur Entscheidung überlassen.
+
+Ein Projekt hängt an genau einem **Kunden** (`projects.customer_id`,
+`restrictOnDelete`), nicht an einer Kundenleistung. Der Grund ist fachlich: ein
+Relaunch berührt Hosting, Wartung und Domain gleichzeitig — hinge das Projekt
+an einer Leistung, müsste man willkürlich eine davon zur Trägerin erklären. Der
+Bezug zu einzelnen Leistungen entsteht stattdessen über die Positionen: eine
+Projektposition verweist wahlweise auf einen Katalogartikel, auf eine bestehende
+Kundenleistung oder auf nichts. Sie speichert Name und Einzelpreis **immer
+selbst**, damit sie lesbar und rechenbar bleibt, wenn der Artikel später
+verschwindet — dieselbe Begründung wie beim Katalog-Snapshot (AE-6).
+
+Weitere Festlegungen:
+
+- **Projektnummer** `PR-00001` über dieselbe Sequenztabelle wie die
+  Kundennummer (AE-1) und nach der Erstellung unveränderlich, erzwungen im
+  Model.
+- **Projekttypen** sind eine Tabelle, kein Enum. §61 nennt Webseite, Shop,
+  Web-App, API und internes Tool ausdrücklich als Beispiele; die Liste ist frei
+  definierbar und über `/projekte/typen` pflegbar.
+- **Fortschritt** wird aus den Meilensteinen gerechnet, nicht von Hand gepflegt.
+  Ohne Meilensteine ist er `null` und die Oberfläche schreibt „Keine
+  Meilensteine" statt einer Prozentzahl ohne Grundlage. Entfallene Meilensteine
+  zählen als erledigt — sonst bliebe der Fortschritt dauerhaft unter hundert
+  Prozent.
+- **Projektvolumen** ist die Summe der *einmaligen* Positionen. Wiederkehrende
+  Positionen stehen daneben als Monatsbetrag, weil sie sich nicht auf denselben
+  Zeitraum beziehen (dieselbe Trennung wie in AE-14).
+- **Status Archiviert** ist im Formular nicht wählbar; er entsteht
+  ausschließlich über das Archivieren, damit der Schreibschutz nicht versehentlich
+  gesetzt oder aufgehoben wird. Die Reaktivierung bringt das Projekt als
+  *pausiert* zurück, nicht als laufend — ob es weiterläuft, entscheidet die
+  Person, die es reaktiviert.
+- **Meilensteine und Positionen** werden hart gelöscht. Sie sind Planung, kein
+  Beleg; der Vorgang steht in der Änderungshistorie. Das Projekt selbst folgt
+  weiter der Regel „kein endgültiges Löschen" und wird archiviert.
+
+---
+
+### AE-18 — Katalogänderungen werden gezeigt, nie automatisch übernommen
+
+AE-6 hält fest, dass bestehende Kundenleistungen bei Katalogänderungen niemals
+automatisch verändert werden. Bis hierher war das nur die halbe Wahrheit: die
+Änderung wurde auch niemandem *gezeigt*. Wer den Listenpreis erhöhte, erfuhr
+nirgends, welche laufenden Verträge noch auf dem alten Stand liefen.
+
+Der Vergleich braucht **drei** Stände, nicht zwei:
+
+| Stand | Bedeutung |
+|---|---|
+| zuletzt gesehen | Der Katalog, über den zuletzt jemand entschieden hat; anfangs der Verknüpfungszeitpunkt. |
+| Katalog heute | Was derzeit im Katalog steht. |
+| Diese Leistung | Was beim Kunden tatsächlich gilt. |
+
+Erst daraus lassen sich zwei Aussagen trennen, die sonst verschwimmen: „der
+Katalog hat sich seither geändert" (Stand ≠ Katalog heute) und „der Kunde weicht
+bewusst ab" (Stand ≠ Leistung). Eine Oberfläche, die nur zwei Werte zeigt, kann
+den bewusst gewährten Rabatt nicht von der verpassten Preiserhöhung
+unterscheiden.
+
+**Der zweite Snapshot.** `catalog_snapshot` bleibt unangetastet der Stand des
+Verknüpfungszeitpunkts. Der Abgleich schreibt stattdessen
+`catalog_reviewed_snapshot` fort. Ohne diese Trennung hätte entweder AE-6 seine
+Bedeutung verloren oder dieselbe Katalogänderung hätte für immer als offen
+gegolten — auch nachdem jemand entschieden hat, den Kundenwert bewusst zu
+behalten.
+
+**Zwei gleichwertige Ausgänge.** *Übernehmen* setzt den heutigen Katalogwert auf
+die Leistung, *Behalten* lässt sie unverändert. Beides schließt den Vorgang ab
+und wird je Feld entschieden — wer über den Verkaufspreis entscheidet, hat nicht
+über den Einkauf entschieden.
+
+**Übernommene Preise laufen über den Preisverlauf.** Eine übernommene
+Katalogerhöhung ist eine Preisänderung wie jede andere und gehört in die
+Historie (AE-5), nicht in einen stillen Schreibzugriff.
+
+**Die Bezeichnung wird nicht übernommen.** Die Leistung trägt bewusst einen
+eigenen Namen („Hosting Webseite Müller" statt „Managed Hosting"). Dass der
+Artikel jetzt anders heißt, wird gezeigt; ändern muss man den Namen selbst.
+
+**Gefiltert wird in PHP.** Der gesehene Stand liegt als JSON vor, die heutigen
+Werte hängen an Artikel und Variante — in SQL ist das nicht zu vergleichen. Die
+Kandidatenmenge ist eng (nur nicht archivierte Leistungen mit Katalogherkunft)
+und wird mit ihren Beziehungen in einem Zug geladen. Dieselbe Linie wie AE-13a.
 
 ---
 

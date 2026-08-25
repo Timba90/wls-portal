@@ -1,12 +1,20 @@
 @php
+    $abgleich = $service->hasCatalogOrigin() ? $this->catalogComparison() : [];
+    $offeneKatalogaenderungen = $service->hasCatalogOrigin() ? $this->openCatalogChangeCount() : 0;
+
     $reiter = collect([
         'preise' => 'Preisverlauf',
         'bestandteile' => 'Bestandteile',
-        'notizen' => 'Notizen',
-        'dokumente' => 'Dokumente',
-        'felder' => 'Eigene Felder',
-        'verlauf' => 'Verlauf',
-    ]);
+    ])
+        // Der Reiter erscheint nur, wenn es einen Katalogartikel gibt, gegen
+        // den sich vergleichen lässt.
+        ->when($service->hasCatalogOrigin(), fn ($liste) => $liste->put('katalog', 'Katalog'))
+        ->merge([
+            'notizen' => 'Notizen',
+            'dokumente' => 'Dokumente',
+            'felder' => 'Eigene Felder',
+            'verlauf' => 'Verlauf',
+        ]);
 @endphp
 
 <div>
@@ -97,15 +105,30 @@
 
         <div class="grid items-start gap-3.5 lg:grid-cols-[minmax(0,1.75fr)_minmax(0,1fr)]">
             <div class="flex min-w-0 flex-col gap-3.5">
-                <div class="flex gap-1 rounded-[9px] border border-line bg-panel p-1">
+                {{--
+                    Die Reiter füllen die Breite, solange sie passen. Bei schmalen
+                    Fenstern schrumpfen Flex-Elemente nicht unter ihre Textbreite —
+                    dann scrollt die Leiste in sich, statt die Seite zu verbreitern.
+                --}}
+                <div class="flex gap-1 overflow-x-auto rounded-[9px] border border-line bg-panel p-1">
                     @foreach ($reiter as $schluessel => $beschriftung)
                         <button type="button"
                                 wire:click="$set('tab', '{{ $schluessel }}')"
                                 @class([
-                                    'flex-1 rounded-[6px] px-2.5 py-1.5 text-[12px] font-medium transition',
+                                    'flex-1 whitespace-nowrap rounded-[6px] px-2.5 py-1.5 text-[12px] font-medium transition',
                                     'bg-accent text-accent-ink' => $tab === $schluessel,
                                     'text-ink-muted hover:bg-raised hover:text-ink-base' => $tab !== $schluessel,
-                                ])>{{ $beschriftung }}</button>
+                                ])>
+                            {{ $beschriftung }}
+
+                            @if ($schluessel === 'katalog' && $offeneKatalogaenderungen > 0)
+                                <span @class([
+                                    'ml-1 rounded-full px-1.5 py-px font-mono text-[10px] tabular-nums',
+                                    'bg-accent-ink/15' => $tab === $schluessel,
+                                    'bg-[color:var(--pill-warn-bg)] text-[color:var(--pill-warn-ink)]' => $tab !== $schluessel,
+                                ])>{{ $offeneKatalogaenderungen }}</span>
+                            @endif
+                        </button>
                     @endforeach
                 </div>
 
@@ -113,6 +136,98 @@
                     @case('bestandteile')
                         <div class="rounded-[10px] border border-line bg-panel p-[17px]">
                             <x-service-components-list :components="$service->serviceComponents" />
+                        </div>
+                        @break
+
+                    @case('katalog')
+                        <div class="rounded-[10px] border border-line bg-panel">
+                            <div class="flex flex-wrap items-baseline justify-between gap-3.5 border-b border-line px-[17px] py-[15px]">
+                                <div class="flex flex-col gap-[3px]">
+                                    <h3 class="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">Katalogabgleich</h3>
+                                    <span class="text-[11.5px] text-ink-faint">
+                                        {{ $service->product?->name }} · zuletzt gesehen
+                                        {{ optional($service->catalog_reviewed_at ?? $service->created_at)->format('d.m.Y') }}
+                                    </span>
+                                </div>
+
+                                @if ($offeneKatalogaenderungen > 0 && ! $service->isArchived())
+                                    <x-button sm
+                                              color="secondary"
+                                              outline
+                                              wire:click="adoptAllCatalogChanges"
+                                              wire:confirm="Alle geänderten Katalogwerte übernehmen? Preise werden dabei im Preisverlauf festgehalten.">
+                                        Alle übernehmen
+                                    </x-button>
+                                @endif
+                            </div>
+
+                            @forelse ($abgleich as $zeile)
+                                <div wire:key="abgleich-{{ $zeile['feld'] }}"
+                                     class="flex flex-col gap-3 border-b border-line px-[17px] py-3.5 last:border-b-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <span class="text-[12.5px] font-medium text-ink">{{ $zeile['label'] }}</span>
+
+                                        @if ($zeile['katalogGeaendert'])
+                                            <x-status-pill kind="warn" label="Katalog geändert" />
+                                        @endif
+
+                                        @if ($zeile['kundeWeichtAb'])
+                                            <x-status-pill kind="info" label="Kunde weicht ab" />
+                                        @endif
+                                    </div>
+
+                                    {{--
+                                        Drei Stände nebeneinander. Ohne den mittleren ließe sich nicht
+                                        unterscheiden, ob der Kunde bewusst abweicht oder ob sich der
+                                        Katalog seither geändert hat.
+                                    --}}
+                                    <div class="grid gap-2.5 sm:grid-cols-3">
+                                        @foreach ([
+                                            ['Zuletzt gesehen', $zeile['stand'], false],
+                                            ['Katalog heute', $zeile['katalog'], $zeile['katalogGeaendert']],
+                                            ['Diese Leistung', $zeile['leistung'], false],
+                                        ] as [$titel, $wert, $hervorheben])
+                                            <div @class([
+                                                'flex flex-col gap-1 rounded-[8px] border px-2.5 py-2',
+                                                'border-[color:var(--pill-warn-ink)]/40 bg-[color:var(--pill-warn-bg)]' => $hervorheben,
+                                                'border-line bg-raised' => ! $hervorheben,
+                                            ])>
+                                                <span class="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint">{{ $titel }}</span>
+                                                <span @class([
+                                                    'truncate text-[12.5px]',
+                                                    'font-medium text-[color:var(--pill-warn-ink)]' => $hervorheben,
+                                                    'text-ink-base' => ! $hervorheben,
+                                                ])>{{ $wert }}</span>
+                                            </div>
+                                        @endforeach
+                                    </div>
+
+                                    @if ($zeile['uebernehmbar'])
+                                        <div class="flex flex-wrap gap-2">
+                                            <x-button sm
+                                                      wire:click="resolveCatalogChange('{{ $zeile['feld'] }}', true)"
+                                                      wire:confirm="„{{ $zeile['katalog'] }}&#34; aus dem Katalog übernehmen?">
+                                                Katalogwert übernehmen
+                                            </x-button>
+
+                                            <x-button sm
+                                                      color="secondary"
+                                                      outline
+                                                      wire:click="resolveCatalogChange('{{ $zeile['feld'] }}', false)">
+                                                Kundenwert behalten
+                                            </x-button>
+                                        </div>
+                                    @elseif ($zeile['katalogGeaendert'] && $zeile['feld'] === 'product_name')
+                                        <span class="text-[11.5px] text-ink-faint">
+                                            Die Leistung trägt einen eigenen Namen — er wird nicht automatisch mitgeändert.
+                                        </span>
+                                    @endif
+                                </div>
+                            @empty
+                                <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
+                                    Diese Leistung entspricht dem Katalog.
+                                </div>
+                            @endforelse
                         </div>
                         @break
 

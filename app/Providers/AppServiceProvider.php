@@ -30,6 +30,7 @@ class AppServiceProvider extends ServiceProvider
         $this->configureUrls();
         $this->configureNavigationCounts();
         $this->configureFormFieldPaddings();
+        $this->configureProgressTrack();
 
         Date::use(Carbon::class);
     }
@@ -63,6 +64,22 @@ class AppServiceProvider extends ServiceProvider
                 ->block('input.base')
                 ->append('px-3');
         }
+    }
+
+    /**
+     * Fortschrittsleiste auf die Flaechentokens des Entwurfs bringen.
+     *
+     * TallStackUI faerbt die Spur fest mit `bg-gray-200 dark:bg-gray-700`. Das
+     * ist im dauerhaften Dunkelmodus deutlich heller als jede andere Flaeche
+     * der Anwendung; `bg-raised` ist derselbe Ton wie Tabellenkopf und
+     * Kennzahlkacheln.
+     */
+    private function configureProgressTrack(): void
+    {
+        TallStackUi::customize()
+            ->progress()
+            ->block('simple.wrapper')
+            ->replace('bg-gray-200 dark:bg-gray-700', 'bg-raised');
     }
 
     /**

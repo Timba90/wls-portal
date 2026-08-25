@@ -13,7 +13,7 @@ berücksichtigt sie, Phase 1 implementiert sie nicht.
 | Rechnungserzeugung             | —                                                                                            |
 | do.de / ResellerInterface      | —                                                                                            |
 | Domains                        | Tags und Custom Fields sind polymorph und ohne Migration erweiterbar.                        |
-| Webseiten / Projekte           | dito                                                                                         |
+| Webseiten                      | dito                                                                                         |
 | Hosting-Systeme                | —                                                                                            |
 | E-Mail-Synchronisierung        | `email_addresses` ist polymorph und indiziert.                                               |
 | KI-Funktionen                  | —                                                                                            |
@@ -23,7 +23,7 @@ berücksichtigt sie, Phase 1 implementiert sie nicht.
 
 | Thema                                     | Entscheidung                                                                                                                        |
 |-------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Katalogänderungen übernehmen              | `catalog_snapshot` und `product_id` bleiben erhalten, damit Unterschiede später angezeigt und einzeln übernommen werden können. Die Vergleichs- und Übernahme-Oberfläche fehlt noch. |
+| Katalogänderungen übernehmen              | Umgesetzt: Reiter „Katalog" im Leistungsdetail, Hinweis mit Filter in der Leistungsübersicht, Markierung im Artikeldetail, zwei MCP-Werkzeuge. Siehe AE-18. |
 | Bedingte Sichtbarkeit von Custom Fields   | Die Spalte `visibility_condition` existiert, es gibt bewusst keinen Rule Builder.                                                    |
 | Mehrere interne Verantwortliche           | Kunde und Kundenleistung tragen je einen `responsible_user_id`. Ein Wechsel auf n:m ist eine reine Pivot-Migration.                  |
 | Office-Dokumentvorschau                   | Bilder und PDF werden angezeigt. Office-Formate werden zum Download angeboten — kein eigener Renderer.                               |
@@ -70,6 +70,16 @@ vortäuschen würde, die keine Daten haben.
 | Feste sieben Spalten des Artikelkatalogs | Wie bei der Kundenliste als Voreinstellung umgesetzt; Einkaufspreis, Marge, Varianten und Tags bleiben zuschaltbar. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### Projekte
+
+| Element im Entwurf | Umsetzung |
+|---|---|
+| „Budget & Stunden" im Projektdetail | Nicht übernommen. Es gibt weder Zeiterfassung noch Rechnungsstellung; das Panel hätte nur erfundene Zahlen zeigen können. Der Geldteil steht als Projektvolumen aus den Positionen im Kopf und in der Positionstabelle. |
+| Fortschrittsbalken ohne Meilensteine | Der Entwurf zeigt immer einen Balken. Ohne Meilensteine gibt es nichts zu messen — Liste und Detail schreiben dort „Keine Meilensteine". |
+| Linke Spalte des Projektdetails | Der Entwurf stapelt „Plan & Meilensteine" und „Positionen". Umgesetzt als Reiterleiste wie im Kunden- und Leistungsdetail, weil zusätzlich Notizen, Dokumente, eigene Felder und Verlauf unterkommen müssen. |
+| Spalte „Nächste Termine" | Zeigt bewusst alle offenen Meilensteine laufender Projekte, unabhängig vom Statusfilter der Tabelle. Sie ist ein Terminkalender, kein zweites Abbild der gefilterten Liste. |
+| Feste sechs Spalten der Projektliste | Wie bei Kundenliste und Artikelkatalog als Voreinstellung umgesetzt; Projektnummer, Typ, Verantwortlich, Beginn, laufendes Volumen und Meilensteinzahl bleiben zuschaltbar. |
+
 ## Offene fachliche Rückfragen
 
 | Frage                                                                                                     | Aktuelle Annahme                                                                                              |
@@ -78,3 +88,5 @@ vortäuschen würde, die keine Daten haben.
 | Was bedeutet ein fehlender Einkaufspreis?                                                                  | `0` Cent, also keine Kosten. Beide Preisspalten sind `NOT NULL DEFAULT 0`.                                     |
 | Zählt eine pausierte Leistung zum Soll-Umsatz?                                                             | Nein — nur `aktiv` fließt in Umsatz-, Kosten- und Margenkennzahlen ein.                                        |
 | Zählen Leistungen mit „Bewusst nicht abrechnen" zum Soll-Umsatz?                                           | Nein. Sie werden separat ausgewiesen.                                                                          |
+| Fließen Projektpositionen in Umsatz, Kosten und Marge des Kunden ein?                                      | Nein. Abgerechnet wird über Kundenleistungen; ein Projekt ist Planung. Das Projektvolumen steht separat.        |
+| Darf eine Projektposition vom Listenpreis abweichen?                                                       | Ja. Katalogartikel und Kundenleistung liefern Name und Preis nur als Vorschlag; beides bleibt frei änderbar.    |

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Services;
 
+use App\Actions\Services\FindServicesWithCatalogChanges;
 use App\Enums\CustomerServiceStatus;
 use App\Livewire\Concerns\WithConfigurableTable;
 use App\Models\Category;
@@ -52,6 +53,9 @@ class ServiceOverview extends Component
     #[Url(as: 'abrechnung', except: '')]
     public string $billingFilter = '';
 
+    #[Url(as: 'katalog', except: '')]
+    public string $catalogFilter = '';
+
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'name', 'direction' => 'asc'];
 
@@ -67,7 +71,7 @@ class ServiceOverview extends Component
 
     public function resetFilters(): void
     {
-        $this->reset('search', 'status', 'productId', 'categoryId', 'tagId', 'responsibleUserId', 'billingFilter');
+        $this->reset('catalogFilter', 'search', 'status', 'productId', 'categoryId', 'tagId', 'responsibleUserId', 'billingFilter');
         $this->resetPage();
     }
 
@@ -82,7 +86,24 @@ class ServiceOverview extends Component
             'products' => $this->products(),
             'categories' => $this->categories(),
             'responsibleUsers' => $this->responsibleUsers(),
+            'catalogChangeCount' => $this->catalogChangeCount(),
         ]);
+    }
+
+    /**
+     * Zahl der Leistungen mit offener Katalogaenderung — unabhaengig von den
+     * uebrigen Filtern, weil der Hinweis sonst verschwaende, sobald jemand
+     * filtert.
+     */
+    public function catalogChangeCount(): int
+    {
+        return count(app(FindServicesWithCatalogChanges::class)());
+    }
+
+    public function toggleCatalogFilter(): void
+    {
+        $this->catalogFilter = $this->catalogFilter === 'changed' ? '' : 'changed';
+        $this->resetPage();
     }
 
     protected function tableKey(): string
@@ -192,7 +213,11 @@ class ServiceOverview extends Component
                 ->where('responsible_user_id', $this->responsibleUserId))
             ->when($this->billingFilter === 'do_not_bill', fn (Builder $query) => $query->where('do_not_bill', true))
             ->when($this->billingFilter === 'billable', fn (Builder $query) => $query->where('do_not_bill', false))
-            ->when($this->billingFilter === 'once', fn (Builder $query) => $query->where('billing_interval_unit', 'once'));
+            ->when($this->billingFilter === 'once', fn (Builder $query) => $query->where('billing_interval_unit', 'once'))
+            ->when(
+                $this->catalogFilter === 'changed',
+                fn (Builder $query) => app(FindServicesWithCatalogChanges::class)->applyTo($query),
+            );
     }
 
     private function sortColumn(): string
