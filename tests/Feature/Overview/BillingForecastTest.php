@@ -71,6 +71,37 @@ it('trifft mit einer Quartalsleistung vier Monate des Fensters', function (): vo
         ->toBe([0, 30000, 0, 0, 30000, 0, 0, 30000, 0, 0, 30000, 0]);
 });
 
+it('faengt bei einem Abrechnungsbeginn in der Zukunft genau dort an', function (): void {
+    // Der Anker liegt hinter dem Fensteranfang. Waere der Monatsabstand
+    // absolut gerechnet, wuerde die erste Faelligkeit uebersprungen.
+    CustomerService::factory()->create([
+        'billing_interval_unit' => BillingIntervalUnit::Month,
+        'billing_interval_count' => 3,
+        'sales_price_cents' => 30000,
+        'service_start_date' => '2026-03-01',
+        'billing_start_date' => '2026-03-01',
+    ]);
+
+    $prognose = app(CalculateBillingForecast::class)(fenster());
+
+    // Ab Maerz 2026 alle drei Monate: Maerz, Juni, September, Dezember.
+    expect(betraegeJeMonat($prognose))
+        ->toBe([0, 0, 30000, 0, 0, 30000, 0, 0, 30000, 0, 0, 30000]);
+});
+
+it('laesst eine Leistung aus, deren erste Faelligkeit hinter dem Fenster liegt', function (): void {
+    CustomerService::factory()->yearly()->create([
+        'sales_price_cents' => 120000,
+        'service_start_date' => '2027-06-01',
+        'billing_start_date' => '2027-06-01',
+    ]);
+
+    $prognose = app(CalculateBillingForecast::class)(fenster());
+
+    expect($prognose['total']->cents)->toBe(0)
+        ->and($prognose['unscheduled'])->toBe(0);
+});
+
 it('weist eine Leistung ohne Abrechnungsdatum getrennt aus, statt den Monat zu raten', function (): void {
     CustomerService::factory()->yearly()->create([
         'sales_price_cents' => 120000,

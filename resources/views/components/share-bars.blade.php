@@ -12,7 +12,8 @@
 
 <div class="flex flex-col gap-3">
     @forelse ($shares as $anteil)
-        <div wire:key="anteil-{{ Str::slug($anteil['label']) }}">
+        {{-- Der Index gehört dazu: zwei Namen können denselben Slug ergeben. --}}
+        <div wire:key="anteil-{{ $loop->index }}-{{ Str::slug($anteil['label']) }}">
             <div class="mb-1.5 flex items-baseline justify-between gap-3">
                 <span class="truncate text-[12.5px] text-ink-base">{{ $anteil['label'] }}</span>
 
@@ -25,8 +26,12 @@
             </div>
 
             <div class="h-1.5 w-full overflow-hidden rounded-full bg-raised" aria-hidden="true">
+                {{--
+                    Ein Betrag von 0 bekommt keinen Balken. Ein sehr kleiner
+                    bleibt mit einem Prozent sichtbar.
+                --}}
                 <div class="h-full rounded-full bg-[color:var(--accent)]"
-                     style="width: {{ max(1, round($anteil['amount']->cents / $groesster * 100)) }}%"></div>
+                     style="width: {{ $anteil['amount']->isZero() ? 0 : max(1, round($anteil['amount']->cents / $groesster * 100)) }}%"></div>
             </div>
         </div>
     @empty

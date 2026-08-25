@@ -208,8 +208,11 @@ class CalculateBillingForecast
         $ende = $start->addMonths(self::MONATE - 1);
 
         // Vom Anker aus in ganzen Schritten bis in das Fenster springen, statt
-        // Monat fuer Monat zu laufen.
-        $abstand = $anker->diffInMonths($start);
+        // Monat fuer Monat zu laufen. `absolute: false` steht hier
+        // ausdruecklich: liegt der Anker erst in der Zukunft, ist der Abstand
+        // negativ und es wird gar nicht gesprungen — die erste Faelligkeit ist
+        // dann der Anker selbst.
+        $abstand = $anker->diffInMonths($start, absolute: false);
         $spruenge = $abstand > 0 ? (int) ceil($abstand / $schritt) : 0;
 
         $faellig = $anker->addMonths($spruenge * $schritt);
