@@ -129,3 +129,32 @@ it('rechnet auch die Vorgabepreise eines Katalogartikels um', function (): void 
         ->assertSet('default_purchase_price', '1,00')
         ->assertSet('default_sales_price', '1,25');
 });
+
+it('bricht nicht ab, wenn im Preisfeld etwas Unlesbares steht', function (): void {
+    // Wer „ca. 15" tippt und dann das Intervall wechselt, darf keine
+    // abgebrochene Anfrage bekommen — die Eingabe bleibt stehen und die
+    // Validierung beim Speichern meldet sie.
+    Livewire::actingAs($this->benutzer)
+        ->test(CustomerServiceForm::class, ['customer' => Customer::factory()->create()])
+        ->set('sales_price', 'ca. 15')
+        ->set('billing_interval_unit', BillingIntervalUnit::Year->value)
+        ->assertSet('sales_price', 'ca. 15')
+        ->assertHasNoErrors();
+});
+
+it('haelt zwei Intervalle nach Einheit und Anzahl auseinander, nicht nach Beschriftung', function (): void {
+    expect(BillingInterval::monthly()->equals(BillingInterval::make(BillingIntervalUnit::Month, 1)))->toBeTrue()
+        ->and(BillingInterval::monthly()->equals(BillingInterval::make(BillingIntervalUnit::Month, 3)))->toBeFalse()
+        // Zwoelf Monate und ein Jahr sind gleich lang, aber nicht dasselbe
+        // Intervall — abgerechnet wird zu verschiedenen Zeitpunkten.
+        ->and(BillingInterval::yearly()->equals(BillingInterval::make(BillingIntervalUnit::Month, 12)))->toBeFalse();
+});
+
+it('bricht auch im Artikelformular nicht an einer unlesbaren Eingabe ab', function (): void {
+    Livewire::actingAs($this->benutzer)
+        ->test(ProductForm::class)
+        ->set('default_sales_price', 'etwa 20')
+        ->set('default_billing_interval_unit', BillingIntervalUnit::Year->value)
+        ->assertSet('default_sales_price', 'etwa 20')
+        ->assertHasNoErrors();
+});

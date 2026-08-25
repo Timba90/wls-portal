@@ -86,6 +86,17 @@ final readonly class BillingInterval implements Stringable
     }
 
     /**
+     * Zwei Intervalle sind gleich, wenn Einheit und Anzahl uebereinstimmen.
+     *
+     * Ausdruecklich nicht ueber `__toString()`: das liefert die Beschriftung
+     * fuer die Oberflaeche und ist keine Identitaet.
+     */
+    public function equals(self $other): bool
+    {
+        return $this->unit === $other->unit && $this->count === $other->count;
+    }
+
+    /**
      * Rechnet einen Betrag dieses Intervalls auf ein anderes um.
      *
      * Eine Domain fuer 15,00 EUR im Jahr kostet monatlich 1,25 EUR. Gerundet

@@ -12,6 +12,7 @@ use App\Support\Money;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 use Livewire\Attributes\Layout;
 use Livewire\Component;
 
@@ -119,7 +120,7 @@ class ProductForm extends Component
 
         $nachher = $this->currentInterval();
 
-        if ($nachher === null || (string) $vorher === (string) $nachher) {
+        if ($nachher === null || $vorher->equals($nachher)) {
             return;
         }
 
@@ -158,7 +159,15 @@ class ProductForm extends Component
             return $eingabe;
         }
 
-        return $von->convertTo(Money::fromEuroInput($eingabe), $nach)->toInput();
+        try {
+            $betrag = Money::fromEuroInput($eingabe);
+        } catch (InvalidArgumentException) {
+            // Unlesbares bleibt stehen: die Validierung beim Speichern meldet
+            // es. Ein Intervallwechsel darf daran nicht abbrechen.
+            return $eingabe;
+        }
+
+        return $von->convertTo($betrag, $nach)->toInput();
     }
 
     public function requiresIntervalCount(): bool
@@ -266,7 +275,7 @@ class ProductForm extends Component
 
             try {
                 Money::fromEuroInput($value);
-            } catch (\InvalidArgumentException) {
+            } catch (InvalidArgumentException) {
                 $fail('Der Wert ist kein gültiger Geldbetrag.');
             }
         };
