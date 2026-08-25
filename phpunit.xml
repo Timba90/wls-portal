@@ -12,20 +12,13 @@
             <directory>tests/Feature</directory>
         </testsuite>
         <!--
-            Die Browser-Suite ist bewusst NICHT eingetragen.
-
-            Der Rundgang in tests/Browser/ ist geschrieben, und das Plugin
-            startet seinen Playwright-Server inzwischen auch. Der Testlauf
-            bleibt danach aber hängen, statt einen Browser zu öffnen.
-            Eingetragen würde er jeden CI-Lauf blockieren.
-
-            Von Hand ausführbar, sobald die Ursache geklärt ist — dafür den
-            folgenden Eintrag wieder aktivieren:
-
-            <testsuite name="Browser">
-                <directory>tests/Browser</directory>
-            </testsuite>
+            Die Browser-Suite faehrt einen echten Chromium. Sie prueft, was
+            serverseitig gerenderte Tests nicht sehen koennen: ob ein Knopf im
+            Browser tatsaechlich etwas ausloest.
         -->
+        <testsuite name="Browser">
+            <directory>tests/Browser</directory>
+        </testsuite>
     </testsuites>
     <source>
         <include>

@@ -70,15 +70,32 @@ jobs:
           node-version: '22'
           cache: npm
 
-      # `playwright` steckt als Abhaengigkeit der vorbereiteten Browser-Tests
-      # in package.json. Sein Postinstall wuerde bei jedem Lauf Browser
-      # nachladen — solange die Browser-Suite nicht aktiv ist, waere das
-      # reine Wartezeit. Wer sie aktiviert, nimmt die Zeile heraus und
-      # ergaenzt `npx playwright install --with-deps chromium`.
+      # Das Postinstall von `playwright` wird uebersprungen; der Browser wird
+      # im naechsten Schritt gezielt und zwischengespeichert geholt.
       - name: NPM-Abhängigkeiten installieren
         run: npm ci
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+
+      # Die Browser-Suite fährt einen echten Chromium. Der Schluessel haengt an
+      # der Playwright-Version: eine neue Version erwartet einen anderen
+      # Browser-Build, und ein alter aus dem Zwischenspeicher passt dann nicht.
+      - name: Browser zwischenspeichern
+        id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Browser installieren
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+
+      # Aus dem Zwischenspeicher fehlen die Systempakete, die `--with-deps`
+      # sonst mitbringt.
+      - name: Systempakete für den Browser
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
 
       # Die Layouts binden Assets über @vite ein; ohne Build fehlt das Manifest
       # und jede Seitenansicht schlägt fehl.
