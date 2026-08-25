@@ -133,9 +133,9 @@
 
     @script
     <script>
-        $wire.on('dokument-gespeichert', () => $tallstackui.toast().success('Dokument gespeichert').send());
-        $wire.on('dokument-archiviert', () => $tallstackui.toast().success('Dokument archiviert').send());
-        $wire.on('dokument-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
+        $wire.on('dokument-gespeichert', () => $tsui.interaction('toast').success('Dokument gespeichert').send());
+        $wire.on('dokument-archiviert', () => $tsui.interaction('toast').success('Dokument archiviert').send());
+        $wire.on('dokument-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
     </script>
     @endscript
 </div>

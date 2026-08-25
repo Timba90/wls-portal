@@ -88,12 +88,12 @@
                                          icon="x-mark"
                                          sm
                                          title="Zuordnung entfernen"
-                                         x-on:click="$dialog.confirm({
-                                             title: 'Zuordnung entfernen?',
-                                             description: 'Der Ansprechpartner bleibt erhalten und verliert nur die Verbindung zu diesem Kunden.',
-                                             accept: { text: 'Entfernen', method: 'detachAssignment', params: {{ $assignment->id }} },
-                                             reject: { text: 'Abbrechen' },
-                                         })" />
+                                         x-on:click="$tsui.interaction('dialog')
+                                             .question('Zuordnung entfernen?', 'Der Ansprechpartner bleibt erhalten und verliert nur die Verbindung zu diesem Kunden.')
+                                             .wireable($wire.id)
+                                             .confirm('Entfernen', 'detachAssignment', {{ $assignment->id }})
+                                             .cancel('Abbrechen')
+                                             .send()" />
                     </div>
                 </div>
             </div>
@@ -176,8 +176,8 @@
 
     @script
     <script>
-        $wire.on('vertretungen-gespeichert', () => $tallstackui.toast().success('Vertretungen gespeichert').send());
-        $wire.on('zuordnung-entfernt', () => $tallstackui.toast().success('Zuordnung entfernt').send());
+        $wire.on('vertretungen-gespeichert', () => $tsui.interaction('toast').success('Vertretungen gespeichert').send());
+        $wire.on('zuordnung-entfernt', () => $tsui.interaction('toast').success('Zuordnung entfernt').send());
     </script>
     @endscript
 </div>

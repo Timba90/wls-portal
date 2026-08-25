@@ -70,7 +70,7 @@
 
         @script
         <script>
-            $wire.on('projekttyp-gespeichert', () => $tallstackui.toast().success('Projekttyp gespeichert').send());
+            $wire.on('projekttyp-gespeichert', () => $tsui.interaction('toast').success('Projekttyp gespeichert').send());
         </script>
         @endscript
     </x-page>

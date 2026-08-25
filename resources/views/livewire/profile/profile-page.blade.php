@@ -46,8 +46,8 @@
 
         @script
         <script>
-            $wire.on('profil-gespeichert', () => $tallstackui.toast().success('Profil gespeichert').send());
-            $wire.on('passwort-gespeichert', () => $tallstackui.toast().success('Passwort geändert').send());
+            $wire.on('profil-gespeichert', () => $tsui.interaction('toast').success('Profil gespeichert').send());
+            $wire.on('passwort-gespeichert', () => $tsui.interaction('toast').success('Passwort geändert').send());
         </script>
         @endscript
     </x-page>

@@ -24,12 +24,12 @@
                           color="red"
                           outline
                           icon="archive-box"
-                          x-on:click="$dialog.confirm({
-                              title: 'Kunde archivieren?',
-                              description: 'Der Kunde bleibt vollständig erhalten, erscheint aber nicht mehr in der normalen Suche.',
-                              accept: { text: 'Archivieren', method: 'archive' },
-                              reject: { text: 'Abbrechen' },
-                          })">
+                          x-on:click="$tsui.interaction('dialog')
+                              .question('Kunde archivieren?', 'Der Kunde bleibt vollständig erhalten, erscheint aber nicht mehr in der normalen Suche.')
+                              .wireable($wire.id)
+                              .confirm('Archivieren', 'archive')
+                              .cancel('Abbrechen')
+                              .send()">
                     Archivieren
                 </x-button>
             @else
@@ -37,12 +37,12 @@
                           color="secondary"
                           outline
                           icon="arrow-uturn-left"
-                          x-on:click="$dialog.confirm({
-                              title: 'Archivierung aufheben?',
-                              description: 'Der Kunde wird wieder als aktiv geführt.',
-                              accept: { text: 'Reaktivieren', method: 'restore' },
-                              reject: { text: 'Abbrechen' },
-                          })">
+                          x-on:click="$tsui.interaction('dialog')
+                              .question('Archivierung aufheben?', 'Der Kunde wird wieder als aktiv geführt.')
+                              .wireable($wire.id)
+                              .confirm('Reaktivieren', 'restore')
+                              .cancel('Abbrechen')
+                              .send()">
                     Archivierung aufheben
                 </x-button>
             @endunless
@@ -230,10 +230,10 @@
 
         @script
         <script>
-            $wire.on('kunde-archiviert', () => $tallstackui.toast().success('Kunde archiviert').send());
-            $wire.on('kunde-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
+            $wire.on('kunde-archiviert', () => $tsui.interaction('toast').success('Kunde archiviert').send());
+            $wire.on('kunde-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
             $wire.on('archivierung-nicht-moeglich', (event) =>
-                $tallstackui.toast().error('Archivierung nicht möglich', event.meldung).send());
+                $tsui.interaction('toast').error('Archivierung nicht möglich', event.meldung).send());
         </script>
         @endscript
     </x-page>

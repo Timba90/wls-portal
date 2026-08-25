@@ -312,12 +312,12 @@
                                   block
                                   color="red"
                                   outline
-                                  x-on:click="$dialog.confirm({
-                                      title: 'Artikel archivieren?',
-                                      description: 'Der Artikel und seine Varianten werden archiviert. Bestehende Kundenleistungen bleiben unverändert.',
-                                      accept: { text: 'Archivieren', method: 'archive' },
-                                      reject: { text: 'Abbrechen' },
-                                  })">
+                                  x-on:click="$tsui.interaction('dialog')
+                                      .question('Artikel archivieren?', 'Der Artikel und seine Varianten werden archiviert. Bestehende Kundenleistungen bleiben unverändert.')
+                                      .wireable($wire.id)
+                                      .confirm('Archivieren', 'archive')
+                                      .cancel('Abbrechen')
+                                      .send()">
                             Artikel deaktivieren
                         </x-button>
                     @endif
@@ -396,11 +396,11 @@
 
         @script
         <script>
-            $wire.on('artikel-archiviert', () => $tallstackui.toast().success('Artikel archiviert').send());
-            $wire.on('artikel-reaktiviert', () => $tallstackui.toast().success('Archivierung aufgehoben').send());
-            $wire.on('variante-gespeichert', () => $tallstackui.toast().success('Variante gespeichert').send());
-            $wire.on('variante-archiviert', () => $tallstackui.toast().success('Variante archiviert').send());
-            $wire.on('variante-reaktiviert', () => $tallstackui.toast().success('Variante reaktiviert').send());
+            $wire.on('artikel-archiviert', () => $tsui.interaction('toast').success('Artikel archiviert').send());
+            $wire.on('artikel-reaktiviert', () => $tsui.interaction('toast').success('Archivierung aufgehoben').send());
+            $wire.on('variante-gespeichert', () => $tsui.interaction('toast').success('Variante gespeichert').send());
+            $wire.on('variante-archiviert', () => $tsui.interaction('toast').success('Variante archiviert').send());
+            $wire.on('variante-reaktiviert', () => $tsui.interaction('toast').success('Variante reaktiviert').send());
         </script>
         @endscript
     </x-page>
