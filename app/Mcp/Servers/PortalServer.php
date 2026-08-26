@@ -33,6 +33,8 @@ use App\Mcp\Tools\Projects\ProjektLoeschen;
 use App\Mcp\Tools\Projects\ProjektSpeichern;
 use App\Mcp\Tools\Projects\ProjektTeamSetzen;
 use App\Mcp\Tools\Projects\ProjekttypenVerwalten;
+use App\Mcp\Tools\Registrar\BestandSuchen;
+use App\Mcp\Tools\Registrar\BestandZuordnen;
 use App\Mcp\Tools\Services\KatalogabgleichLesen;
 use App\Mcp\Tools\Services\KatalogaenderungEntscheiden;
 use App\Mcp\Tools\Services\LeistungenSuchen;
@@ -71,6 +73,17 @@ use Laravel\Mcp\Server\Attributes\Version;
       meinen.
     - Der Fortschritt kommt aus den Meilensteinen und ist `null`, solange es
       keine gibt.
+
+    Zum Bestand an Domains und Zertifikaten:
+
+    - Der technische Stand kommt aus der Schnittstelle des Registrars. Wem ein
+      Eintrag gehoert, weiss nur das Portal — diese Zuordnung wird von Hand
+      gesetzt und vom Import nicht ueberschrieben.
+    - `zuordnung: ohne_kunde` nennt den offenen Rest nach einem Import.
+      `zuordnung: ohne_leistung` ist etwas anderes: der Kunde steht fest, nur
+      die Verbindung zur Abrechnung fehlt noch.
+    - Die Kundenleistung ist freiwillig. Nicht jede Domain wird einzeln
+      berechnet, manche laeuft in einem Paket mit.
 
     Zum Einstieg eignen sich `kennzahlen-lesen` fuer den Gesamtueberblick und
     `global-suchen`, wenn nur ein Stichwort bekannt ist.
@@ -123,6 +136,9 @@ class PortalServer extends Server
         PreisaenderungPlanen::class,
         PreisaenderungAbbrechen::class,
         PreisDirektSetzen::class,
+
+        BestandSuchen::class,
+        BestandZuordnen::class,
 
         KennzahlenLesen::class,
         GlobalSuchen::class,
