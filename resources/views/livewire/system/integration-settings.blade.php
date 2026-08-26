@@ -30,8 +30,10 @@
                     <div class="grid gap-4 md:grid-cols-2">
                         @foreach ($felder as $name => $feld)
                             <div wire:key="feld-{{ $anbieter->value }}-{{ $name }}">
-                                <x-input type="password"
-                                         autocomplete="new-password"
+                                @php($geheim = $feld['secret'] ?? true)
+
+                                <x-input :type="$geheim ? 'password' : 'text'"
+                                         :autocomplete="$geheim ? 'new-password' : 'off'"
                                          wire:model="input.{{ $anbieter->value }}.{{ $name }}"
                                          :label="$feld['label']"
                                          :placeholder="($hinterlegt[$name] ?? false) ? 'Hinterlegt — zum Ersetzen neu eingeben' : 'Nicht hinterlegt'"

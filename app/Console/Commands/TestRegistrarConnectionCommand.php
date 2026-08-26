@@ -26,6 +26,10 @@ class TestRegistrarConnectionCommand extends Command
     {
         $anschluesse = $this->clients($factory);
 
+        if ($anschluesse === null) {
+            return self::FAILURE;
+        }
+
         if ($anschluesse === []) {
             $this->components->error('Kein Anbieter ist eingerichtet. Zugangsdaten werden unter „Schnittstellen" gepflegt.');
 
@@ -47,9 +51,13 @@ class TestRegistrarConnectionCommand extends Command
     }
 
     /**
-     * @return array<int, RegistrarClient>
+     * Die gewaehlten Anschluesse — oder `null`, wenn das Argument keinen
+     * Anbieter benennt. Ein Tippfehler im Namen ist etwas anderes als ein
+     * Anbieter ohne Zugangsdaten, und beides verdient seine eigene Meldung.
+     *
+     * @return array<int, RegistrarClient>|null
      */
-    private function clients(RegistrarClientFactory $factory): array
+    private function clients(RegistrarClientFactory $factory): ?array
     {
         $gewaehlt = $this->argument('anbieter');
 
@@ -66,7 +74,7 @@ class TestRegistrarConnectionCommand extends Command
                 implode(', ', array_column(RegistrarProvider::cases(), 'value')),
             ));
 
-            return [];
+            return null;
         }
 
         return [$factory->for($anbieter)];

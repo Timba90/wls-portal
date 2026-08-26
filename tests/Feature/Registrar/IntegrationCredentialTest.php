@@ -14,6 +14,18 @@ beforeEach(function (): void {
     $this->benutzer = User::factory()->create();
 });
 
+/**
+ * Die Eingabeart des Feldes, an dem `wire:model` auf diesen Namen zeigt.
+ */
+function feldTyp(string $markup, string $feld): ?string
+{
+    if (preg_match('/<input\\b[^>]*wire:model="input\\.autodns\\.'.$feld.'"[^>]*>/', $markup, $treffer) !== 1) {
+        return null;
+    }
+
+    return preg_match('/\\btype="([^"]+)"/', $treffer[0], $art) === 1 ? $art[1] : null;
+}
+
 it('legt Zugangsdaten verschluesselt ab', function (): void {
     IntegrationCredential::query()->create([
         'provider' => RegistrarProvider::AutoDns->value,
@@ -192,6 +204,17 @@ it('haelt Zugangsdaten aus der Aenderungshistorie heraus', function (): void {
     $eintraege = DB::table('audit_logs')->get()->map(fn ($zeile): string => json_encode($zeile, JSON_UNESCAPED_UNICODE) ?: '');
 
     expect($eintraege->filter(fn (string $zeile): bool => str_contains($zeile, 'sehr-geheim')))->toBeEmpty();
+});
+
+it('zeigt den Kontext im Klartext, das Kennwort nicht', function (): void {
+    // Der Kontext ist kein Geheimnis; maskiert faellt ein Zahlendreher nicht auf.
+    $markup = Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->html();
+
+    expect(feldTyp($markup, 'context'))->toBe('text')
+        ->and(feldTyp($markup, 'password'))->toBe('password')
+        ->and(feldTyp($markup, 'username'))->toBe('password');
 });
 
 it('meldet einen bestandenen Verbindungstest an die Oberflaeche', function (): void {

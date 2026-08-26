@@ -50,18 +50,23 @@ class IntegrationSettings extends Component
     /**
      * Welche Felder ein Anbieter braucht, mit Beschriftung und Hinweis.
      *
-     * @return array<string, array{label: string, hint?: string, optional?: bool}>
+     * `secret` entscheidet ueber die Eingabeart: ein Kennwort wird maskiert
+     * und nie zurueckgelesen, der Kontext ist kein Geheimnis und wird beim
+     * Tippen gezeigt — sonst faellt ein Zahlendreher nicht auf.
+     *
+     * @return array<string, array{label: string, hint?: string, optional?: bool, secret?: bool}>
      */
     public function fieldsFor(RegistrarProvider $provider): array
     {
         return match ($provider) {
             RegistrarProvider::AutoDns => [
-                'username' => ['label' => 'Benutzername'],
-                'password' => ['label' => 'Kennwort'],
+                'username' => ['label' => 'Benutzername', 'secret' => true],
+                'password' => ['label' => 'Kennwort', 'secret' => true],
                 'context' => [
                     'label' => 'Kontext',
                     'hint' => 'Voreingestellt 4 — nur ausfüllen, wenn ein anderer Kontext gilt (1 ist das Testsystem).',
                     'optional' => true,
+                    'secret' => false,
                 ],
             ],
         };

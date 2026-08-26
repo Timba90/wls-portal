@@ -170,14 +170,16 @@ class AutoDnsClient implements RegistrarClient
     }
 
     /**
+     * @param  'get'|'post'  $verb
      * @param  array<string, mixed>|null  $koerper
      */
     private function send(string $verb, string $pfad, ?array $koerper = null): Response
     {
         try {
-            return $koerper === null
-                ? $this->request()->get($pfad)
-                : $this->request()->post($pfad, $koerper);
+            return match ($verb) {
+                'get' => $this->request()->get($pfad),
+                'post' => $this->request()->post($pfad, $koerper ?? []),
+            };
         } catch (Throwable $fehler) {
             throw new RegistrarException(
                 "Die Verbindung zu autoDNS ist fehlgeschlagen: {$fehler->getMessage()}",

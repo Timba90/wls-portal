@@ -269,6 +269,17 @@ it('blaettert, bis eine Seite nicht mehr voll ist', function (): void {
     Http::assertSentCount(2);
 });
 
+it('nennt bei einem unbekannten Anbieter nur den Tippfehler', function (): void {
+    // Ein Tippfehler im Namen ist etwas anderes als ein fehlender Zugang;
+    // beide Meldungen zusammen führten in die falsche Richtung.
+    foreach (['registrar:test', 'registrar:import'] as $befehl) {
+        $this->artisan($befehl, ['anbieter' => 'inwx'])
+            ->expectsOutputToContain('Unbekannter Anbieter')
+            ->doesntExpectOutputToContain('Kein Anbieter ist eingerichtet')
+            ->assertFailed();
+    }
+});
+
 it('liefert nur eingerichtete Anbieter', function (): void {
     expect(app(RegistrarClientFactory::class)->configured())->toBe([]);
 
