@@ -4,6 +4,8 @@ namespace App\Livewire\System;
 
 use App\Enums\RegistrarProvider;
 use App\Models\IntegrationCredential;
+use App\Support\Registrar\RegistrarClientFactory;
+use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -53,18 +55,13 @@ class IntegrationSettings extends Component
     public function fieldsFor(RegistrarProvider $provider): array
     {
         return match ($provider) {
-            RegistrarProvider::Inwx => [
+            RegistrarProvider::AutoDns => [
                 'username' => ['label' => 'Benutzername'],
                 'password' => ['label' => 'Kennwort'],
-                'shared_secret' => [
-                    'label' => 'Geheimnis der Zwei-Faktor-Anmeldung',
-                    'hint' => 'Nur nötig, wenn das Konto eine Zwei-Faktor-Anmeldung verlangt.',
-                    'optional' => true,
+                'context' => [
+                    'label' => 'Kontext',
+                    'hint' => '1 ist das Testsystem, 4 oder die eigene Kontextnummer das Livesystem.',
                 ],
-            ],
-            RegistrarProvider::DomainReselling => [
-                'username' => ['label' => 'Benutzername'],
-                'password' => ['label' => 'Kennwort'],
             ],
         };
     }
@@ -125,6 +122,23 @@ class IntegrationSettings extends Component
 
         $this->mount();
         $this->dispatch('zugang-gespeichert');
+    }
+
+    /**
+     * Prueft den Zugang beim Anbieter, ohne etwas zu lesen oder zu schreiben.
+     *
+     * Der erste Schritt nach dem Hinterlegen: stimmen Zugangsdaten und
+     * Kontext? Das soll man erfahren, bevor ein Import laeuft.
+     */
+    public function test(string $provider): void
+    {
+        $client = app(RegistrarClientFactory::class)->for(RegistrarProvider::from($provider));
+
+        try {
+            $this->dispatch('zugang-geprueft', meldung: $client->testConnection());
+        } catch (RegistrarException $ausnahme) {
+            $this->dispatch('zugang-abgelehnt', meldung: $ausnahme->getMessage());
+        }
     }
 
     /**

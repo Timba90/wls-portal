@@ -24,6 +24,15 @@ interface RegistrarClient
     public function isConfigured(): bool;
 
     /**
+     * Prueft den Zugang, ohne etwas zu lesen oder zu schreiben.
+     *
+     * Gibt eine kurze Bestaetigung zurueck und wirft eine RegistrarException,
+     * wenn der Anbieter ablehnt. Der Sinn: herausfinden, ob die Zugangsdaten
+     * stimmen, bevor ein Import laeuft — und nicht mittendrin.
+     */
+    public function testConnection(): string;
+
+    /**
      * @return iterable<int, RemoteDomain>
      */
     public function domains(): iterable;

@@ -47,12 +47,10 @@ return [
     |
     */
 
-    'inwx' => [
-        'endpoint' => env('INWX_ENDPOINT', 'https://api.domrobot.com/jsonrpc/'),
-    ],
-
-    'domain_reselling' => [
-        'endpoint' => env('DOMAIN_RESELLING_ENDPOINT', 'https://api.domainreselling.de/api/call.cgi'),
+    'autodns' => [
+        // Kontext 1 ist das Testsystem von autoDNS, 4 oder die eigene
+        // Kontextnummer das Livesystem.
+        'endpoint' => env('AUTODNS_ENDPOINT', 'https://api.autodns.com/v1/'),
     ],
 
 ];

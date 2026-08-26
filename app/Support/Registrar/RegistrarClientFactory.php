@@ -24,8 +24,7 @@ class RegistrarClientFactory
         $config = array_merge($config, IntegrationCredential::valuesFor($provider));
 
         return match ($provider) {
-            RegistrarProvider::Inwx => new InwxClient($config),
-            RegistrarProvider::DomainReselling => new DomainResellingClient($config),
+            RegistrarProvider::AutoDns => new AutoDnsClient($config),
         };
     }
 

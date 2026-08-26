@@ -6,6 +6,7 @@ use App\Models\IntegrationCredential;
 use App\Models\User;
 use App\Support\Registrar\RegistrarClientFactory;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
 
 beforeEach(function (): void {
@@ -14,7 +15,7 @@ beforeEach(function (): void {
 
 it('legt Zugangsdaten verschluesselt ab', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => RegistrarProvider::Inwx->value,
+        'provider' => RegistrarProvider::AutoDns->value,
         'credentials' => ['username' => 'benutzer', 'password' => 'sehr-geheim'],
     ]);
 
@@ -23,28 +24,29 @@ it('legt Zugangsdaten verschluesselt ab', function (): void {
     // In der Datenbank darf nie Klartext stehen.
     expect($roh)->not->toContain('sehr-geheim')
         ->and($roh)->not->toContain('benutzer')
-        ->and(IntegrationCredential::valuesFor(RegistrarProvider::Inwx))
+        ->and(IntegrationCredential::valuesFor(RegistrarProvider::AutoDns))
         ->toBe(['username' => 'benutzer', 'password' => 'sehr-geheim']);
 });
 
 it('setzt den Anschluss aus Endpunkt und hinterlegten Zugangsdaten zusammen', function (): void {
-    expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::Inwx)->isConfigured())->toBeFalse();
+    expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->isConfigured())->toBeFalse();
 
+    // autoDNS braucht neben den Zugangsdaten den Kontext.
     IntegrationCredential::query()->create([
-        'provider' => RegistrarProvider::Inwx->value,
-        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+        'provider' => RegistrarProvider::AutoDns->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
     ]);
 
-    expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::Inwx)->isConfigured())->toBeTrue()
+    expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->isConfigured())->toBeTrue()
         ->and(app(RegistrarClientFactory::class)->configured())->toHaveCount(1);
 });
 
 it('speichert eingegebene Zugangsdaten ueber die Oberflaeche', function (): void {
     Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->set('input.inwx.username', 'benutzer')
-        ->set('input.inwx.password', 'geheim')
-        ->call('save', 'inwx')
+        ->set('input.autodns.username', 'benutzer')
+        ->set('input.autodns.password', 'geheim')
+        ->call('save', 'autodns')
         ->assertDispatched('zugang-gespeichert');
 
     $eintrag = IntegrationCredential::query()->sole();
@@ -55,78 +57,99 @@ it('speichert eingegebene Zugangsdaten ueber die Oberflaeche', function (): void
 
 it('laesst beim Ersetzen eines Feldes die uebrigen stehen', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
+        'provider' => 'autodns',
         'credentials' => ['username' => 'benutzer', 'password' => 'alt'],
     ]);
 
     Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->set('input.inwx.password', 'neu')
-        ->call('save', 'inwx');
+        ->set('input.autodns.password', 'neu')
+        ->call('save', 'autodns');
 
     // Wer nur das Kennwort wechselt, soll den Benutzernamen nicht erneut tippen.
-    expect(IntegrationCredential::valuesFor(RegistrarProvider::Inwx))
+    expect(IntegrationCredential::valuesFor(RegistrarProvider::AutoDns))
         ->toBe(['username' => 'benutzer', 'password' => 'neu']);
 });
 
 it('aendert nichts, wenn kein Feld ausgefuellt wurde', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
+        'provider' => 'autodns',
         'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
     ]);
 
     Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->call('save', 'inwx')
+        ->call('save', 'autodns')
         ->assertDispatched('zugang-unveraendert');
 
-    expect(IntegrationCredential::valuesFor(RegistrarProvider::Inwx)['password'])->toBe('geheim');
+    expect(IntegrationCredential::valuesFor(RegistrarProvider::AutoDns)['password'])->toBe('geheim');
 });
 
 it('entfernt Zugangsdaten vollstaendig', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
+        'provider' => 'autodns',
         'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
     ]);
 
     Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->call('forget', 'inwx')
+        ->call('forget', 'autodns')
         ->assertDispatched('zugang-entfernt');
 
-    expect(IntegrationCredential::valuesFor(RegistrarProvider::Inwx))->toBe([])
-        ->and(app(RegistrarClientFactory::class)->for(RegistrarProvider::Inwx)->isConfigured())->toBeFalse();
+    expect(IntegrationCredential::valuesFor(RegistrarProvider::AutoDns))->toBe([])
+        ->and(app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->isConfigured())->toBeFalse();
 });
 
 it('liefert hinterlegte Werte nie an die Oberflaeche zurueck', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
+        'provider' => 'autodns',
         'credentials' => ['username' => 'benutzer', 'password' => 'sehr-geheim'],
     ]);
 
     $komponente = Livewire::actingAs($this->benutzer)->test(IntegrationSettings::class);
 
     // Weder im Zustand der Komponente noch im gerenderten Markup.
-    $komponente->assertSet('input.inwx.password', '')
+    $komponente->assertSet('input.autodns.password', '')
         ->assertDontSee('sehr-geheim')
         ->assertSee('Hinterlegt');
 });
 
-it('zeigt an, welcher Anschluss eingerichtet ist', function (): void {
+it('zeigt an, ob der Anschluss eingerichtet ist', function (): void {
+    Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->assertSee('Nicht eingerichtet');
+
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
-        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
     ]);
 
     Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->assertSee('Eingerichtet')
-        ->assertSee('Nicht eingerichtet');
+        ->assertSee('Eingerichtet');
+});
+
+it('bietet den Verbindungstest erst an, wenn der Anschluss vollstaendig ist', function (): void {
+    // Ein Testknopf ohne Zugangsdaten führte nur zu einer Fehlermeldung.
+    // Geprüft wird der Knopf, nicht der Text — der Hilfetext nennt ihn immer.
+    Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->assertDontSeeHtml('wire:click="test(');
+
+    IntegrationCredential::query()->create([
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
+    ]);
+
+    Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->assertSeeHtml('wire:click="test(')
+        ->assertSee('Verbindung prüfen');
 });
 
 it('haelt Zugangsdaten aus der Aenderungshistorie heraus', function (): void {
     IntegrationCredential::query()->create([
-        'provider' => 'inwx',
+        'provider' => 'autodns',
         'credentials' => ['username' => 'benutzer', 'password' => 'sehr-geheim'],
     ]);
 
@@ -134,4 +157,40 @@ it('haelt Zugangsdaten aus der Aenderungshistorie heraus', function (): void {
     $eintraege = DB::table('audit_logs')->get()->map(fn ($zeile): string => json_encode($zeile, JSON_UNESCAPED_UNICODE) ?: '');
 
     expect($eintraege->filter(fn (string $zeile): bool => str_contains($zeile, 'sehr-geheim')))->toBeEmpty();
+});
+
+it('meldet einen bestandenen Verbindungstest an die Oberflaeche', function (): void {
+    IntegrationCredential::query()->create([
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
+    ]);
+
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'S0101', 'type' => 'SUCCESS', 'text' => 'Hallo.'],
+    ]));
+
+    Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->call('test', 'autodns')
+        ->assertDispatched('zugang-geprueft');
+});
+
+it('meldet eine abgelehnte Verbindung, ohne die Seite zu brechen', function (): void {
+    IntegrationCredential::query()->create([
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'falsch', 'context' => '4'],
+    ]);
+
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'EF01001', 'type' => 'ERROR', 'text' => 'Authorization failed'],
+    ], 401));
+
+    // Eine falsche Eingabe darf eine Meldung geben, keine Ausnahme.
+    Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->call('test', 'autodns')
+        ->assertDispatched('zugang-abgelehnt')
+        ->assertOk();
 });
