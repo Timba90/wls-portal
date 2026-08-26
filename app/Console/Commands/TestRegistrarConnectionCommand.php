@@ -18,7 +18,7 @@ use Illuminate\Console\Command;
  */
 class TestRegistrarConnectionCommand extends Command
 {
-    protected $signature = 'registrar:test {anbieter? : autodns; ohne Angabe alle eingerichteten}';
+    protected $signature = 'registrar:test {anbieter? : autodns oder resellerinterface; ohne Angabe alle eingerichteten}';
 
     protected $description = 'Zugang zu den Registraren prüfen';
 

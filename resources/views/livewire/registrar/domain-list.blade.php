@@ -17,8 +17,8 @@
             </x-button>
         </x-slot:actions>
 
-        {{-- Kennzahlen des Bestands — alle vier aus echten Daten. --}}
-        <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {{-- Kennzahlen des Bestands — alle fünf aus echten Daten. --}}
+        <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <x-kpi-tile label="Domains"
                         :value="number_format($metrics['total'], 0, ',', '.')"
                         note="Aus allen Anbietern zusammen" />
@@ -26,6 +26,10 @@
             <x-kpi-tile label="Ohne Kunde"
                         :value="number_format($metrics['unassigned'], 0, ',', '.')"
                         note="Der Registrar kennt unsere Kunden nicht" />
+
+            <x-kpi-tile label="Ohne Leistung"
+                        :value="number_format($metrics['withoutService'], 0, ',', '.')"
+                        note="Kunde steht, Abrechnung fehlt" />
 
             <x-kpi-tile label="Läuft bald ab"
                         :value="number_format($metrics['expiringSoon'], 0, ',', '.')"
@@ -58,6 +62,7 @@
                                  placeholder="Alle"
                                  :options="[
                                      ['label' => 'Ohne Kunde', 'value' => 'unassigned'],
+                                     ['label' => 'Ohne Leistung', 'value' => 'without_service'],
                                      ['label' => 'Zugeordnet', 'value' => 'assigned'],
                                  ]"
                                  select="label:label|value:value" />

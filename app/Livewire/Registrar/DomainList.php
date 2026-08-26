@@ -79,12 +79,13 @@ class DomainList extends Component
     }
 
     /**
-     * @return array{total: int, unassigned: int, expiringSoon: int, expired: int}
+     * @return array{total: int, withoutService: int, unassigned: int, expiringSoon: int, expired: int}
      */
     public function metrics(): array
     {
         return [
             'total' => Domain::query()->count(),
+            'withoutService' => Domain::query()->withoutService()->count(),
             'unassigned' => Domain::query()->unassigned()->count(),
             'expiringSoon' => Domain::query()->expiringWithin(self::BALD)->count(),
             'expired' => Domain::query()
@@ -169,6 +170,7 @@ class DomainList extends Component
             ->when($this->provider !== '', fn (Builder $query) => $query->where('provider', $this->provider))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())
             ->when($this->assignment === 'assigned', fn (Builder $query) => $query->whereNotNull('customer_id'))
+            ->when($this->assignment === 'without_service', fn (Builder $query) => $query->withoutService())
             ->when($this->expiry === 'soon', fn (Builder $query) => $query->expiringWithin(self::BALD))
             ->when($this->expiry === 'expired', fn (Builder $query) => $query
                 ->whereNotNull('expires_on')

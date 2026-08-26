@@ -20,7 +20,7 @@ use Illuminate\Console\Command;
 class ImportRegistrarInventoryCommand extends Command
 {
     protected $signature = 'registrar:import
-                            {anbieter? : autodns; ohne Angabe alle eingerichteten}
+                            {anbieter? : autodns oder resellerinterface; ohne Angabe alle eingerichteten}
                             {--trocken : Nur zeigen, was geschehen würde}';
 
     protected $description = 'Domains und Zertifikate der Registrare einlesen';

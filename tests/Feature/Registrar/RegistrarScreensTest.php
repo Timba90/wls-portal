@@ -4,6 +4,7 @@ use App\Livewire\Registrar\CertificateList;
 use App\Livewire\Registrar\DomainList;
 use App\Models\Certificate;
 use App\Models\Customer;
+use App\Models\CustomerService;
 use App\Models\Domain;
 use App\Models\User;
 use Livewire\Livewire;
@@ -53,6 +54,45 @@ it('filtert auf bald ablaufende und abgelaufene Domains', function (): void {
     $komponente->set('expiry', 'expired')
         ->assertSee('abgelaufen.de')
         ->assertDontSee('bald.de');
+});
+
+it('filtert auf Domains ohne Leistung', function (): void {
+    $kunde = Customer::factory()->create();
+    $leistung = CustomerService::factory()->for($kunde)->create();
+
+    Domain::factory()->create(['name' => 'ohne-leistung.de', 'customer_id' => $kunde->id]);
+    Domain::factory()->create([
+        'name' => 'abgerechnet.de',
+        'customer_id' => $kunde->id,
+        'customer_service_id' => $leistung->id,
+    ]);
+    Domain::factory()->create(['name' => 'ohne-kunde.de']);
+
+    // Ohne Kunde ist etwas anderes als ohne Leistung: dort fehlt die
+    // Zuordnung ganz, hier nur die Verbindung zur Abrechnung.
+    Livewire::actingAs($this->benutzer)
+        ->test(DomainList::class)
+        ->set('assignment', 'without_service')
+        ->assertSee('ohne-leistung.de')
+        ->assertDontSee('abgerechnet.de')
+        ->assertDontSee('ohne-kunde.de');
+});
+
+it('zaehlt die Luecke zwischen Kunde und Abrechnung', function (): void {
+    $kunde = Customer::factory()->create();
+    $leistung = CustomerService::factory()->for($kunde)->create();
+
+    Domain::factory()->count(2)->create(['customer_id' => $kunde->id]);
+    Domain::factory()->create(['customer_id' => $kunde->id, 'customer_service_id' => $leistung->id]);
+    Domain::factory()->create();
+
+    $kennzahlen = Livewire::actingAs($this->benutzer)
+        ->test(DomainList::class)
+        ->instance()
+        ->metrics();
+
+    expect($kennzahlen['withoutService'])->toBe(2)
+        ->and($kennzahlen['unassigned'])->toBe(1);
 });
 
 it('zaehlt den Bestand in den Kennzahlen', function (): void {

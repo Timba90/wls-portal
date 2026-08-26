@@ -59,6 +59,12 @@ class IntegrationSettings extends Component
     public function fieldsFor(RegistrarProvider $provider): array
     {
         return match ($provider) {
+            // ResellerInterface braucht hier nichts: die Bruecke auf demselben
+            // Host haelt die Zugangsdaten in ihrer eigenen `.env` und meldet
+            // sich selbst an. Ein zweiter Ort fuer dieselben Geheimnisse waere
+            // ein Risiko ohne Gegenwert.
+            RegistrarProvider::ResellerInterface => [],
+
             RegistrarProvider::AutoDns => [
                 'username' => ['label' => 'Benutzername', 'secret' => true],
                 'password' => ['label' => 'Kennwort', 'secret' => true],
@@ -85,6 +91,31 @@ class IntegrationSettings extends Component
             fn (string $feld): bool => filled($werte[$feld] ?? null),
             array_combine(array_keys($this->fieldsFor($provider)), array_keys($this->fieldsFor($provider))),
         );
+    }
+
+    /**
+     * Ist der Anschluss betriebsbereit?
+     *
+     * Die Frage beantwortet der Anschluss selbst, nicht die Oberflaeche: bei
+     * autoDNS heisst das Zugangsdaten und Kontext, bei ResellerInterface eine
+     * aufrufbare Bruecke.
+     */
+    public function isReady(RegistrarProvider $provider): bool
+    {
+        return app(RegistrarClientFactory::class)->for($provider)->isConfigured();
+    }
+
+    /**
+     * Ein Hinweis, wo die Zugangsdaten eines Anbieters liegen — falls nicht hier.
+     */
+    public function notice(RegistrarProvider $provider): ?string
+    {
+        return match ($provider) {
+            RegistrarProvider::ResellerInterface => 'Hier ist nichts einzutragen. Die Anmeldung übernimmt die Brücke auf '
+                .'demselben Server; sie hält die Zugangsdaten in ihrer eigenen Umgebung. Ein eigener Login des Portals '
+                .'beim Anbieter ist ausgeschlossen — er hat das Konto schon einmal gesperrt. Das Portal liest nur.',
+            default => null,
+        };
     }
 
     public function lastChange(RegistrarProvider $provider): ?IntegrationCredential

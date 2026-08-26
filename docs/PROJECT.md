@@ -369,8 +369,10 @@ neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
 
 Der technische Stand beider Tabellen kommt aus der Schnittstelle des
 Registrars (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
-Hand. Angebunden ist autoDNS (InterNetX Domainrobot) ueber die JSON-API
-`https://api.autodns.com/v1/`; die Zugangsdaten liegen verschluesselt in
+Hand. Angebunden sind zwei Anbieter: autoDNS (InterNetX Domainrobot) ueber die
+JSON-API `https://api.autodns.com/v1/` und ResellerInterface (do.de) ueber
+die Bruecke `domain-api-call`, die auf demselben Server liegt und die
+Anmeldung uebernimmt — das Portal meldet sich dort nie selbst an; die Zugangsdaten liegen verschluesselt in
 `integration_credentials`, in der Umgebung steht nur ein abweichender Endpunkt.
 
 #### `project_types`

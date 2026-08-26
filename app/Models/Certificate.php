@@ -61,6 +61,19 @@ class Certificate extends Model
     }
 
     /**
+     * Einem Kunden zugeordnet, aber ohne Kundenleistung.
+     *
+     * Die interessante Luecke nach dem Zuordnen: der Kunde steht fest, die
+     * Verbindung zur Abrechnung fehlt noch.
+     *
+     * @param  Builder<Certificate>  $query
+     */
+    public function scopeWithoutService(Builder $query): void
+    {
+        $query->whereNotNull('customer_id')->whereNull('customer_service_id');
+    }
+
+    /**
      * @param  Builder<Certificate>  $query
      */
     public function scopeExpiringWithin(Builder $query, int $days): void
