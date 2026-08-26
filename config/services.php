@@ -48,9 +48,11 @@ return [
     */
 
     'autodns' => [
-        // Kontext 1 ist das Testsystem von autoDNS, 4 oder die eigene
-        // Kontextnummer das Livesystem.
         'endpoint' => env('AUTODNS_ENDPOINT', 'https://api.autodns.com/v1/'),
+
+        // Unser Kontext ist 4. Er ist kein Geheimnis und steht deshalb hier
+        // statt bei den Zugangsdaten; 1 waere das Testsystem von autoDNS.
+        'context' => env('AUTODNS_CONTEXT', '4'),
     ],
 
 ];

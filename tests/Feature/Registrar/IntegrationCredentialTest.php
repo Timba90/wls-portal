@@ -5,6 +5,7 @@ use App\Livewire\System\IntegrationSettings;
 use App\Models\IntegrationCredential;
 use App\Models\User;
 use App\Support\Registrar\RegistrarClientFactory;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Livewire\Livewire;
@@ -31,14 +32,48 @@ it('legt Zugangsdaten verschluesselt ab', function (): void {
 it('setzt den Anschluss aus Endpunkt und hinterlegten Zugangsdaten zusammen', function (): void {
     expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->isConfigured())->toBeFalse();
 
-    // autoDNS braucht neben den Zugangsdaten den Kontext.
+    // Der Kontext kommt aus der Konfiguration; einzutippen sind nur
+    // Benutzername und Kennwort.
     IntegrationCredential::query()->create([
         'provider' => RegistrarProvider::AutoDns->value,
-        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
     ]);
 
     expect(app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->isConfigured())->toBeTrue()
         ->and(app(RegistrarClientFactory::class)->configured())->toHaveCount(1);
+});
+
+it('nimmt den Kontext 4, ohne dass ihn jemand eintippt', function (): void {
+    IntegrationCredential::query()->create([
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+    ]);
+
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'S0101', 'type' => 'SUCCESS', 'text' => 'Hallo.'],
+    ]));
+
+    app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->testConnection();
+
+    Http::assertSent(fn (Request $anfrage): bool => $anfrage->hasHeader('X-Domainrobot-Context', '4'));
+});
+
+it('laesst einen hinterlegten Kontext vor die Voreinstellung', function (): void {
+    // Fürs Testsystem von autoDNS gilt 1; das gehört einstellbar zu bleiben.
+    IntegrationCredential::query()->create([
+        'provider' => 'autodns',
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '1'],
+    ]);
+
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'S0101', 'type' => 'SUCCESS', 'text' => 'Hallo.'],
+    ]));
+
+    app(RegistrarClientFactory::class)->for(RegistrarProvider::AutoDns)->testConnection();
+
+    Http::assertSent(fn (Request $anfrage): bool => $anfrage->hasHeader('X-Domainrobot-Context', '1'));
 });
 
 it('speichert eingegebene Zugangsdaten ueber die Oberflaeche', function (): void {
@@ -138,7 +173,7 @@ it('bietet den Verbindungstest erst an, wenn der Anschluss vollstaendig ist', fu
 
     IntegrationCredential::query()->create([
         'provider' => 'autodns',
-        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
     ]);
 
     Livewire::actingAs($this->benutzer)

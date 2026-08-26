@@ -60,7 +60,8 @@ class IntegrationSettings extends Component
                 'password' => ['label' => 'Kennwort'],
                 'context' => [
                     'label' => 'Kontext',
-                    'hint' => '1 ist das Testsystem, 4 oder die eigene Kontextnummer das Livesystem.',
+                    'hint' => 'Voreingestellt 4 — nur ausfüllen, wenn ein anderer Kontext gilt (1 ist das Testsystem).',
+                    'optional' => true,
                 ],
             ],
         };
