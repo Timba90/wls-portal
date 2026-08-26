@@ -5,6 +5,7 @@ use App\Enums\RegistrarProvider;
 use App\Models\Certificate;
 use App\Models\Customer;
 use App\Models\Domain;
+use App\Models\IntegrationCredential;
 use App\Support\Registrar\DomainResellingClient;
 use App\Support\Registrar\InwxClient;
 use App\Support\Registrar\RegistrarClientFactory;
@@ -259,9 +260,10 @@ it('uebergeht Zertifikate ohne Kennung des Anbieters, statt Dubletten anzulegen'
 });
 
 it('liefert nur eingerichtete Anbieter', function (): void {
-    config()->set('services.inwx.username', 'benutzer');
-    config()->set('services.inwx.password', 'geheim');
-    config()->set('services.domain_reselling.username', null);
+    IntegrationCredential::query()->create([
+        'provider' => RegistrarProvider::Inwx->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+    ]);
 
     $anbieter = array_map(
         fn ($client) => $client->provider(),

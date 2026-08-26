@@ -351,6 +351,12 @@ Kennzahlen, `CalculateBillingForecast` die tatsächliche Fälligkeit je Monat
 über die kommenden zwölf Monate samt Aufteilung nach Kategorie. Die Summe
 der zwölf Monate entspricht dem normalisierten Jahresumsatz.
 
+#### `integration_credentials`
+`provider` unique, `credentials` (verschluesseltes JSON), `updated_by`. Ein
+Datensatz je Anbieter; welche Felder er braucht, weiss der Anschluss, nicht die
+Tabelle. Bewusst **nicht** auditierbar: die Aenderungshistorie haelt alte und
+neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
+
 #### `domains`
 `name` unique, `provider` (`App\Enums\RegistrarProvider`), `provider_reference`,
 `status`, `registered_on`, `expires_on`, `auto_renew`, `nameservers` (json),

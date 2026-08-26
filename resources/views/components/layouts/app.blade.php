@@ -79,6 +79,7 @@
                 <x-nav-group label="System">
                     <x-nav-item route="archive.index" icon="archive-box" label="Archiv" />
                     <x-nav-item route="users.index" icon="users" label="Benutzer" />
+                    <x-nav-item route="integrations.index" icon="link" label="Schnittstellen" />
                     <x-nav-item :href="url('horizon')" icon="queue-list" label="Queue & Jobs" />
                 </x-nav-group>
             </nav>
