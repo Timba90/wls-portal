@@ -17,7 +17,7 @@
             </x-button>
         </x-slot:actions>
 
-        {{-- Kennzahlen des Bestands — alle vier aus echten Daten. --}}
+        {{-- Kennzahlen des Bestands — alle fünf aus echten Daten. --}}
         <div class="mb-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <x-kpi-tile label="Zertifikate"
                         :value="number_format($metrics['total'], 0, ',', '.')"

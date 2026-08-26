@@ -71,7 +71,7 @@ class BestandSuchen extends PortalTool
      * @param  array<string, mixed>  $eingabe
      * @return Collection<int, TModel>
      */
-    private function suchen(Builder $query, array $eingabe, string $namensspalte, int $anzahl)
+    private function suchen(Builder $query, array $eingabe, string $namensspalte, int $anzahl): Collection
     {
         $query->with(['customer', 'customerService']);
 

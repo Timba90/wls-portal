@@ -78,7 +78,7 @@ class CertificateList extends Component
     }
 
     /**
-     * @return array{total: int, unassigned: int, expiringSoon: int, expired: int}
+     * @return array{total: int, withoutService: int, unassigned: int, expiringSoon: int, expired: int}
      */
     public function metrics(): array
     {
