@@ -351,6 +351,26 @@ Kennzahlen, `CalculateBillingForecast` die tatsächliche Fälligkeit je Monat
 über die kommenden zwölf Monate samt Aufteilung nach Kategorie. Die Summe
 der zwölf Monate entspricht dem normalisierten Jahresumsatz.
 
+#### `integration_credentials`
+`provider` unique, `credentials` (verschluesseltes JSON), `updated_by`. Ein
+Datensatz je Anbieter; welche Felder er braucht, weiss der Anschluss, nicht die
+Tabelle. Bewusst **nicht** auditierbar: die Aenderungshistorie haelt alte und
+neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
+
+#### `domains`
+`name` unique, `provider` (`App\Enums\RegistrarProvider`), `provider_reference`,
+`status`, `registered_on`, `expires_on`, `auto_renew`, `nameservers` (json),
+`customer_id` / `customer_service_id` (null on delete), `synced_at`.
+
+#### `certificates`
+`common_name`, `provider`, `provider_reference` (zusammen unique), `status`,
+`issuer`, `issued_on`, `expires_on`, `alternative_names` (json),
+`customer_id` / `customer_service_id`, `synced_at`.
+
+Der technische Stand beider Tabellen kommt aus den Schnittstellen der
+Registrare (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
+Hand. Zugangsdaten stehen ausschliesslich in der Umgebung.
+
 #### `project_types`
 Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,
 `color`, `sort_order`, `is_active`. Fest angelegt sind Laravel, Shopify und

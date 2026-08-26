@@ -35,4 +35,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registrare
+    |--------------------------------------------------------------------------
+    |
+    | Hier steht nur, wohin die Anschluesse sprechen. Die Zugangsdaten liegen
+    | verschluesselt in der Tabelle `integration_credentials` (§50) und werden
+    | in der Oberflaeche gepflegt — nicht in der Umgebung und schon gar nicht
+    | im Repository.
+    |
+    */
+
+    'inwx' => [
+        'endpoint' => env('INWX_ENDPOINT', 'https://api.domrobot.com/jsonrpc/'),
+    ],
+
+    'domain_reselling' => [
+        'endpoint' => env('DOMAIN_RESELLING_ENDPOINT', 'https://api.domainreselling.de/api/call.cgi'),
+    ],
+
 ];

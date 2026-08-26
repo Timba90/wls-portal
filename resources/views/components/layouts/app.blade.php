@@ -61,6 +61,12 @@
                                 label="Ansprechpartner" :count="$navCounts['contacts']" />
                     <x-nav-item route="products.index" match="products.*" icon="cube"
                                 label="Artikel" :count="$navCounts['products']" />
+
+                    <x-nav-item route="domains.index" icon="globe-alt"
+                                label="Domains" :count="$navCounts['domains']" />
+
+                    <x-nav-item route="certificates.index" icon="lock-closed"
+                                label="Zertifikate" :count="$navCounts['certificates']" />
                 </x-nav-group>
 
                 <x-nav-group label="Katalog">
@@ -73,6 +79,7 @@
                 <x-nav-group label="System">
                     <x-nav-item route="archive.index" icon="archive-box" label="Archiv" />
                     <x-nav-item route="users.index" icon="users" label="Benutzer" />
+                    <x-nav-item route="integrations.index" icon="link" label="Schnittstellen" />
                     <x-nav-item :href="url('horizon')" icon="queue-list" label="Queue & Jobs" />
                 </x-nav-group>
             </nav>

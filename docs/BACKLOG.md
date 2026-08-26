@@ -80,6 +80,20 @@ vortäuschen würde, die keine Daten haben.
 | Voreingestellte Spalten der Leistungsübersicht | Sieben statt dreizehn: Kunde, Leistung, Turnus, Verkauf, Monatswert, Status, Abrechnung. Katalogartikel, Kategorie, Einkauf, Marge, Verantwortlich und Leistungsbeginn bleiben zuschaltbar. Die Abrechnungsspalte bleibt voreingestellt, weil sie erklärt, warum eine Leistung *nicht* in den Kennzahlen steht. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### Domains und Zertifikate
+
+| Element | Umsetzung |
+|---|---|
+| Eigene Tabellen statt Kundenleistungen | Auf Ansage. Ein Ablaufdatum, ein Nameserver und ein Registrar sind keine Preisangaben; sie hätten in einer Kundenleistung nur in der Beschreibung Platz gefunden. Die Verbindung zur Abrechnung führt über `customer_service_id`. |
+| Nur lesende Schnittstellen | Registrieren, verlängern und kündigen bleiben im Portal des Anbieters. Das Portal hier ist eine Verwaltungsoberfläche, kein Registrar-Frontend — und ein versehentlicher Schreibzugriff kostet Geld. |
+| Zuordnung wird beim Abgleich nicht überschrieben | Der Registrar kennt unsere Kundennummern nicht. Ein zweiter Import darf die von Hand gesetzte Zuordnung nicht wieder wegwerfen; ein Test hält das fest. |
+| Zertifikate ohne Kennung des Anbieters | Werden übergangen und gezählt, nicht importiert. Für denselben Namen kann es mehrere Zertifikate geben — ohne Kennung gäbe es keinen eindeutigen Schlüssel und bei jedem Lauf neue Dubletten. |
+| Feldnamen der Schnittstellen | Gegen die Dokumentation geschrieben, noch nicht gegen echte Konten geprüft. Die Anschlüsse lesen deshalb mehrere gebräuchliche Schreibweisen und brechen mit der Rohantwort ab, wenn keine passt — ein stiller Import leerer Datensätze wäre schlimmer als ein Abbruch. `php artisan registrar:import --trocken` ist der vorgesehene erste Schritt. |
+| Zugangsdaten | Verschlüsselt in der Datenbank (§50), gepflegt unter „Schnittstellen". Die Felder sind einseitig: was hinterlegt ist, wird nie zurückgelesen — ein Kennwort, das die Seite wieder ausliefert, steht im Quelltext des Browsers. Angezeigt wird nur, ob etwas hinterlegt ist. In der Umgebung steht nur noch ein abweichender Endpunkt, etwa für ein Testsystem. |
+| Offene Punkte aus §60 | Nicht in diesem Schritt: **do.de / ResellerInterface** als Anbieter (§60 nennt ihn als Hauptprovider), **manuelle Pflege** von Domains anderer Anbieter, **täglicher Sync**. Schreibende Vorgänge — Registrierung, Transfer, DNS, Verlängerung, Kündigung — sind bewusst nicht enthalten; §60 plant sie mit Bestätigung für kritische Aktionen. |
+| Notizen, Dokumente, eigene Felder an Domains | §525 und §933 sehen sie vor, hier noch nicht angebunden. Die Concerns dafür gibt es bereits (`HasNotes`, `HasDocuments`, `HasCustomFields`); das Nachziehen ist eine Zeile je Modell plus Oberfläche. |
+| Zwei-Faktor-Anmeldung bei INWX | Wird unterstützt, wenn `INWX_SHARED_SECRET` hinterlegt ist; das Einmalkennwort wird im Anschluss selbst gerechnet. Ohne Geheimnis bricht der Import mit einer klaren Meldung ab, statt an der Anmeldung hängenzubleiben. |
+
 ### Preise
 
 | Element | Umsetzung |

@@ -2,9 +2,11 @@
 
 namespace App\Providers;
 
+use App\Models\Certificate;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
+use App\Models\Domain;
 use App\Models\Product;
 use App\Models\Project;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -117,6 +119,8 @@ class AppServiceProvider extends ServiceProvider
                 'services' => CustomerService::query()->active()->count(),
                 'contacts' => Contact::query()->active()->count(),
                 'products' => Product::query()->active()->count(),
+                'domains' => Domain::query()->count(),
+                'certificates' => Certificate::query()->count(),
             ]));
         });
     }
