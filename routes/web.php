@@ -22,6 +22,8 @@ use App\Livewire\Projects\ProjectDetail;
 use App\Livewire\Projects\ProjectForm;
 use App\Livewire\Projects\ProjectList;
 use App\Livewire\Projects\ProjectTypeList;
+use App\Livewire\Registrar\CertificateList;
+use App\Livewire\Registrar\DomainList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Services\ServiceOverview;
@@ -62,6 +64,9 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/projekte/{project}/bearbeiten', ProjectForm::class)->name('projects.edit');
 
     Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
+
+    Route::livewire('/domains', DomainList::class)->name('domains.index');
+    Route::livewire('/zertifikate', CertificateList::class)->name('certificates.index');
     Route::livewire('/archiv', ArchivePage::class)->name('archive.index');
 
     Route::livewire('/felder', CustomFieldDefinitionList::class)->name('custom-fields.index');

@@ -35,4 +35,29 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registrare
+    |--------------------------------------------------------------------------
+    |
+    | Zugangsdaten der Domain-Schnittstellen. Sie stehen ausschliesslich in der
+    | Umgebung, nie im Repository. Ohne Eintrag meldet der Import, dass der
+    | Anschluss nicht eingerichtet ist, statt zu versuchen es ohne zu tun.
+    |
+    */
+
+    'inwx' => [
+        'endpoint' => env('INWX_ENDPOINT', 'https://api.domrobot.com/jsonrpc/'),
+        'username' => env('INWX_USERNAME'),
+        'password' => env('INWX_PASSWORD'),
+        // Nur noetig, wenn das Konto eine Zwei-Faktor-Anmeldung verlangt.
+        'shared_secret' => env('INWX_SHARED_SECRET'),
+    ],
+
+    'domain_reselling' => [
+        'endpoint' => env('DOMAIN_RESELLING_ENDPOINT', 'https://api.domainreselling.de/api/call.cgi'),
+        'username' => env('DOMAIN_RESELLING_USERNAME'),
+        'password' => env('DOMAIN_RESELLING_PASSWORD'),
+    ],
+
 ];

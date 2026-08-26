@@ -61,6 +61,12 @@
                                 label="Ansprechpartner" :count="$navCounts['contacts']" />
                     <x-nav-item route="products.index" match="products.*" icon="cube"
                                 label="Artikel" :count="$navCounts['products']" />
+
+                    <x-nav-item route="domains.index" icon="globe-alt"
+                                label="Domains" :count="$navCounts['domains']" />
+
+                    <x-nav-item route="certificates.index" icon="lock-closed"
+                                label="Zertifikate" :count="$navCounts['certificates']" />
                 </x-nav-group>
 
                 <x-nav-group label="Katalog">
