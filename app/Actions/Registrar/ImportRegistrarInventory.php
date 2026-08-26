@@ -49,7 +49,7 @@ class ImportRegistrarInventory
         ];
 
         foreach ($client->domains() as $entfernt) {
-            $vorhanden = Domain::query()->where('name', $entfernt->name)->first();
+            $vorhanden = $this->findDomain($client, $entfernt);
 
             $ergebnis['domains'][$vorhanden instanceof Domain ? 'updated' : 'new']++;
 
@@ -81,6 +81,32 @@ class ImportRegistrarInventory
         }
 
         return $ergebnis;
+    }
+
+    /**
+     * Sucht die vorhandene Domain — erst über die Kennung des Registrars, dann
+     * über den Namen.
+     *
+     * Die Kennung ist der stabile Anker: benennt der Registrar eine Domain um
+     * oder liefert er sie nach einem Transfer anders, bliebe beim Suchen nur
+     * über den Namen der alte Datensatz stehen und ein zweiter entstünde.
+     * Umgekehrt trägt ein von Hand angelegter Datensatz noch keine Kennung —
+     * deshalb der Rückfall auf den Namen.
+     */
+    private function findDomain(RegistrarClient $client, RemoteDomain $entfernt): ?Domain
+    {
+        if ($entfernt->reference !== null) {
+            $ueberKennung = Domain::query()
+                ->where('provider', $client->provider())
+                ->where('provider_reference', $entfernt->reference)
+                ->first();
+
+            if ($ueberKennung instanceof Domain) {
+                return $ueberKennung;
+            }
+        }
+
+        return Domain::query()->where('name', $entfernt->name)->first();
     }
 
     private function saveDomain(RegistrarClient $client, RemoteDomain $entfernt, ?Domain $vorhanden): void

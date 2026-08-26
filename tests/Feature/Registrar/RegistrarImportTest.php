@@ -272,3 +272,68 @@ it('liefert nur eingerichtete Anbieter', function (): void {
 
     expect($anbieter)->toBe([RegistrarProvider::Inwx]);
 });
+
+it('liest Zertifikate von Domain-Reselling und verwechselt Produktklasse nicht mit dem Namen', function (): void {
+    Http::fake(fn (Request $anfrage) => Http::response(str_contains((string) $anfrage->body(), 'QuerySSLCertList')
+        ? resellingAntwort([
+            'total' => [1],
+            // Die Produktklasse steht in der Antwort und darf den Namen nicht verdrängen.
+            'sslcertclass' => ['SSL_CERT_CLASS_SECTIGO_DV'],
+            'commonname' => ['www.Beispiel.de'],
+            'sslcertid' => ['SSL-4711'],
+            'status' => ['ACTIVE'],
+            'creationdate' => ['2026-02-01 00:00:00'],
+            'expirationdate' => ['2027-02-01 00:00:00'],
+            'sslcertsan' => ['beispiel.de shop.beispiel.de'],
+        ])
+        : resellingAntwort(['total' => [0]])));
+
+    $client = new DomainResellingClient([
+        'endpoint' => 'https://api.example.test/api/call.cgi',
+        'username' => 'benutzer',
+        'password' => 'geheim',
+    ]);
+
+    app(ImportRegistrarInventory::class)($client);
+
+    $zertifikat = Certificate::query()->sole();
+
+    expect($zertifikat->common_name)->toBe('www.beispiel.de')
+        ->and($zertifikat->provider_reference)->toBe('SSL-4711')
+        ->and($zertifikat->issuer)->toBe('SSL_CERT_CLASS_SECTIGO_DV')
+        ->and($zertifikat->expires_on->toDateString())->toBe('2027-02-01')
+        ->and($zertifikat->alternative_names)->toBe(['beispiel.de', 'shop.beispiel.de']);
+});
+
+it('erkennt eine umbenannte Domain an der Kennung des Registrars wieder', function (): void {
+    inwxFake(domains: [[
+        'roId' => 4711, 'domain' => 'alter-name.de', 'exDate' => '2027-03-04 10:00:00',
+    ]]);
+
+    app(ImportRegistrarInventory::class)(inwxClient());
+
+    // Derselbe Eintrag beim Registrar, anderer Name.
+    inwxFake(domains: [[
+        'roId' => 4711, 'domain' => 'neuer-name.de', 'exDate' => '2027-03-04 10:00:00',
+    ]]);
+
+    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
+
+    // Ohne den Anker über die Kennung entstünde hier ein zweiter Datensatz.
+    expect($ergebnis['domains'])->toBe(['new' => 0, 'updated' => 1])
+        ->and(Domain::query()->count())->toBe(1)
+        ->and(Domain::query()->sole()->name)->toBe('neuer-name.de');
+});
+
+it('findet eine von Hand angelegte Domain ueber den Namen, wenn sie noch keine Kennung hat', function (): void {
+    Domain::factory()->create(['name' => 'von-hand.de', 'provider_reference' => null]);
+
+    inwxFake(domains: [[
+        'roId' => 9999, 'domain' => 'von-hand.de', 'exDate' => '2027-03-04 10:00:00',
+    ]]);
+
+    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
+
+    expect($ergebnis['domains'])->toBe(['new' => 0, 'updated' => 1])
+        ->and(Domain::query()->sole()->provider_reference)->toBe('9999');
+});

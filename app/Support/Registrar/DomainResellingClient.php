@@ -80,7 +80,9 @@ class DomainResellingClient implements RegistrarClient
     public function certificates(): iterable
     {
         foreach ($this->pages('QuerySSLCertList', ['wide' => 1]) as $zeile) {
-            $name = $this->readField($zeile, ['sslcertclass', 'commonname', 'domain']);
+            // Ausdrücklich ohne `sslcertclass`: das ist die Produktklasse
+            // („SSL_CERT_CLASS_…"), nicht der Name, für den das Zertifikat gilt.
+            $name = $this->readField($zeile, ['commonname', 'domain', 'sslcertdomain']);
 
             if ($name === null) {
                 throw new RegistrarException(

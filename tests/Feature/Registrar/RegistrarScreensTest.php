@@ -111,3 +111,25 @@ it('nennt in der Navigation die Zahl der Domains und Zertifikate', function (): 
             '<span class="font-mono text-[10px] tabular-nums text-ink-faint">2</span>',
         ], escape: false);
 });
+
+it('faellt bei einer unbekannten Sortierung auf die Voreinstellung zurueck', function (): void {
+    Domain::factory()->create(['name' => 'beispiel.de']);
+
+    // Sortierspalte und -richtung sind öffentliche Eigenschaften und damit vom
+    // Browser setzbar. Ungeprüft weitergereicht bräche das die Abfrage.
+    Livewire::actingAs($this->benutzer)
+        ->test(DomainList::class)
+        ->set('sort', ['column' => 'name); drop table domains; --', 'direction' => 'schräg'])
+        ->assertOk()
+        ->assertSee('beispiel.de');
+});
+
+it('faellt auch in der Zertifikatsliste auf die Voreinstellung zurueck', function (): void {
+    Certificate::factory()->create(['common_name' => 'www.beispiel.de']);
+
+    Livewire::actingAs($this->benutzer)
+        ->test(CertificateList::class)
+        ->set('sort', ['column' => 'unbekannt', 'direction' => 'seitwärts'])
+        ->assertOk()
+        ->assertSee('www.beispiel.de');
+});

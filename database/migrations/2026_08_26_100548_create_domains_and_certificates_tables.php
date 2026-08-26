@@ -43,6 +43,10 @@ return new class extends Migration
             $table->timestamp('synced_at')->nullable();
             $table->timestamps();
 
+            // Die Referenz ist der Anker beim Abgleich; sie muss je Anbieter
+            // eindeutig sein, sonst wäre der Abgleich nicht bestimmt. Mehrere
+            // NULL bleiben erlaubt — nicht jeder Anbieter vergibt eine.
+            $table->unique(['provider', 'provider_reference']);
             $table->index(['provider', 'expires_on']);
             $table->index('customer_id');
         });

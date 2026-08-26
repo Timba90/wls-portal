@@ -126,6 +126,25 @@ class CertificateList extends Component
     }
 
     /**
+     * Sortierspalte und -richtung kommen aus einer oeffentlichen Eigenschaft
+     * und sind damit vom Browser setzbar. Ungeprueft weitergereicht brechen
+     * ein unbekannter Spaltenname oder eine unbekannte Richtung die Abfrage.
+     */
+    private function sortColumn(): string
+    {
+        $sortierbar = ['common_name', 'expires_on', 'issued_on', 'provider', 'status', 'synced_at'];
+
+        return in_array($this->sort['column'], $sortierbar, strict: true)
+            ? $this->sort['column']
+            : 'expires_on';
+    }
+
+    private function sortDirection(): string
+    {
+        return $this->sort['direction'] === 'desc' ? 'desc' : 'asc';
+    }
+
+    /**
      * @return LengthAwarePaginator<int, Certificate>
      */
     private function certificates(): LengthAwarePaginator
@@ -142,7 +161,7 @@ class CertificateList extends Component
                 ->whereDate('expires_on', '<', now()->toDateString()))
             // Ohne Ablaufdatum ans Ende: sie sind kein Termin, sondern eine Lücke.
             ->orderByRaw('expires_on is null')
-            ->orderBy($this->sort['column'], $this->sort['direction'])
+            ->orderBy($this->sortColumn(), $this->sortDirection())
             ->paginate(25);
     }
 }
