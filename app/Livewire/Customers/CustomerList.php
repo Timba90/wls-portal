@@ -184,7 +184,7 @@ class CustomerList extends Component
             ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
             ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
             ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId))
-            ->orderBy($this->sortColumn(), $this->sort['direction'])
+            ->orderBy($this->sortColumn(), $this->sortDirection())
             ->paginate(25);
     }
 
@@ -203,6 +203,16 @@ class CustomerList extends Component
                 ->orWhere('short_label', 'like', $term)
                 ->orWhere('internal_code', 'like', $term);
         });
+    }
+
+    /**
+     * Die Richtung kommt wie die Spalte aus der URL. Laravel wirft bei einem
+     * fremden Wert eine Ausnahme — die Seite antwortete mit 500 statt mit
+     * einer Liste.
+     */
+    private function sortDirection(): string
+    {
+        return $this->sort['direction'] === 'desc' ? 'desc' : 'asc';
     }
 
     /**

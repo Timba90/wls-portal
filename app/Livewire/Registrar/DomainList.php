@@ -4,6 +4,7 @@ namespace App\Livewire\Registrar;
 
 use App\Enums\RegistrarProvider;
 use App\Livewire\Concerns\WithConfigurableTable;
+use App\Livewire\Concerns\WithInventoryAssignment;
 use App\Models\Domain;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
@@ -25,7 +26,7 @@ use Livewire\WithPagination;
 #[Title('Domains')]
 class DomainList extends Component
 {
-    use WithConfigurableTable, WithPagination;
+    use WithConfigurableTable, WithInventoryAssignment, WithPagination;
 
     /**
      * Ab wie vielen Tagen eine Domain als „läuft bald ab" gilt.
@@ -46,6 +47,14 @@ class DomainList extends Component
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'expires_on', 'direction' => 'asc'];
+
+    /**
+     * @return class-string<Domain>
+     */
+    protected function inventoryModel(): string
+    {
+        return Domain::class;
+    }
 
     public function updated(string $property): void
     {
@@ -98,6 +107,7 @@ class DomainList extends Component
         return [
             'domain' => ['label' => 'Domain', 'sortable' => false, 'fixed' => true],
             'customer' => ['label' => 'Kunde', 'sortable' => false],
+            'service' => ['label' => 'Leistung', 'sortable' => false, 'default_visible' => false],
             'expires_on' => ['label' => 'Läuft ab'],
             'auto_renew' => ['label' => 'Verlängerung', 'sortable' => false],
             'provider' => ['label' => 'Anbieter'],
@@ -151,7 +161,10 @@ class DomainList extends Component
     private function domains(): LengthAwarePaginator
     {
         return Domain::query()
-            ->with(['customer:id,company_name,first_name,last_name,customer_number,type'])
+            ->with([
+                'customer:id,company_name,first_name,last_name,customer_number,type',
+                'customerService:id,name,billing_label',
+            ])
             ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
             ->when($this->provider !== '', fn (Builder $query) => $query->where('provider', $this->provider))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())

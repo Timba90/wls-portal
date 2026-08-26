@@ -4,9 +4,9 @@
 
     $vorlage = collect($spalten)
         ->map(fn (array $spalte): string => $raster[$spalte['index']]['breite'] ?? '1fr')
-        ->implode(' ');
+        ->implode(' ').' 44px';
 
-    $mindestbreite = max(760, count($spalten) * 150);
+    $mindestbreite = max(760, count($spalten) * 150) + 44;
 @endphp
 
 <div>
@@ -108,6 +108,10 @@
                                 {{ $spalte['label'] }}
                             </span>
                         @endforeach
+
+                        <span role="columnheader" class="text-[10px] font-semibold uppercase tracking-[0.08em] text-ink-faint">
+                            <span class="sr-only">Aktionen</span>
+                        </span>
                     </div>
 
                     @forelse ($certificates as $zertifikat)
@@ -133,6 +137,16 @@
                                             </span>
                                         @else
                                             <x-status-pill kind="warn" label="Ohne Kunde" />
+                                        @endif
+                                        @break
+
+                                    @case('service')
+                                        @if ($zertifikat->customerService)
+                                            <span class="truncate text-[12px] text-ink-muted">
+                                                {{ $zertifikat->customerService->billing_label ?: $zertifikat->customerService->name }}
+                                            </span>
+                                        @else
+                                            <span class="text-[12px] text-ink-faint">—</span>
                                         @endif
                                         @break
 
@@ -193,6 +207,15 @@
                                 @endswitch
                             </div>
                             @endforeach
+
+                            <div role="cell" class="flex justify-end">
+                                <x-button color="secondary"
+                                          outline
+                                          sm
+                                          icon="user-plus"
+                                          :title="$zertifikat->customer ? 'Zuordnung ändern' : 'Kunde zuordnen'"
+                                          wire:click="startAssignment({{ $zertifikat->id }})" />
+                            </div>
                         </div>
                     @empty
                         <div class="px-[17px] py-[34px] text-center text-[12.5px] text-ink-faint">
@@ -209,6 +232,45 @@
             @endif
         </div>
 
+
+        {{--
+            Die Zuordnung ist die eigentliche Arbeit nach einem Import: der
+            Registrar liefert den technischen Bestand, wem er gehört weiß nur
+            das Portal.
+        --}}
+        <x-modal wire="showAssignmentForm" id="zuordnung-formular" title="Zuordnung" persistent>
+            <x-errors title="Die Zuordnung konnte nicht gespeichert werden" class="mb-4" />
+
+            <div class="space-y-4">
+                <x-select.styled wire:model.live="assignmentCustomerId"
+                                 label="Kunde"
+                                 placeholder="Ohne Kunde"
+                                 searchable
+                                 :options="$this->assignableCustomers()"
+                                 select="label:name|value:id" />
+
+                <x-select.styled wire:model="assignmentServiceId"
+                                 label="Kundenleistung"
+                                 placeholder="Ohne Leistung"
+                                 :options="$this->assignableServices()"
+                                 select="label:name|value:id"
+                                 hint="Die Verbindung zur Abrechnung. Freiwillig — manches läuft im Paket mit." />
+            </div>
+
+            <x-slot:footer>
+                <div class="flex justify-end gap-2">
+                    <x-button color="secondary" outline wire:click="closeAssignment">Abbrechen</x-button>
+                    <x-button wire:click="saveAssignment">Speichern</x-button>
+                </div>
+            </x-slot:footer>
+        </x-modal>
+
         <x-column-settings :columns="$this->columnSettings()" />
     </x-page>
+
+    @script
+    <script>
+        $wire.on('zuordnung-gespeichert', () => $tsui.interaction('toast').success('Zuordnung gespeichert').send());
+    </script>
+    @endscript
 </div>

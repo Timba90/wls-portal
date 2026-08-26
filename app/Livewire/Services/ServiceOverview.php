@@ -194,7 +194,7 @@ class ServiceOverview extends Component
     {
         return $this->baseQuery()
             ->with(['customer', 'product', 'productVariant', 'category', 'subcategory', 'tags', 'responsibleUser'])
-            ->orderBy($this->sortColumn(), $this->sort['direction'])
+            ->orderBy($this->sortColumn(), $this->sortDirection())
             ->paginate(25);
     }
 
@@ -275,6 +275,16 @@ class ServiceOverview extends Component
                 $this->catalogFilter === 'changed',
                 fn (Builder $query) => $query->whereKey($this->servicesWithCatalogChanges()),
             );
+    }
+
+    /**
+     * Die Richtung kommt wie die Spalte aus der URL. Laravel wirft bei einem
+     * fremden Wert eine Ausnahme — die Seite antwortete mit 500 statt mit
+     * einer Liste.
+     */
+    private function sortDirection(): string
+    {
+        return $this->sort['direction'] === 'desc' ? 'desc' : 'asc';
     }
 
     private function sortColumn(): string
