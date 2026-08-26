@@ -124,7 +124,7 @@ class ContactList extends Component
                 'assignments.roles',
                 fn (Builder $roles) => $roles->whereKey($this->roleId),
             ))
-            ->orderBy($this->sortColumn(), $this->sort['direction'])
+            ->orderBy($this->sortColumn(), $this->sortDirection())
             ->orderBy('first_name')
             ->paginate(25);
     }
@@ -145,6 +145,16 @@ class ContactList extends Component
                     ->where('company_name', 'like', $term)
                     ->orWhere('customer_number', 'like', $term));
         });
+    }
+
+    /**
+     * Die Richtung kommt wie die Spalte aus der URL. Laravel wirft bei einem
+     * fremden Wert eine Ausnahme — die Seite antwortete mit 500 statt mit
+     * einer Liste.
+     */
+    private function sortDirection(): string
+    {
+        return $this->sort['direction'] === 'desc' ? 'desc' : 'asc';
     }
 
     private function sortColumn(): string

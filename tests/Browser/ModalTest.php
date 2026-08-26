@@ -2,6 +2,7 @@
 
 use App\Models\Customer;
 use App\Models\CustomerService;
+use App\Models\Domain;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\User;
@@ -84,3 +85,13 @@ it('öffnet die Formulare der Katalog- und Systemlisten', function (string $pfad
     'Projekttypen' => ['/projekte/typen', 'Projekttyp anlegen'],
     'Benutzer' => ['/benutzer', 'Benutzer anlegen'],
 ]);
+
+it('öffnet die Zuordnung aus der Domainliste', function (): void {
+    $domain = Domain::factory()->create(['name' => 'beispiel.de']);
+
+    // Die Zuordnung ist die eigentliche Arbeit nach einem Import.
+    visit('/domains')
+        ->click('[wire\\:click="startAssignment('.$domain->id.')"]')
+        ->waitForText('Die Verbindung zur Abrechnung')
+        ->assertNoJavaScriptErrors();
+});

@@ -4,6 +4,7 @@ namespace App\Livewire\Registrar;
 
 use App\Enums\RegistrarProvider;
 use App\Livewire\Concerns\WithConfigurableTable;
+use App\Livewire\Concerns\WithInventoryAssignment;
 use App\Models\Certificate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Contracts\View\View;
@@ -24,7 +25,7 @@ use Livewire\WithPagination;
 #[Title('Zertifikate')]
 class CertificateList extends Component
 {
-    use WithConfigurableTable, WithPagination;
+    use WithConfigurableTable, WithInventoryAssignment, WithPagination;
 
     /**
      * Ab wie vielen Tagen eine Domain als „läuft bald ab" gilt.
@@ -45,6 +46,14 @@ class CertificateList extends Component
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'expires_on', 'direction' => 'asc'];
+
+    /**
+     * @return class-string<Certificate>
+     */
+    protected function inventoryModel(): string
+    {
+        return Certificate::class;
+    }
 
     public function updated(string $property): void
     {
@@ -97,6 +106,7 @@ class CertificateList extends Component
         return [
             'certificate' => ['label' => 'Hauptname', 'sortable' => false, 'fixed' => true],
             'customer' => ['label' => 'Kunde', 'sortable' => false],
+            'service' => ['label' => 'Leistung', 'sortable' => false, 'default_visible' => false],
             'expires_on' => ['label' => 'Läuft ab'],
             'issuer' => ['label' => 'Aussteller', 'sortable' => false],
             'provider' => ['label' => 'Anbieter'],
@@ -150,7 +160,10 @@ class CertificateList extends Component
     private function certificates(): LengthAwarePaginator
     {
         return Certificate::query()
-            ->with(['customer:id,company_name,first_name,last_name,customer_number,type'])
+            ->with([
+                'customer:id,company_name,first_name,last_name,customer_number,type',
+                'customerService:id,name,billing_label',
+            ])
             ->when($this->search !== '', fn (Builder $query) => $query->where('common_name', 'like', '%'.$this->search.'%'))
             ->when($this->provider !== '', fn (Builder $query) => $query->where('provider', $this->provider))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())

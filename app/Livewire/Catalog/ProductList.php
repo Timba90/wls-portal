@@ -180,7 +180,7 @@ class ProductList extends Component
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))
-            ->orderBy($this->sortColumn(), $this->sort['direction'])
+            ->orderBy($this->sortColumn(), $this->sortDirection())
             ->paginate(25);
     }
 
@@ -208,6 +208,16 @@ class ProductList extends Component
         $query->where(fn (Builder $query) => $query
             ->where('category_id', $this->categoryId)
             ->orWhere('subcategory_id', $this->categoryId));
+    }
+
+    /**
+     * Die Richtung kommt wie die Spalte aus der URL. Laravel wirft bei einem
+     * fremden Wert eine Ausnahme — die Seite antwortete mit 500 statt mit
+     * einer Liste.
+     */
+    private function sortDirection(): string
+    {
+        return $this->sort['direction'] === 'desc' ? 'desc' : 'asc';
     }
 
     private function sortColumn(): string
