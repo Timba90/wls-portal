@@ -6,158 +6,198 @@ use App\Models\Certificate;
 use App\Models\Customer;
 use App\Models\Domain;
 use App\Models\IntegrationCredential;
-use App\Support\Registrar\DomainResellingClient;
-use App\Support\Registrar\InwxClient;
+use App\Support\Registrar\AutoDnsClient;
 use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Antworten, wie die Anbieter sie liefern.
+ * Antworten, wie autoDNS sie liefert.
  *
- * Die Feldnamen stammen aus der Dokumentation der beiden Schnittstellen. Sie
- * gegen echte Konten zu prüfen ist Sache des Trockenlaufs — hier steht fest,
- * dass die Anschlüsse diese Form korrekt lesen und alles andere melden.
+ * Umschlag und Feldnamen stammen aus der offiziellen OpenAPI-Beschreibung
+ * (InterNetX/domainrobot-api, `src/domainrobot.json`) — sie sind nicht geraten.
+ *
+ * @param  array<int, array<string, mixed>>  $daten
+ * @return array<string, mixed>
  */
-function inwxAntwort(array $resData, int $code = 1000): array
+function autodnsAntwort(array $daten = [], string $typ = 'SUCCESS', string $code = 'S0301', string $text = 'Suche erfolgreich.'): array
 {
-    return ['code' => $code, 'msg' => 'Command completed successfully', 'resData' => $resData];
+    return [
+        'stid' => '20260826-app1-dev',
+        'status' => ['code' => $code, 'type' => $typ, 'text' => $text],
+        'object' => ['type' => 'Domain', 'value' => 'suche'],
+        'data' => $daten,
+    ];
 }
 
 /**
- * Die Attrappe wird einmal je Test gesetzt; `Http::fake()` ersetzt eine
- * bestehende nicht, sondern reiht sich dahinter ein. Der Bestand liegt deshalb
- * in einem Behälter, den ein zweiter Aufruf umschreibt.
- *
- * @var array{domains: array<int, array<string, mixed>>, certificates: array<int, array<string, mixed>>}
+ * Eine Attrappe für alle drei Pfade. `Http::fake()` ersetzt eine bestehende
+ * nicht, sondern reiht sich dahinter ein — der Bestand liegt deshalb in einem
+ * Behälter, den ein zweiter Aufruf umschreibt.
  */
-$GLOBALS['inwxBestand'] = ['domains' => [], 'certificates' => []];
+$GLOBALS['autodnsBestand'] = ['domains' => [], 'certificates' => []];
 
-function inwxFake(array $domains = [], array $certificates = []): void
+function autodnsFake(array $domains = [], array $certificates = []): void
 {
-    $GLOBALS['inwxBestand'] = ['domains' => $domains, 'certificates' => $certificates];
+    $GLOBALS['autodnsBestand'] = ['domains' => $domains, 'certificates' => $certificates];
 
     Http::fake(function (Request $anfrage): array {
-        $methode = $anfrage->data()['method'] ?? '';
-        $seite = (int) ($anfrage->data()['params']['page'] ?? 1);
-        $bestand = $GLOBALS['inwxBestand'];
+        $pfad = $anfrage->url();
+        $offset = (int) ($anfrage->data()['view']['offset'] ?? 0);
+        $bestand = $GLOBALS['autodnsBestand'];
 
         return match (true) {
-            $methode === 'account.login' => inwxAntwort(['tfa' => '0']),
-            $methode === 'domain.list' => inwxAntwort([
-                'count' => count($bestand['domains']),
-                'domain' => $seite === 1 ? $bestand['domains'] : [],
-            ]),
-            $methode === 'certificate.list' => inwxAntwort([
-                'count' => count($bestand['certificates']),
-                'certificate' => $seite === 1 ? $bestand['certificates'] : [],
-            ]),
-            default => inwxAntwort([]),
+            str_contains($pfad, '/hello') => autodnsAntwort(code: 'S0101', text: 'Hallo.'),
+            str_contains($pfad, 'domain/_search') => autodnsAntwort($offset === 0 ? $bestand['domains'] : []),
+            str_contains($pfad, 'certificate/_search') => autodnsAntwort($offset === 0 ? $bestand['certificates'] : []),
+            default => autodnsAntwort(),
         };
     });
 }
 
-function resellingAntwort(array $eigenschaften, int $code = 200, string $beschreibung = 'Command completed successfully'): string
+function autodnsClient(): AutoDnsClient
 {
-    $zeilen = ['[RESPONSE]', "code = {$code}", "description = {$beschreibung}"];
-
-    foreach ($eigenschaften as $name => $werte) {
-        foreach ((array) $werte as $index => $wert) {
-            $zeilen[] = "property[{$name}][{$index}] = {$wert}";
-        }
-    }
-
-    return implode("\n", [...$zeilen, 'EOF', '']);
-}
-
-function inwxClient(): InwxClient
-{
-    return new InwxClient([
-        'endpoint' => 'https://api.example.test/jsonrpc/',
+    return new AutoDnsClient([
+        'endpoint' => 'https://api.example.test/v1/',
         'username' => 'benutzer',
         'password' => 'geheim',
+        'context' => '4',
     ]);
 }
 
 it('meldet einen Anschluss ohne Zugangsdaten, statt es zu versuchen', function (): void {
-    $client = new InwxClient(['endpoint' => 'https://api.example.test/jsonrpc/']);
+    $client = new AutoDnsClient(['endpoint' => 'https://api.example.test/v1/']);
 
     expect($client->isConfigured())->toBeFalse();
 
     app(ImportRegistrarInventory::class)($client);
-})->throws(RegistrarException::class, 'keine Zugangsdaten');
+})->throws(RegistrarException::class, 'keine Zugangsdaten hinterlegt');
 
-it('liest Domains von INWX ein', function (): void {
-    inwxFake(domains: [[
-        'roId' => 4711,
-        'domain' => 'Beispiel.DE',
-        'status' => 'OK',
-        'crDate' => '2021-03-04 10:00:00',
-        'exDate' => '2027-03-04 10:00:00',
-        'renewalMode' => 'AUTORENEW',
-        'ns' => ['ns1.example.net', 'ns2.example.net'],
+it('haelt einen Anschluss ohne Kontext fuer unvollstaendig', function (): void {
+    // Ohne Kontext weiß autoDNS nicht, gegen welches System der Aufruf geht.
+    $client = new AutoDnsClient([
+        'endpoint' => 'https://api.example.test/v1/',
+        'username' => 'benutzer',
+        'password' => 'geheim',
+    ]);
+
+    expect($client->isConfigured())->toBeFalse();
+});
+
+it('prueft den Zugang ueber hello, ohne etwas zu lesen', function (): void {
+    autodnsFake();
+
+    expect(autodnsClient()->testConnection())->toContain('Hallo.');
+
+    Http::assertSent(fn (Request $anfrage): bool => str_ends_with($anfrage->url(), '/hello')
+        && $anfrage->method() === 'GET');
+
+    // Der Test darf keine Suche auslösen.
+    Http::assertNotSent(fn (Request $anfrage): bool => str_contains($anfrage->url(), '_search'));
+});
+
+it('meldet beim Verbindungstest die Ablehnung des Anbieters im Wortlaut', function (): void {
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'EF01001', 'type' => 'ERROR', 'text' => 'Authorization failed'],
+    ], 401));
+
+    autodnsClient()->testConnection();
+})->throws(RegistrarException::class, 'Authorization failed');
+
+it('sendet Zugangsdaten und Kontext im Kopf mit', function (): void {
+    autodnsFake();
+
+    autodnsClient()->testConnection();
+
+    Http::assertSent(fn (Request $anfrage): bool => $anfrage->hasHeader('X-Domainrobot-Context', '4')
+        && $anfrage->hasHeader('Authorization'));
+});
+
+it('liest Domains von autoDNS ein', function (): void {
+    autodnsFake(domains: [[
+        'name' => 'Beispiel.DE',
+        'registryStatus' => 'ACTIVE',
+        'domainCreated' => '2021-03-04T10:00:00.000+0100',
+        'created' => '2024-01-01T10:00:00.000+0100',
+        'expire' => '2027-03-04T10:00:00.000+0100',
+        'autoRenewStatus' => 'TRUE',
+        'nameServers' => [['name' => 'ns1.example.net'], ['name' => 'ns2.example.net']],
     ]]);
 
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
+    $ergebnis = app(ImportRegistrarInventory::class)(autodnsClient());
 
     expect($ergebnis['domains'])->toBe(['new' => 1, 'updated' => 0]);
 
     $domain = Domain::query()->sole();
 
     expect($domain->name)->toBe('beispiel.de')
-        ->and($domain->provider)->toBe(RegistrarProvider::Inwx)
-        ->and($domain->provider_reference)->toBe('4711')
-        ->and($domain->expires_on->toDateString())->toBe('2027-03-04')
+        ->and($domain->provider)->toBe(RegistrarProvider::AutoDns)
+        ->and($domain->status)->toBe('ACTIVE')
+        // `domainCreated` ist das Datum bei der Registrierungsstelle und geht vor.
         ->and($domain->registered_on->toDateString())->toBe('2021-03-04')
+        ->and($domain->expires_on->toDateString())->toBe('2027-03-04')
         ->and($domain->auto_renew)->toBeTrue()
         ->and($domain->nameservers)->toBe(['ns1.example.net', 'ns2.example.net'])
         ->and($domain->synced_at)->not->toBeNull();
 });
 
-it('liest Zertifikate von INWX ein', function (): void {
-    inwxFake(certificates: [[
-        'id' => 99,
-        'commonName' => 'www.Beispiel.de',
-        'status' => 'ISSUED',
-        'issuer' => 'Sectigo',
-        'startDate' => '2026-01-10 00:00:00',
-        'endDate' => '2027-01-10 00:00:00',
-        'san' => ['beispiel.de'],
+it('haelt nur TRUE fuer eine dauerhafte Verlaengerung', function (): void {
+    // autoDNS kennt TRUE, FALSE und ONCE — ONCE verlängert genau einmal.
+    autodnsFake(domains: [
+        ['name' => 'einmal.de', 'autoRenewStatus' => 'ONCE'],
+        ['name' => 'nie.de', 'autoRenewStatus' => 'FALSE'],
+    ]);
+
+    app(ImportRegistrarInventory::class)(autodnsClient());
+
+    expect(Domain::query()->where('name', 'einmal.de')->sole()->auto_renew)->toBeFalse()
+        ->and(Domain::query()->where('name', 'nie.de')->sole()->auto_renew)->toBeFalse();
+});
+
+it('liest Zertifikate von autoDNS ein', function (): void {
+    autodnsFake(certificates: [[
+        'id' => 4711,
+        'name' => 'www.Beispiel.de',
+        'product' => 'SSL123',
+        'created' => '2026-01-10T00:00:00.000+0100',
+        'expire' => '2027-01-10T00:00:00.000+0100',
+        'subjectAlternativeNames' => [['name' => 'beispiel.de'], ['name' => 'shop.beispiel.de']],
     ]]);
 
-    app(ImportRegistrarInventory::class)(inwxClient());
+    app(ImportRegistrarInventory::class)(autodnsClient());
 
     $zertifikat = Certificate::query()->sole();
 
     expect($zertifikat->common_name)->toBe('www.beispiel.de')
-        ->and($zertifikat->provider_reference)->toBe('99')
-        ->and($zertifikat->issuer)->toBe('Sectigo')
+        ->and($zertifikat->provider_reference)->toBe('4711')
+        ->and($zertifikat->issuer)->toBe('SSL123')
         ->and($zertifikat->expires_on->toDateString())->toBe('2027-01-10')
-        ->and($zertifikat->alternative_names)->toBe(['beispiel.de']);
+        ->and($zertifikat->alternative_names)->toBe(['beispiel.de', 'shop.beispiel.de']);
 });
 
 it('legt beim zweiten Lauf keine Dublette an, sondern gleicht ab', function (): void {
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'beispiel.de', 'status' => 'OK',
-        'exDate' => '2027-03-04 10:00:00', 'ns' => ['ns1.example.net'],
+    autodnsFake(domains: [[
+        'name' => 'beispiel.de', 'registryStatus' => 'ACTIVE',
+        'expire' => '2027-03-04T10:00:00.000+0100',
     ]]);
 
-    app(ImportRegistrarInventory::class)(inwxClient());
+    app(ImportRegistrarInventory::class)(autodnsClient());
 
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'beispiel.de', 'status' => 'TRANSFER',
-        'exDate' => '2028-03-04 10:00:00', 'ns' => ['ns9.example.net'],
+    autodnsFake(domains: [[
+        'name' => 'beispiel.de', 'registryStatus' => 'LOCK',
+        'expire' => '2028-03-04T10:00:00.000+0100',
     ]]);
 
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
+    $ergebnis = app(ImportRegistrarInventory::class)(autodnsClient());
 
     expect($ergebnis['domains'])->toBe(['new' => 0, 'updated' => 1])
         ->and(Domain::query()->count())->toBe(1);
 
     $domain = Domain::query()->sole();
 
-    expect($domain->status)->toBe('TRANSFER')
+    expect($domain->status)->toBe('LOCK')
         ->and($domain->expires_on->toDateString())->toBe('2028-03-04');
 });
 
@@ -170,12 +210,9 @@ it('wirft die von Hand gesetzte Zuordnung beim Abgleich nicht weg', function ():
         'expires_on' => '2026-01-01',
     ]);
 
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'beispiel.de', 'status' => 'OK',
-        'exDate' => '2029-03-04 10:00:00',
-    ]]);
+    autodnsFake(domains: [['name' => 'beispiel.de', 'expire' => '2029-03-04T10:00:00.000+0100']]);
 
-    app(ImportRegistrarInventory::class)(inwxClient());
+    app(ImportRegistrarInventory::class)(autodnsClient());
 
     $domain = Domain::query()->sole();
 
@@ -185,84 +222,70 @@ it('wirft die von Hand gesetzte Zuordnung beim Abgleich nicht weg', function ():
 });
 
 it('schreibt im Trockenlauf nichts', function (): void {
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'beispiel.de', 'exDate' => '2027-03-04 10:00:00',
-    ]]);
+    autodnsFake(domains: [['name' => 'beispiel.de', 'expire' => '2027-03-04T10:00:00.000+0100']]);
 
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient(), dryRun: true);
+    $ergebnis = app(ImportRegistrarInventory::class)(autodnsClient(), dryRun: true);
 
     expect($ergebnis['domains'])->toBe(['new' => 1, 'updated' => 0])
         ->and(Domain::query()->count())->toBe(0);
 });
 
-it('bricht mit der Meldung des Anbieters ab, wenn INWX einen Fehler liefert', function (): void {
-    Http::fake(fn (): array => ['code' => 2200, 'msg' => 'Authentication error']);
+it('bricht mit der Meldung des Anbieters ab, wenn autoDNS einen Fehler liefert', function (): void {
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'EF01001', 'type' => 'ERROR', 'text' => 'Authorization failed'],
+    ], 401));
 
-    app(ImportRegistrarInventory::class)(inwxClient());
-})->throws(RegistrarException::class, 'Authentication error');
-
-it('bricht ab, wenn ein Domaineintrag keinen erkennbaren Namen hat', function (): void {
-    // So sähe es aus, wenn INWX die Feldnamen änderte.
-    inwxFake(domains: [['roId' => 4711, 'unbekanntesFeld' => 'beispiel.de']]);
-
-    app(ImportRegistrarInventory::class)(inwxClient());
-})->throws(RegistrarException::class, 'ohne erkennbaren Namen');
-
-it('liest die Zeilenantwort von Domain-Reselling', function (): void {
-    Http::fake(fn (Request $anfrage) => Http::response(str_contains((string) $anfrage->body(), 'QueryDomainList')
-        ? resellingAntwort([
-            'total' => [1],
-            'domain' => ['Beispiel.DE'],
-            'status' => ['ACTIVE'],
-            'creationdate' => ['2021-05-06 12:00:00'],
-            'expirationdate' => ['2027-05-06 12:00:00'],
-            'renewalmode' => ['AUTORENEW'],
-            'nameserver' => ['ns1.example.net ns2.example.net'],
-        ])
-        : resellingAntwort(['total' => [0]])));
-
-    $client = new DomainResellingClient([
-        'endpoint' => 'https://api.example.test/api/call.cgi',
-        'username' => 'benutzer',
-        'password' => 'geheim',
-    ]);
-
-    app(ImportRegistrarInventory::class)($client);
-
-    $domain = Domain::query()->sole();
-
-    expect($domain->name)->toBe('beispiel.de')
-        ->and($domain->provider)->toBe(RegistrarProvider::DomainReselling)
-        ->and($domain->expires_on->toDateString())->toBe('2027-05-06')
-        ->and($domain->auto_renew)->toBeTrue()
-        ->and($domain->nameservers)->toBe(['ns1.example.net', 'ns2.example.net']);
-});
-
-it('bricht bei Domain-Reselling mit Code und Beschreibung ab', function (): void {
-    Http::fake(fn () => Http::response(resellingAntwort([], 530, 'Authorization failed')));
-
-    $client = new DomainResellingClient([
-        'endpoint' => 'https://api.example.test/api/call.cgi',
-        'username' => 'benutzer',
-        'password' => 'falsch',
-    ]);
-
-    app(ImportRegistrarInventory::class)($client);
+    app(ImportRegistrarInventory::class)(autodnsClient());
 })->throws(RegistrarException::class, 'Authorization failed');
 
-it('uebergeht Zertifikate ohne Kennung des Anbieters, statt Dubletten anzulegen', function (): void {
-    inwxFake(certificates: [['commonName' => 'ohne-kennung.de', 'status' => 'ISSUED']]);
+it('bricht ab, wenn ein Domaineintrag keinen Namen hat', function (): void {
+    autodnsFake(domains: [['registryStatus' => 'ACTIVE']]);
 
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
+    app(ImportRegistrarInventory::class)(autodnsClient());
+})->throws(RegistrarException::class, 'ohne Namen');
+
+it('uebergeht Zertifikate ohne Kennung des Anbieters, statt Dubletten anzulegen', function (): void {
+    autodnsFake(certificates: [['name' => 'ohne-kennung.de']]);
+
+    $ergebnis = app(ImportRegistrarInventory::class)(autodnsClient());
 
     expect($ergebnis['skipped'])->toBe(1)
         ->and(Certificate::query()->count())->toBe(0);
 });
 
+it('blaettert, bis eine Seite nicht mehr voll ist', function (): void {
+    // Zwei volle Seiten wären zweihundert Einträge; hier reicht der Beleg,
+    // dass nach einer nicht vollen Seite Schluss ist.
+    autodnsFake(domains: [
+        ['name' => 'eins.de'],
+        ['name' => 'zwei.de'],
+    ]);
+
+    app(ImportRegistrarInventory::class)(autodnsClient());
+
+    expect(Domain::query()->count())->toBe(2);
+
+    Http::assertSentCount(2);
+});
+
+it('nennt bei einem unbekannten Anbieter nur den Tippfehler', function (): void {
+    // Ein Tippfehler im Namen ist etwas anderes als ein fehlender Zugang;
+    // beide Meldungen zusammen führten in die falsche Richtung.
+    foreach (['registrar:test', 'registrar:import'] as $befehl) {
+        $this->artisan($befehl, ['anbieter' => 'inwx'])
+            ->expectsOutputToContain('Unbekannter Anbieter')
+            ->doesntExpectOutputToContain('Kein Anbieter ist eingerichtet')
+            ->assertFailed();
+    }
+});
+
 it('liefert nur eingerichtete Anbieter', function (): void {
+    expect(app(RegistrarClientFactory::class)->configured())->toBe([]);
+
     IntegrationCredential::query()->create([
-        'provider' => RegistrarProvider::Inwx->value,
-        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+        'provider' => RegistrarProvider::AutoDns->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim', 'context' => '4'],
     ]);
 
     $anbieter = array_map(
@@ -270,70 +293,5 @@ it('liefert nur eingerichtete Anbieter', function (): void {
         app(RegistrarClientFactory::class)->configured(),
     );
 
-    expect($anbieter)->toBe([RegistrarProvider::Inwx]);
-});
-
-it('liest Zertifikate von Domain-Reselling und verwechselt Produktklasse nicht mit dem Namen', function (): void {
-    Http::fake(fn (Request $anfrage) => Http::response(str_contains((string) $anfrage->body(), 'QuerySSLCertList')
-        ? resellingAntwort([
-            'total' => [1],
-            // Die Produktklasse steht in der Antwort und darf den Namen nicht verdrängen.
-            'sslcertclass' => ['SSL_CERT_CLASS_SECTIGO_DV'],
-            'commonname' => ['www.Beispiel.de'],
-            'sslcertid' => ['SSL-4711'],
-            'status' => ['ACTIVE'],
-            'creationdate' => ['2026-02-01 00:00:00'],
-            'expirationdate' => ['2027-02-01 00:00:00'],
-            'sslcertsan' => ['beispiel.de shop.beispiel.de'],
-        ])
-        : resellingAntwort(['total' => [0]])));
-
-    $client = new DomainResellingClient([
-        'endpoint' => 'https://api.example.test/api/call.cgi',
-        'username' => 'benutzer',
-        'password' => 'geheim',
-    ]);
-
-    app(ImportRegistrarInventory::class)($client);
-
-    $zertifikat = Certificate::query()->sole();
-
-    expect($zertifikat->common_name)->toBe('www.beispiel.de')
-        ->and($zertifikat->provider_reference)->toBe('SSL-4711')
-        ->and($zertifikat->issuer)->toBe('SSL_CERT_CLASS_SECTIGO_DV')
-        ->and($zertifikat->expires_on->toDateString())->toBe('2027-02-01')
-        ->and($zertifikat->alternative_names)->toBe(['beispiel.de', 'shop.beispiel.de']);
-});
-
-it('erkennt eine umbenannte Domain an der Kennung des Registrars wieder', function (): void {
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'alter-name.de', 'exDate' => '2027-03-04 10:00:00',
-    ]]);
-
-    app(ImportRegistrarInventory::class)(inwxClient());
-
-    // Derselbe Eintrag beim Registrar, anderer Name.
-    inwxFake(domains: [[
-        'roId' => 4711, 'domain' => 'neuer-name.de', 'exDate' => '2027-03-04 10:00:00',
-    ]]);
-
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
-
-    // Ohne den Anker über die Kennung entstünde hier ein zweiter Datensatz.
-    expect($ergebnis['domains'])->toBe(['new' => 0, 'updated' => 1])
-        ->and(Domain::query()->count())->toBe(1)
-        ->and(Domain::query()->sole()->name)->toBe('neuer-name.de');
-});
-
-it('findet eine von Hand angelegte Domain ueber den Namen, wenn sie noch keine Kennung hat', function (): void {
-    Domain::factory()->create(['name' => 'von-hand.de', 'provider_reference' => null]);
-
-    inwxFake(domains: [[
-        'roId' => 9999, 'domain' => 'von-hand.de', 'exDate' => '2027-03-04 10:00:00',
-    ]]);
-
-    $ergebnis = app(ImportRegistrarInventory::class)(inwxClient());
-
-    expect($ergebnis['domains'])->toBe(['new' => 0, 'updated' => 1])
-        ->and(Domain::query()->sole()->provider_reference)->toBe('9999');
+    expect($anbieter)->toBe([RegistrarProvider::AutoDns]);
 });

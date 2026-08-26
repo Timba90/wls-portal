@@ -47,12 +47,12 @@ return [
     |
     */
 
-    'inwx' => [
-        'endpoint' => env('INWX_ENDPOINT', 'https://api.domrobot.com/jsonrpc/'),
-    ],
+    'autodns' => [
+        'endpoint' => env('AUTODNS_ENDPOINT', 'https://api.autodns.com/v1/'),
 
-    'domain_reselling' => [
-        'endpoint' => env('DOMAIN_RESELLING_ENDPOINT', 'https://api.domainreselling.de/api/call.cgi'),
+        // Unser Kontext ist 4. Er ist kein Geheimnis und steht deshalb hier
+        // statt bei den Zugangsdaten; 1 waere das Testsystem von autoDNS.
+        'context' => env('AUTODNS_CONTEXT', '4'),
     ],
 
 ];

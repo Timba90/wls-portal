@@ -30,8 +30,10 @@
                     <div class="grid gap-4 md:grid-cols-2">
                         @foreach ($felder as $name => $feld)
                             <div wire:key="feld-{{ $anbieter->value }}-{{ $name }}">
-                                <x-input type="password"
-                                         autocomplete="new-password"
+                                @php($geheim = $feld['secret'] ?? true)
+
+                                <x-input :type="$geheim ? 'password' : 'text'"
+                                         :autocomplete="$geheim ? 'new-password' : 'off'"
                                          wire:model="input.{{ $anbieter->value }}.{{ $name }}"
                                          :label="$feld['label']"
                                          :placeholder="($hinterlegt[$name] ?? false) ? 'Hinterlegt — zum Ersetzen neu eingeben' : 'Nicht hinterlegt'"
@@ -67,6 +69,18 @@
                                 </x-button>
                             @endif
 
+                            @if ($vollstaendig)
+                                <x-button sm
+                                          color="secondary"
+                                          outline
+                                          icon="signal"
+                                          wire:click="test('{{ $anbieter->value }}')"
+                                          wire:loading.attr="disabled"
+                                          wire:target="test('{{ $anbieter->value }}')">
+                                    Verbindung prüfen
+                                </x-button>
+                            @endif
+
                             <x-button sm wire:click="save('{{ $anbieter->value }}')">Speichern</x-button>
                         </div>
                     </div>
@@ -82,10 +96,12 @@
                 <p class="mt-2 font-mono text-[12px] text-ink-base">php artisan registrar:import --trocken</p>
 
                 <p class="mt-3 text-[12.5px] leading-relaxed text-ink-muted">
-                    Die Feldnamen der Schnittstellen sind gegen die Dokumentation geschrieben und noch
-                    nicht gegen ein echtes Konto geprüft. Passt etwas nicht, bricht der Lauf mit der
-                    Rohantwort des Anbieters ab — das ist die Gelegenheit, sie nachzuziehen.
+                    Davor beantwortet „Verbindung prüfen" die einfachere Frage: stimmen Zugangsdaten
+                    und Kontext überhaupt? Der Aufruf geht an <span class="font-mono">/hello</span>,
+                    liest nichts und ändert nichts. Dasselbe von der Kommandozeile:
                 </p>
+
+                <p class="mt-2 font-mono text-[12px] text-ink-base">php artisan registrar:test</p>
             </x-panel>
         </div>
     </x-page>
@@ -95,6 +111,11 @@
         $wire.on('zugang-gespeichert', () => $tsui.interaction('toast').success('Zugangsdaten gespeichert').send());
         $wire.on('zugang-entfernt', () => $tsui.interaction('toast').success('Zugangsdaten entfernt').send());
         $wire.on('zugang-unveraendert', () => $tsui.interaction('toast').info('Nichts eingegeben — nichts geändert').send());
+
+        // Die Antwort des Anbieters wird im Wortlaut gezeigt: bei einer
+        // Ablehnung ist genau sie der Hinweis, was fehlt.
+        $wire.on('zugang-geprueft', (e) => $tsui.interaction('toast').success('Verbindung steht', e.meldung).send());
+        $wire.on('zugang-abgelehnt', (e) => $tsui.interaction('toast').error('Verbindung abgelehnt', e.meldung).send());
     </script>
     @endscript
 </div>

@@ -367,9 +367,11 @@ neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
 `issuer`, `issued_on`, `expires_on`, `alternative_names` (json),
 `customer_id` / `customer_service_id`, `synced_at`.
 
-Der technische Stand beider Tabellen kommt aus den Schnittstellen der
-Registrare (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
-Hand. Zugangsdaten stehen ausschliesslich in der Umgebung.
+Der technische Stand beider Tabellen kommt aus der Schnittstelle des
+Registrars (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
+Hand. Angebunden ist autoDNS (InterNetX Domainrobot) ueber die JSON-API
+`https://api.autodns.com/v1/`; die Zugangsdaten liegen verschluesselt in
+`integration_credentials`, in der Umgebung steht nur ein abweichender Endpunkt.
 
 #### `project_types`
 Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,

@@ -20,7 +20,7 @@ class CertificateFactory extends Factory
     {
         return [
             'common_name' => fake()->unique()->domainWord().'-'.fake()->unique()->numberBetween(1, 99999).'.de',
-            'provider' => RegistrarProvider::Inwx,
+            'provider' => RegistrarProvider::AutoDns,
             'provider_reference' => (string) fake()->unique()->numberBetween(100000, 999999),
             'status' => 'issued',
             'issuer' => 'Sectigo',

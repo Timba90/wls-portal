@@ -15,17 +15,17 @@ class RegistrarClientFactory
 {
     public function for(RegistrarProvider $provider): RegistrarClient
     {
-        // Der Endpunkt ist kein Geheimnis und darf in der Konfiguration
-        // stehen; Benutzername, Kennwort und Geheimnis kommen verschluesselt
-        // aus der Datenbank (§50).
+        // Endpunkt und Kontext sind keine Geheimnisse und stehen deshalb in
+        // der Konfiguration; Benutzername und Kennwort kommen verschluesselt
+        // aus der Datenbank (§50) und gehen einem gleichnamigen Wert aus der
+        // Konfiguration vor.
         /** @var array<string, mixed> $config */
         $config = config('services.'.$provider->configKey(), []);
 
         $config = array_merge($config, IntegrationCredential::valuesFor($provider));
 
         return match ($provider) {
-            RegistrarProvider::Inwx => new InwxClient($config),
-            RegistrarProvider::DomainReselling => new DomainResellingClient($config),
+            RegistrarProvider::AutoDns => new AutoDnsClient($config),
         };
     }
 

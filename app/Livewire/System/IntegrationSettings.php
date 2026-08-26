@@ -4,6 +4,8 @@ namespace App\Livewire\System;
 
 use App\Enums\RegistrarProvider;
 use App\Models\IntegrationCredential;
+use App\Support\Registrar\RegistrarClientFactory;
+use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Title;
@@ -48,23 +50,24 @@ class IntegrationSettings extends Component
     /**
      * Welche Felder ein Anbieter braucht, mit Beschriftung und Hinweis.
      *
-     * @return array<string, array{label: string, hint?: string, optional?: bool}>
+     * `secret` entscheidet ueber die Eingabeart: ein Kennwort wird maskiert
+     * und nie zurueckgelesen, der Kontext ist kein Geheimnis und wird beim
+     * Tippen gezeigt — sonst faellt ein Zahlendreher nicht auf.
+     *
+     * @return array<string, array{label: string, hint?: string, optional?: bool, secret?: bool}>
      */
     public function fieldsFor(RegistrarProvider $provider): array
     {
         return match ($provider) {
-            RegistrarProvider::Inwx => [
-                'username' => ['label' => 'Benutzername'],
-                'password' => ['label' => 'Kennwort'],
-                'shared_secret' => [
-                    'label' => 'Geheimnis der Zwei-Faktor-Anmeldung',
-                    'hint' => 'Nur nötig, wenn das Konto eine Zwei-Faktor-Anmeldung verlangt.',
+            RegistrarProvider::AutoDns => [
+                'username' => ['label' => 'Benutzername', 'secret' => true],
+                'password' => ['label' => 'Kennwort', 'secret' => true],
+                'context' => [
+                    'label' => 'Kontext',
+                    'hint' => 'Voreingestellt 4 — nur ausfüllen, wenn ein anderer Kontext gilt (1 ist das Testsystem).',
                     'optional' => true,
+                    'secret' => false,
                 ],
-            ],
-            RegistrarProvider::DomainReselling => [
-                'username' => ['label' => 'Benutzername'],
-                'password' => ['label' => 'Kennwort'],
             ],
         };
     }
@@ -125,6 +128,23 @@ class IntegrationSettings extends Component
 
         $this->mount();
         $this->dispatch('zugang-gespeichert');
+    }
+
+    /**
+     * Prueft den Zugang beim Anbieter, ohne etwas zu lesen oder zu schreiben.
+     *
+     * Der erste Schritt nach dem Hinterlegen: stimmen Zugangsdaten und
+     * Kontext? Das soll man erfahren, bevor ein Import laeuft.
+     */
+    public function test(string $provider): void
+    {
+        $client = app(RegistrarClientFactory::class)->for(RegistrarProvider::from($provider));
+
+        try {
+            $this->dispatch('zugang-geprueft', meldung: $client->testConnection());
+        } catch (RegistrarException $ausnahme) {
+            $this->dispatch('zugang-abgelehnt', meldung: $ausnahme->getMessage());
+        }
     }
 
     /**

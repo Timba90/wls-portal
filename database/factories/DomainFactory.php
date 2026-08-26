@@ -22,7 +22,7 @@ class DomainFactory extends Factory
 
         return [
             'name' => $name,
-            'provider' => RegistrarProvider::Inwx,
+            'provider' => RegistrarProvider::AutoDns,
             'provider_reference' => (string) fake()->unique()->numberBetween(100000, 999999),
             'status' => 'ok',
             'registered_on' => now()->subYears(2)->startOfDay(),
@@ -42,10 +42,5 @@ class DomainFactory extends Factory
     public function expiringSoon(): static
     {
         return $this->state(fn (): array => ['expires_on' => now()->addDays(10)->startOfDay()]);
-    }
-
-    public function fromDomainReselling(): static
-    {
-        return $this->state(fn (): array => ['provider' => RegistrarProvider::DomainReselling]);
     }
 }
