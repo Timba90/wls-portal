@@ -47,6 +47,33 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | ResellerInterface (do.de)
+    |--------------------------------------------------------------------------
+    |
+    | Der Zugriff laeuft ueber die Bruecke, die auf demselben Host liegt
+    | (`domain-api-call`). Sie haelt die Zugangsdaten in ihrer eigenen `.env`
+    | und uebernimmt Anmeldung und Sitzung; das Portal sieht davon nichts.
+    |
+    | Ein eigener Login beim Anbieter ist ausdruecklich untersagt: ein
+    | selbstgebautes Login-Skript hat das Konto schon einmal gesperrt und damit
+    | die DNS-Aenderungen aller Kunden blockiert.
+    |
+    */
+
+    'resellerinterface' => [
+        'command' => env('RESELLERINTERFACE_COMMAND', '/usr/local/bin/domain-api-call'),
+
+        // Ohne resellerID liefert `domain/list` nur den Hauptaccount. Weitere
+        // Konten kommen als Liste dazu, etwa "59163" fuer den Subreseller.
+        'reseller_ids' => env('RESELLERINTERFACE_RESELLER_IDS', ''),
+
+        // Eine sicher freie Domain fuer den Verbindungstest. `domain/check`
+        // liest nur und aendert nichts.
+        'test_domain' => env('RESELLERINTERFACE_TEST_DOMAIN', 'wls-portal-verbindungstest-xyz.de'),
+    ],
+
     'autodns' => [
         'endpoint' => env('AUTODNS_ENDPOINT', 'https://api.autodns.com/v1/'),
 

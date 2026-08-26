@@ -26,6 +26,7 @@ class RegistrarClientFactory
 
         return match ($provider) {
             RegistrarProvider::AutoDns => new AutoDnsClient($config),
+            RegistrarProvider::ResellerInterface => new ResellerInterfaceClient($config),
         };
     }
 

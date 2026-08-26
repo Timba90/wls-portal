@@ -15,11 +15,13 @@ enum RegistrarProvider: string
     use HasOptions;
 
     case AutoDns = 'autodns';
+    case ResellerInterface = 'resellerinterface';
 
     public function label(): string
     {
         return match ($this) {
             self::AutoDns => 'autoDNS',
+            self::ResellerInterface => 'ResellerInterface (do.de)',
         };
     }
 
@@ -30,6 +32,7 @@ enum RegistrarProvider: string
     {
         return match ($this) {
             self::AutoDns => 'autodns',
+            self::ResellerInterface => 'resellerinterface',
         };
     }
 }

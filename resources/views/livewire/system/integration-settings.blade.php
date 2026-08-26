@@ -12,9 +12,11 @@
                     $felder = $this->fieldsFor($anbieter);
                     $hinterlegt = $this->storedFields($anbieter);
                     $letzte = $this->lastChange($anbieter);
-                    $vollstaendig = collect($felder)
-                        ->reject(fn (array $feld): bool => $feld['optional'] ?? false)
-                        ->every(fn (array $feld, string $name): bool => $hinterlegt[$name] ?? false);
+                    $hinweis = $this->notice($anbieter);
+                    // Ob ein Anschluss bereit ist, weiß er selbst am besten —
+                    // bei dem einen sind es Zugangsdaten, beim anderen eine
+                    // aufrufbare Brücke.
+                    $bereit = $this->isReady($anbieter);
                 @endphp
 
                 <x-card wire:key="anbieter-{{ $anbieter->value }}">
@@ -22,10 +24,16 @@
                         <div class="flex flex-wrap items-center justify-between gap-3">
                             <h2 class="text-sm font-semibold text-ink">{{ $anbieter->label() }}</h2>
 
-                            <x-status-pill :kind="$vollstaendig ? 'ok' : 'mute'"
-                                           :label="$vollstaendig ? 'Eingerichtet' : 'Nicht eingerichtet'" />
+                            <x-status-pill :kind="$bereit ? 'ok' : 'mute'"
+                                           :label="$bereit ? 'Eingerichtet' : 'Nicht eingerichtet'" />
                         </div>
                     </x-slot:header>
+
+                    @if ($hinweis)
+                        <p class="rounded-[8px] border border-line bg-raised px-3 py-2.5 text-[12.5px] leading-relaxed text-ink-muted">
+                            {{ $hinweis }}
+                        </p>
+                    @endif
 
                     <div class="grid gap-4 md:grid-cols-2">
                         @foreach ($felder as $name => $feld)
@@ -49,6 +57,8 @@
                                 @if ($letzte->updatedBy)
                                     von {{ $letzte->updatedBy->name }}
                                 @endif
+                            @elseif ($felder === [])
+                                Zugangsdaten liegen außerhalb des Portals.
                             @else
                                 Noch nichts hinterlegt.
                             @endif
@@ -69,7 +79,7 @@
                                 </x-button>
                             @endif
 
-                            @if ($vollstaendig)
+                            @if ($bereit)
                                 <x-button sm
                                           color="secondary"
                                           outline
@@ -81,7 +91,9 @@
                                 </x-button>
                             @endif
 
-                            <x-button sm wire:click="save('{{ $anbieter->value }}')">Speichern</x-button>
+                            @if ($felder !== [])
+                                <x-button sm wire:click="save('{{ $anbieter->value }}')">Speichern</x-button>
+                            @endif
                         </div>
                     </div>
                 </x-card>
@@ -96,12 +108,19 @@
                 <p class="mt-2 font-mono text-[12px] text-ink-base">php artisan registrar:import --trocken</p>
 
                 <p class="mt-3 text-[12.5px] leading-relaxed text-ink-muted">
-                    Davor beantwortet „Verbindung prüfen" die einfachere Frage: stimmen Zugangsdaten
-                    und Kontext überhaupt? Der Aufruf geht an <span class="font-mono">/hello</span>,
-                    liest nichts und ändert nichts. Dasselbe von der Kommandozeile:
+                    Davor beantwortet „Verbindung prüfen" die einfachere Frage: antwortet der Anbieter
+                    überhaupt? Bei autoDNS geht der Aufruf an <span class="font-mono">/hello</span>, bei
+                    ResellerInterface an <span class="font-mono">domain/check</span> mit einem freien
+                    Testnamen. Beide lesen nichts und ändern nichts. Dasselbe von der Kommandozeile:
                 </p>
 
                 <p class="mt-2 font-mono text-[12px] text-ink-base">php artisan registrar:test</p>
+
+                <p class="mt-3 text-[12.5px] leading-relaxed text-ink-muted">
+                    Schlägt ein Aufruf fehl, wird er nicht wiederholt. Bei ResellerInterface verlängert
+                    jeder weitere Versuch eine Sperre — der Anschluss bricht deshalb ab und meldet den
+                    Wortlaut, statt es noch einmal zu probieren.
+                </p>
             </x-panel>
         </div>
     </x-page>

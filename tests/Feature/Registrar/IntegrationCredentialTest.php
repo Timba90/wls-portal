@@ -252,3 +252,26 @@ it('meldet eine abgelehnte Verbindung, ohne die Seite zu brechen', function (): 
         ->assertDispatched('zugang-abgelehnt')
         ->assertOk();
 });
+
+it('verlangt fuer ResellerInterface keine Zugangsdaten', function (): void {
+    // Sie liegen in der Brücke auf demselben Server. Ein zweiter Ort für
+    // dieselben Geheimnisse wäre ein Risiko ohne Gegenwert.
+    $komponente = Livewire::actingAs($this->benutzer)->test(IntegrationSettings::class);
+
+    expect($komponente->instance()->fieldsFor(RegistrarProvider::ResellerInterface))->toBe([]);
+
+    $komponente->assertSee('ResellerInterface')
+        ->assertSee('Die Anmeldung übernimmt die Brücke')
+        ->assertDontSeeHtml('wire:model="input.resellerinterface.');
+});
+
+it('nennt den Anschluss erst eingerichtet, wenn die Bruecke aufrufbar ist', function (): void {
+    // Auf dem Testrechner gibt es sie nicht — dann darf auch nichts anderes
+    // behauptet werden.
+    $bereit = Livewire::actingAs($this->benutzer)
+        ->test(IntegrationSettings::class)
+        ->instance()
+        ->isReady(RegistrarProvider::ResellerInterface);
+
+    expect($bereit)->toBe(is_executable((string) config('services.resellerinterface.command')));
+});
