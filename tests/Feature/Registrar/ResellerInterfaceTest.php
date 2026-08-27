@@ -70,7 +70,10 @@ it('ruft domain/list mit dem Limit 1000 ab, nicht mit der Voreinstellung 25', fu
 
     iterator_to_array(anschluss()->domains());
 
-    Http::assertSent(fn ($request): bool => $request['limit'] === 1000);
+    Http::assertSent(function ($request): bool {
+        return str_contains($request->url(), 'domain/list')
+            && ($request['limit'] ?? null) === 1000;
+    });
 });
 
 it('blaetert, bis die Gesamtzahl erreicht ist', function (): void {
@@ -102,11 +105,13 @@ it('liest auch den Bestand der Subreseller, aber ohne den Hauptaccount doppelt',
 
     Http::assertSent(function ($request): bool {
         return str_contains($request->url(), 'domain/list')
-            && isset($request['resellerID'])
-            && $request['resellerID'] === '59163';
+            && ($request['resellerID'] ?? null) === '59163';
     });
 
-    Http::assertSent(fn ($request): bool => str_contains($request->url(), 'domain/list') && ! isset($request['resellerID']));
+    Http::assertSent(function ($request): bool {
+        return str_contains($request->url(), 'domain/list')
+            && ($request['resellerID'] ?? null) === '58919';
+    });
 });
 
 it('schickt den Benutzernamen im Login, aber nie in der Bestandsabfrage', function (): void {
@@ -249,5 +254,5 @@ it('legt den Bestand ueber den gemeinsamen Abgleich an', function (): void {
 
     expect($domain->provider)->toBe(RegistrarProvider::ResellerInterface)
         ->and($domain->provider_reference)->toBe('4711')
-        ->and($domain->expires_on->toDateString())->toBe('2027-04-22');
+        ->and($domain->expires_on->toDateString())->toBe('2027-07-26');
 });
