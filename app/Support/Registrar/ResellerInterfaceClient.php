@@ -4,26 +4,44 @@ namespace App\Support\Registrar;
 
 use App\Enums\RegistrarProvider;
 use Carbon\CarbonImmutable;
-use Illuminate\Support\Facades\Process;
+use Illuminate\Http\Client\PendingRequest;
+use Illuminate\Http\Client\Response;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
 use Throwable;
 
 /**
- * Anschluss an ResellerInterface (do.de) ueber die Bruecke auf demselben Host.
+ * Direkter Anschluss an ResellerInterface (do.de).
  *
- * Das Portal meldet sich **nicht** selbst bei `core.resellerinterface.de` an.
- * Die Bruecke (`domain-api-call`) haelt die Zugangsdaten in ihrer eigenen
- * `.env`, uebernimmt Anmeldung und Sitzung und wird lokal aufgerufen — das
- * Portal laeuft auf demselben Server, ein Umweg ueber SSH entfaellt.
+ * Das Portal meldet sich selbst bei `core.resellerinterface.de` an — die
+ * Zugangsdaten kommen verschluesselt aus `integration_credentials`. Die
+ * fruehere Variante rief eine Bruecke auf demselben Host auf; die ist jetzt
+ * ueberfluessig, weil Anmeldung und Sitzung hier mitlaufen.
+ *
+ * Das Protokoll (am offiziellen Client `resellerinterface/api-client-php`
+ * gelesen, nicht geraten):
+ *
+ * - Anmeldung: `POST stable/reseller/login` mit `username`, `password`,
+ *   optional `resellerId` (Formular-Felder, nicht JSON).
+ * - Die Sitzung kehrt als Cookie `coreSID` zurueck und geht als eben
+ *   solchen wieder hinaus.
+ * - Aufrufe: `POST stable/{kategorie}/{funktion}` mit Formular-Feldern.
+ * - Jede Antwort ist ein JSON-Umschlag: `success`, `state`, `stateName`
+ *   und die Nutzdaten unter `data`.
  *
  * Warum so streng: ein selbstgebautes Login-Skript hat sich mit leeren
  * Zugangsdaten dutzendfach angemeldet und das Konto gesperrt; DNS-Aenderungen
- * waren danach fuer alle Kunden blockiert. Daraus folgen drei Regeln, die hier
- * im Code stehen und nicht nur im Kommentar:
+ * waren danach fuer alle Kunden blockiert. Daraus folgen Regeln, die hier im
+ * Code stehen und nicht nur im Kommentar:
  *
  * 1. Nur lesende Aufrufe. Schreibende Aktionen sind gar nicht erst erreichbar.
- * 2. Kein Wiederholen. Ein fehlgeschlagener Aufruf wird nie ein zweites Mal
- *    versucht — jeder weitere Versuch verlaengert eine Sperre.
- * 3. Bei `TOO_MANY_ATTEMPTS` oder `WRONG_USERNAME_OR_PASSWORD` bricht der
+ * 2. Eine Anmeldung je 15 Minuten, nicht je Aufruf: die `coreSID` liegt im
+ *    Cache — genau so lange, wie die fruehere Bruecke ihre Sitzung hielt.
+ *    Ein Login je Anfrage hat das Konto schon einmal gesperrt.
+ * 3. Kein Wiederholen. Ein fehlgeschlagener Aufruf wird nie ein zweites Mal
+ *    versucht — jeder weitere Versuch verlaengert eine Sperre. Einzige
+ *    Ausnahme: eine abgelaufene Sitzung meldet sich einmal neu an.
+ * 4. Bei `TOO_MANY_ATTEMPTS` oder `WRONG_USERNAME_OR_PASSWORD` bricht der
  *    Anschluss mit einer unmissverstaendlichen Meldung ab.
  */
 class ResellerInterfaceClient implements RegistrarClient
@@ -35,7 +53,7 @@ class ResellerInterfaceClient implements RegistrarClient
      * nicht. `domain/transfer` mit einem Testnamen hat schon einmal einen
      * echten Transfer ausgeloest.
      */
-    private const ERLAUBTE_AKTIONEN = ['domain/list', 'domain/check'];
+    private const ERLAUBTE_AKTIONEN = ['domain/list', 'domain/check', 'tld/list'];
 
     /**
      * Ohne Angabe liefert `domain/list` nur 25 Eintraege. Das ist kein Fehler
@@ -51,7 +69,14 @@ class ResellerInterfaceClient implements RegistrarClient
     private const SPERRMELDUNGEN = ['TOO_MANY_ATTEMPTS', 'WRONG_USERNAME_OR_PASSWORD'];
 
     /**
-     * @param  array{command?: string, reseller_ids?: string, test_domain?: string}  $config
+     * Wie lange eine Anmeldung wiederverwendet wird. Die Bruecke hielt ihre
+     * Sitzung ebenfalls 15 Minuten; der Anbieter wertet haeufige Anmeldungen
+     * als Angriff.
+     */
+    private const SITZUNGS_TTL_MINUTEN = 15;
+
+    /**
+     * @param  array{endpoint?: string, branch?: string, username?: string, password?: string, reseller_id?: string|int|null, reseller_ids?: string, test_domain?: string}  $config
      */
     public function __construct(private readonly array $config) {}
 
@@ -61,30 +86,37 @@ class ResellerInterfaceClient implements RegistrarClient
     }
 
     /**
-     * Eingerichtet ist der Anschluss, wenn die Bruecke hier ausfuehrbar ist.
+     * Eingerichtet ist der Anschluss, wenn Benutzername und Kennwort liegen.
      *
-     * Zugangsdaten pruefen wir nicht — wir haben sie nicht und sollen sie
-     * nicht haben.
+     * Die ResellerID ist optional: ohne sie liest der Anschluss den
+     * Hauptaccount.
      */
     public function isConfigured(): bool
     {
-        $programm = $this->command();
-
-        return $programm !== '' && is_executable($programm);
+        return filled($this->config['username'] ?? null)
+            && filled($this->config['password'] ?? null);
     }
 
+    /**
+     * Prueft den Zugang ueber `tld/list`.
+     *
+     * Der Aufruf liest die TLD-Liste und aendert nichts — er beantwortet
+     * genau die Frage, ob Zugangsdaten und ResellerID stimmen.
+     */
     public function testConnection(): string
     {
         $this->guardConfigured();
 
-        $domain = $this->config['test_domain'] ?? 'wls-portal-verbindungstest-xyz.de';
+        $antwort = $this->call('tld/list', ['limit' => 1]);
 
-        $antwort = $this->call('domain/check', ['domain' => $domain]);
+        $konto = filled($this->config['reseller_id'] ?? null)
+            ? (string) $this->config['reseller_id']
+            : 'Hauptaccount';
 
         return sprintf(
-            'ResellerInterface hat geantwortet: %s. Geprüft wurde nur die Verfügbarkeit von %s — gelesen oder geändert wurde nichts.',
+            'ResellerInterface hat geantwortet: %s (Konto %s). Gelesen wurde nur die TLD-Liste — geändert wurde nichts.',
             $this->text($antwort, 'stateName') ?? $this->text($antwort, 'state') ?? 'ohne Statusangabe',
-            $domain,
+            $konto,
         );
     }
 
@@ -96,15 +128,29 @@ class ResellerInterfaceClient implements RegistrarClient
         $this->guardConfigured();
 
         foreach ($this->resellerIds() as $resellerId) {
-            $params = ['limit' => self::SEITENGROESSE];
+            $offset = 0;
 
-            if ($resellerId !== null) {
-                $params['resellerID'] = $resellerId;
-            }
+            do {
+                $params = ['limit' => self::SEITENGROESSE, 'offset' => $offset];
 
-            foreach ($this->liste($this->call('domain/list', $params)) as $eintrag) {
-                yield $this->toDomain($eintrag);
-            }
+                if ($resellerId !== null) {
+                    $params['resellerID'] = $resellerId;
+                }
+
+                $antwort = $this->call('domain/list', $params);
+                $liste = $this->liste($antwort);
+
+                foreach ($liste as $eintrag) {
+                    if (is_array($eintrag)) {
+                        yield $this->toDomain($eintrag);
+                    }
+                }
+
+                // Der Anbieter nennt die Gesamtzahl unter `data.total`; die
+                // Seiten laufen, bis alles gesehen wurde.
+                $gesamt = (int) data_get($antwort, 'data.total', 0);
+                $offset += count($liste);
+            } while ($offset < $gesamt);
         }
     }
 
@@ -114,6 +160,7 @@ class ResellerInterfaceClient implements RegistrarClient
      * Die Anleitung nennt fuer den Bestand `domain/*`, `dns/*` und
      * `handle/*`; ein Zertifikatsbestand kommt darin nicht vor. Eine leere
      * Liste ist deshalb die ehrliche Antwort — geraten wird hier nichts.
+     * S/MIME-Zertifikate stammen von autoDNS.
      *
      * @return iterable<int, RemoteCertificate>
      */
@@ -125,28 +172,34 @@ class ResellerInterfaceClient implements RegistrarClient
     /**
      * Die Konten, deren Bestand gelesen wird.
      *
-     * `null` steht fuer den Hauptaccount: ohne `resellerID` liefert
-     * `domain/list` genau ihn — und eben nur ihn.
+     * Die eingetragene `reseller_id` aus den Zugangsdaten steht fuer den
+     * Hauptaccount; ohne sie liefert `domain/list` ebenfalls genau ihn.
+     * Weitere Konten kommen als Liste dazu, etwa "59163" fuer den
+     * Subreseller.
      *
      * @return array<int, string|null>
      */
     private function resellerIds(): array
     {
+        $haupt = filled($this->config['reseller_id'] ?? null)
+            ? (string) $this->config['reseller_id']
+            : null;
+
         $weitere = array_values(array_filter(array_map(
             'trim',
             explode(',', (string) ($this->config['reseller_ids'] ?? '')),
-        ), fn (string $id): bool => $id !== ''));
+        ), fn (string $id): bool => $id !== '' && $id !== $haupt));
 
-        return [null, ...$weitere];
+        return [$haupt, ...$weitere];
     }
 
     /**
-     * Ein einzelner Aufruf der Bruecke. Ohne Wiederholung, mit Absicht.
+     * Ein einzelner Aufruf des Anbieters. Ohne Wiederholung, mit Absicht.
      *
      * @param  array<string, mixed>  $params
      * @return array<string, mixed>
      */
-    private function call(string $aktion, array $params): array
+    private function call(string $aktion, array $params = []): array
     {
         if (! in_array($aktion, self::ERLAUBTE_AKTIONEN, strict: true)) {
             throw new RegistrarException(
@@ -154,58 +207,202 @@ class ResellerInterfaceClient implements RegistrarClient
             );
         }
 
-        $auftrag = json_encode(['action' => $aktion, 'params' => $params], JSON_UNESCAPED_SLASHES);
+        try {
+            $antwort = $this->request()->post($aktion, $params);
+        } catch (Throwable $fehler) {
+            throw new RegistrarException(
+                "Die Verbindung zu ResellerInterface ist fehlgeschlagen: {$fehler->getMessage()}",
+            );
+        }
 
-        if ($auftrag === false) {
-            throw new RegistrarException("Der Aufruf {$aktion} liess sich nicht als JSON schreiben.");
+        return $this->guardAntwort($aktion, $antwort, $params);
+    }
+
+    /**
+     * Der HTTP-Client mit der laufenden Sitzung als Cookie `coreSID`.
+     */
+    private function request(): PendingRequest
+    {
+        return Http::baseUrl($this->endpoint())
+            ->timeout(120)
+            ->connectTimeout(15)
+            ->acceptJson()
+            ->asForm()
+            ->withCookies(['coreSID' => $this->sitzung() ?? ''], $this->host());
+    }
+
+    /**
+     * Der Endpunkt inklusive Branch (`stable`).
+     */
+    private function endpoint(): string
+    {
+        return rtrim((string) ($this->config['endpoint'] ?? 'https://core.resellerinterface.de'), '/').'/';
+    }
+
+    private function host(): string
+    {
+        return (string) parse_url($this->endpoint(), PHP_URL_HOST);
+    }
+
+    /**
+     * Die laufende Anmeldung, aus dem Cache oder durch einen einzigen Login.
+     */
+    private function sitzung(): ?string
+    {
+        $vorhanden = Cache::get($this->cacheSchluessel());
+
+        if (is_string($vorhanden) && $vorhanden !== '') {
+            return $vorhanden;
+        }
+
+        $benutzer = (string) ($this->config['username'] ?? '');
+        $kennwort = (string) ($this->config['password'] ?? '');
+
+        if ($benutzer === '' || $kennwort === '') {
+            throw new RegistrarException(
+                'Für ResellerInterface fehlen Benutzername oder Kennwort. Ohne sie ist kein Zugriff möglich.',
+            );
+        }
+
+        $felder = [
+            'username' => $benutzer,
+            'password' => $kennwort,
+        ];
+
+        if (filled($this->config['reseller_id'] ?? null)) {
+            $felder['resellerId'] = (string) $this->config['reseller_id'];
         }
 
         try {
-            $ergebnis = Process::timeout(120)->run([$this->command(), 'call', $auftrag]);
+            $antwort = Http::baseUrl($this->endpoint())
+                ->timeout(60)
+                ->connectTimeout(15)
+                ->acceptJson()
+                ->asForm()
+                ->post('reseller/login', $felder);
         } catch (Throwable $fehler) {
             throw new RegistrarException(
-                "Die Brücke liess sich nicht aufrufen: {$fehler->getMessage()}",
+                "Die Anmeldung bei ResellerInterface ist fehlgeschlagen: {$fehler->getMessage()}",
             );
         }
 
-        if (! $ergebnis->successful()) {
-            throw $this->fehler($aktion, trim($ergebnis->errorOutput()) ?: trim($ergebnis->output()));
+        $inhalt = $antwort->json();
+
+        if (! is_array($inhalt) || ($inhalt['success'] ?? false) !== true) {
+            $meldung = is_array($inhalt)
+                ? (string) ($inhalt['stateName'] ?? $inhalt['state'] ?? (json_encode($inhalt) ?: 'ohne Meldung'))
+                : 'ohne Meldung';
+
+            throw $this->fehler('reseller/login', $meldung, $inhalt);
         }
 
-        $inhalt = json_decode($ergebnis->output(), true);
+        $sitzung = $antwort->cookie('coreSID');
 
-        if (! is_array($inhalt)) {
+        if (! is_string($sitzung) || $sitzung === '') {
             throw new RegistrarException(
-                "Die Brücke hat auf {$aktion} keine verwertbare Antwort geliefert.",
-                mb_substr($ergebnis->output(), 0, 500),
+                'ResellerInterface hat nach der Anmeldung keine Sitzungskennung (coreSID) geliefert.',
+                $inhalt,
             );
         }
 
-        return $this->guardAntwort($aktion, $inhalt);
+        Cache::put($this->cacheSchluessel(), $sitzung, now()->addMinutes(self::SITZUNGS_TTL_MINUTEN));
+
+        return $sitzung;
+    }
+
+    /**
+     * Cache-Schluessel je Konto: zwei Konten teilen sich keine Sitzung.
+     */
+    private function cacheSchluessel(): string
+    {
+        $konto = filled($this->config['reseller_id'] ?? null)
+            ? (string) $this->config['reseller_id']
+            : 'haupt';
+
+        return "registrar.resellerinterface.session.{$konto}";
     }
 
     /**
      * Prueft den Umschlag der Antwort.
      *
-     * @param  array<string, mixed>  $inhalt
+     * @param  array<string, mixed>  $params
      * @return array<string, mixed>
      */
-    private function guardAntwort(string $aktion, array $inhalt): array
+    private function guardAntwort(string $aktion, Response $antwort, array $params): array
     {
-        $meldung = $this->text($inhalt, 'stateName')
-            ?? $this->text($inhalt, 'state')
-            ?? $this->text($inhalt, 'message')
-            ?? '';
+        $inhalt = $antwort->json();
+
+        if (! is_array($inhalt)) {
+            throw new RegistrarException(
+                "ResellerInterface hat auf {$aktion} keine verwertbare Antwort geliefert (HTTP {$antwort->status()}).",
+                mb_substr((string) $antwort->body(), 0, 500),
+            );
+        }
 
         if ($inhalt['success'] ?? false) {
             return $inhalt;
         }
 
+        $meldung = $this->text($inhalt, 'stateName')
+            ?? $this->text($inhalt, 'state')
+            ?? $this->text($inhalt, 'message')
+            ?? '';
+
         if ($meldung === '') {
             $meldung = json_encode($inhalt) ?: '';
         }
 
+        // Eine abgelaufene oder unbekannte Sitzung ist der eine Fall, in dem
+        // ein zweiter Anlauf erlaubt ist: genau einmal die Anmeldung erneuern,
+        // dann den Aufruf wiederholen. Alles andere wird nie wiederholt.
+        if ($this->istSitzungsfehler($inhalt)) {
+            Cache::forget($this->cacheSchluessel());
+
+            $antwort = $this->request()->post($aktion, $params);
+
+            return $this->pruefeErneut($aktion, $antwort);
+        }
+
         throw $this->fehler($aktion, $meldung, $inhalt);
+    }
+
+    /**
+     * Die Antwort nach der Neuanmeldung — diesmal ohne zweiten Anlauf.
+     *
+     * @return array<string, mixed>
+     */
+    private function pruefeErneut(string $aktion, Response $antwort): array
+    {
+        $inhalt = $antwort->json();
+
+        if (! is_array($inhalt) || ($inhalt['success'] ?? false) !== true) {
+            $meldung = is_array($inhalt)
+                ? (string) ($inhalt['stateName'] ?? $inhalt['state'] ?? (json_encode($inhalt) ?: 'ohne Meldung'))
+                : "HTTP {$antwort->status()}";
+
+            throw $this->fehler($aktion, $meldung, $inhalt);
+        }
+
+        return $inhalt;
+    }
+
+    /**
+     * Erkennt eine abgelaufene oder unbekannte Sitzung.
+     *
+     * @param  array<string, mixed>  $inhalt
+     */
+    private function istSitzungsfehler(array $inhalt): bool
+    {
+        $meldung = strtoupper(implode(' ', array_filter([
+            (string) ($inhalt['stateName'] ?? ''),
+            (string) ($inhalt['state'] ?? ''),
+            (string) ($inhalt['message'] ?? ''),
+        ])));
+
+        return str_contains($meldung, 'SESSION')
+            || str_contains($meldung, 'AUTH')
+            || str_contains($meldung, 'LOGIN')
+            || str_contains($meldung, 'SID');
     }
 
     /**
@@ -241,7 +438,7 @@ class ResellerInterfaceClient implements RegistrarClient
      * statt stillschweigend nichts einzulesen.
      *
      * @param  array<string, mixed>  $antwort
-     * @return array<int, array<string, mixed>>
+     * @return array<int, mixed>
      */
     private function liste(array $antwort): array
     {
@@ -254,7 +451,7 @@ class ResellerInterfaceClient implements RegistrarClient
             );
         }
 
-        return array_values(array_filter($liste, 'is_array'));
+        return array_values($liste);
     }
 
     /**
@@ -262,7 +459,7 @@ class ResellerInterfaceClient implements RegistrarClient
      */
     private function toDomain(array $eintrag): RemoteDomain
     {
-        $name = $this->text($eintrag, 'domain') ?? $this->text($eintrag, 'name');
+        $name = $this->text($eintrag, 'domain') ?? $this->text($eintrag, 'domainAce');
 
         if ($name === null) {
             throw new RegistrarException(
@@ -271,64 +468,52 @@ class ResellerInterfaceClient implements RegistrarClient
             );
         }
 
+        // Ein echtes Ablaufdatum liefert die Liste nicht; `latestCancellationDate`
+        // ist die naechste Verlaengerungsgrenze und damit die beste Naehrung.
+        // Alle Zeiten kommen als Unix-Zeitstempel — als Ziffernfolge.
+        $laeuftAus = $this->zeitstempel($eintrag, 'latestCancellationDate')
+            ?? $this->zeitstempel($eintrag, 'deleteDate');
+
         return new RemoteDomain(
             name: mb_strtolower($name),
-            reference: $this->text($eintrag, 'domainID') ?? $this->text($eintrag, 'id'),
-            status: $this->text($eintrag, 'status') ?? $this->text($eintrag, 'stateName') ?? 'unknown',
-            registeredOn: $this->date($eintrag, 'registered') ?? $this->date($eintrag, 'created'),
-            expiresOn: $this->date($eintrag, 'expire') ?? $this->date($eintrag, 'expireDate') ?? $this->date($eintrag, 'payedUntil'),
-            autoRenew: $this->flag($eintrag, 'autoRenew'),
-            nameservers: $this->nameservers($eintrag),
+            reference: $this->text($eintrag, 'domainID'),
+            // `state` nennt den Zustand; `subState` haelt Sonderfaele wie
+            // PENDING oder REVOKED daneben und wird mitgefuehrt, wenn steht.
+            status: implode(' ', array_filter([
+                $this->text($eintrag, 'state'),
+                $this->text($eintrag, 'subState'),
+            ])) ?: 'unknown',
+            registeredOn: $this->zeitstempel($eintrag, 'createDate') ?? $this->zeitstempel($eintrag, 'orderDate'),
+            expiresOn: $laeuftAus,
+            // Ungekuendigt und ohne Loeschmodus heisst: laeuft automatisch
+            // weiter — eine Naehrung, das Feld selbst kennt der Anbieter in
+            // der Liste nicht.
+            autoRenew: ($eintrag['cancellationDate'] ?? null) === null
+                && blank($this->text($eintrag, 'deleteMode')),
+            // Nameserver liegen nicht in `domain/list` — die Zone liest man
+            // nur ueber `dns/*`, und das ist bewusst nicht Teil des Imports.
+            nameservers: [],
         );
     }
 
     /**
+     * Unix-Zeitstempel aus der Antwort — als Zahl oder Ziffernfolge.
+     *
      * @param  array<string, mixed>  $eintrag
-     * @return array<int, string>
      */
-    private function nameservers(array $eintrag): array
+    private function zeitstempel(array $eintrag, string $feld): ?CarbonImmutable
     {
-        $liste = $eintrag['nameserver'] ?? $eintrag['nameservers'] ?? [];
+        $wert = $eintrag[$feld] ?? null;
 
-        if (! is_array($liste)) {
-            return [];
+        if ($wert === null || $wert === '' || $wert === '0' || $wert === 0) {
+            return null;
         }
 
-        $namen = [];
-
-        foreach ($liste as $element) {
-            if (is_array($element)) {
-                $name = $this->text($element, 'name') ?? $this->text($element, 'nameserver');
-
-                if ($name !== null) {
-                    $namen[] = $name;
-                }
-
-                continue;
-            }
-
-            if (is_scalar($element) && (string) $element !== '') {
-                $namen[] = (string) $element;
-            }
+        if (is_numeric($wert)) {
+            return CarbonImmutable::createFromTimestamp((int) $wert);
         }
 
-        return $namen;
-    }
-
-    private function command(): string
-    {
-        return (string) ($this->config['command'] ?? '');
-    }
-
-    private function guardConfigured(): void
-    {
-        if (! $this->isConfigured()) {
-            throw new RegistrarException(sprintf(
-                'Die Brücke zu ResellerInterface ist unter %s nicht ausführbar. Ohne sie ist kein Zugriff möglich — '
-                .'ein eigener Login beim Anbieter kommt nicht in Frage.',
-                $this->command() !== '' ? $this->command() : 'dem eingestellten Pfad',
-            ));
-        }
+        return null;
     }
 
     /**
@@ -341,30 +526,13 @@ class ResellerInterfaceClient implements RegistrarClient
         return is_scalar($wert) && (string) $wert !== '' ? (string) $wert : null;
     }
 
-    /**
-     * @param  array<string, mixed>  $eintrag
-     */
-    private function flag(array $eintrag, string $feld): bool
+    private function guardConfigured(): void
     {
-        // Streng verglichen: „0" und „false" sollen nicht als Ja durchgehen.
-        return in_array($eintrag[$feld] ?? null, [true, 1, '1', 'true', 'TRUE', 'yes'], strict: true);
-    }
-
-    /**
-     * @param  array<string, mixed>  $eintrag
-     */
-    private function date(array $eintrag, string $feld): ?CarbonImmutable
-    {
-        $wert = $this->text($eintrag, $feld);
-
-        if ($wert === null || $wert === '0000-00-00' || $wert === '0000-00-00 00:00:00') {
-            return null;
-        }
-
-        try {
-            return CarbonImmutable::parse($wert);
-        } catch (Throwable) {
-            return null;
+        if (! $this->isConfigured()) {
+            throw new RegistrarException(
+                'Für ResellerInterface fehlen Benutzername oder Kennwort. Ohne sie ist kein Zugriff möglich — '
+                .'sie werden unter „Schnittstellen" hinterlegt.',
+            );
         }
     }
 }
