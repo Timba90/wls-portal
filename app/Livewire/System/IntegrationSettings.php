@@ -59,11 +59,13 @@ class IntegrationSettings extends Component
     public function fieldsFor(RegistrarProvider $provider): array
     {
         return match ($provider) {
-            // ResellerInterface braucht hier nichts: die Bruecke auf demselben
-            // Host haelt die Zugangsdaten in ihrer eigenen `.env` und meldet
-            // sich selbst an. Ein zweiter Ort fuer dieselben Geheimnisse waere
-            // ein Risiko ohne Gegenwert.
-            RegistrarProvider::ResellerInterface => [],
+            // ResellerInterface meldet sich direkt an: Benutzername und
+            // Kennwort liegen verschluesselt hier, die ResellerID des
+            // Hauptkontos steht in der Konfiguration.
+            RegistrarProvider::ResellerInterface => [
+                'username' => ['label' => 'Benutzername', 'secret' => true],
+                'password' => ['label' => 'Kennwort', 'secret' => true],
+            ],
 
             RegistrarProvider::AutoDns => [
                 'username' => ['label' => 'Benutzername', 'secret' => true],
@@ -111,9 +113,9 @@ class IntegrationSettings extends Component
     public function notice(RegistrarProvider $provider): ?string
     {
         return match ($provider) {
-            RegistrarProvider::ResellerInterface => 'Hier ist nichts einzutragen. Die Anmeldung übernimmt die Brücke auf '
-                .'demselben Server; sie hält die Zugangsdaten in ihrer eigenen Umgebung. Ein eigener Login des Portals '
-                .'beim Anbieter ist ausgeschlossen — er hat das Konto schon einmal gesperrt. Das Portal liest nur.',
+            RegistrarProvider::ResellerInterface => 'Das Portal meldet sich selbst beim Anbieter an. Die ResellerID des '
+                .'Hauptkontos ist voreingestellt (58919); ein falsches Kennwort oder zu haeufige Anmeldeversuche '
+                .'sperren das Konto — nach einem Fehlschlag erst klären, dann erneut versuchen.',
             default => null,
         };
     }

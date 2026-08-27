@@ -52,21 +52,21 @@ return [
     | ResellerInterface (do.de)
     |--------------------------------------------------------------------------
     |
-    | Der Zugriff laeuft ueber die Bruecke, die auf demselben Host liegt
-    | (`domain-api-call`). Sie haelt die Zugangsdaten in ihrer eigenen `.env`
-    | und uebernimmt Anmeldung und Sitzung; das Portal sieht davon nichts.
-    |
-    | Ein eigener Login beim Anbieter ist ausdruecklich untersagt: ein
-    | selbstgebautes Login-Skript hat das Konto schon einmal gesperrt und damit
-    | die DNS-Aenderungen aller Kunden blockiert.
+    | Der Zugriff laeuft direkt: das Portal meldet sich selbst an, die
+    | Zugangsdaten liegen verschluesselt unter „Schnittstellen". Die Sitzung
+    | (coreSID) wird 15 Minuten im Cache gehalten — haeufige Anmeldungen
+    | wertet der Anbieter als Angriff und sperrt das Konto.
     |
     */
 
     'resellerinterface' => [
-        'command' => env('RESELLERINTERFACE_COMMAND', '/usr/local/bin/domain-api-call'),
+        'endpoint' => env('RESELLERINTERFACE_ENDPOINT', 'https://core.resellerinterface.de'),
+        'branch' => env('RESELLERINTERFACE_BRANCH', 'stable'),
 
-        // Ohne resellerID liefert `domain/list` nur den Hauptaccount. Weitere
-        // Konten kommen als Liste dazu, etwa "59163" fuer den Subreseller.
+        // Der Hauptaccount K58919. Ohne resellerId in den Zugangsdaten liest
+        // der Anschluss ebenfalls den Hauptaccount. Weitere Konten kommen als
+        // Liste dazu, etwa "59163" fuer den Subreseller.
+        'reseller_id' => env('RESELLERINTERFACE_RESELLER_ID', '58919'),
         'reseller_ids' => env('RESELLERINTERFACE_RESELLER_IDS', ''),
 
         // Eine sicher freie Domain fuer den Verbindungstest. `domain/check`
