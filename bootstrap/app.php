@@ -1,10 +1,10 @@
 <?php
 
 use App\Http\Middleware\EnsureTwoFactorIsEnabled;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackUserSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
-use App\Http\Middleware\SecurityHeaders;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 
