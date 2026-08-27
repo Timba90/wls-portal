@@ -288,7 +288,10 @@ class ResellerInterfaceClient implements RegistrarClient
 
         $inhalt = $antwort->json();
 
-        if (! is_array($inhalt) || ($inhalt['success'] ?? false) !== true) {
+        // Der Umschlag des Anbieters kennt kein `success`-Feld: Erfolg ist
+        // ein `state` unter 2000 (1000 OK, 1001 OK_PENDING, 1003 NO_CHANGE),
+        // alles ab 2000 ein Fehler.
+        if (! is_array($inhalt) || ! $this->istErfolg($inhalt)) {
             $meldung = is_array($inhalt)
                 ? (string) ($inhalt['stateName'] ?? $inhalt['state'] ?? (json_encode($inhalt) ?: 'ohne Meldung'))
                 : 'ohne Meldung';
@@ -360,7 +363,7 @@ class ResellerInterfaceClient implements RegistrarClient
             );
         }
 
-        if ($inhalt['success'] ?? false) {
+        if ($this->istErfolg($inhalt)) {
             return $inhalt;
         }
 
@@ -396,7 +399,7 @@ class ResellerInterfaceClient implements RegistrarClient
     {
         $inhalt = $antwort->json();
 
-        if (! is_array($inhalt) || ($inhalt['success'] ?? false) !== true) {
+        if (! is_array($inhalt) || ! $this->istErfolg($inhalt)) {
             $meldung = is_array($inhalt)
                 ? (string) ($inhalt['stateName'] ?? $inhalt['state'] ?? (json_encode($inhalt) ?: 'ohne Meldung'))
                 : "HTTP {$antwort->status()}";
@@ -405,6 +408,32 @@ class ResellerInterfaceClient implements RegistrarClient
         }
 
         return $inhalt;
+    }
+
+    /**
+     * Der Erfolgsmassstab des Anbieters: `state` unter 2000 — oder das Feld
+     * `success`, das aeltere Antworten tragen. Beides zu akzeptieren kostet
+     * nichts und bricht bei anders geformten Umschlaegen nicht.
+     *
+     * @param  array<string, mixed>  $inhalt
+     */
+    private function istErfolg(array $inhalt): bool
+    {
+        if (($inhalt['success'] ?? null) === true) {
+            return true;
+        }
+
+        if (($inhalt['success'] ?? null) === false) {
+            return false;
+        }
+
+        $state = $inhalt['state'] ?? null;
+
+        if (is_int($state) || (is_string($state) && ctype_digit($state))) {
+            return (int) $state < 2000;
+        }
+
+        return false;
     }
 
     /**
