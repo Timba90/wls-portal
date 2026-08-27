@@ -46,9 +46,9 @@ it('haelt einen Anschluss ohne Zugangsdaten fuer nicht eingerichtet', function (
 
 it('meldet sich beim ersten Aufruf an und haelt die Sitzung im Cache', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 1, 'list' => [
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
         ['domain' => 'Beispiel.DE', 'domainID' => 4711, 'state' => 'ACTIVE'],
-    ]]])]);
+    ]])]);
 
     $domains = iterator_to_array(anschluss()->domains());
 
@@ -64,9 +64,9 @@ it('meldet sich beim ersten Aufruf an und haelt die Sitzung im Cache', function 
 
 it('ruft domain/list mit dem Limit 1000 ab, nicht mit der Voreinstellung 25', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 1, 'list' => [
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
         ['domain' => 'beispiel.de'],
-    ]]])]);
+    ]])]);
 
     iterator_to_array(anschluss()->domains());
 
@@ -79,12 +79,12 @@ it('ruft domain/list mit dem Limit 1000 ab, nicht mit der Voreinstellung 25', fu
 it('blaetert, bis die Gesamtzahl erreicht ist', function (): void {
     anmeldungFaken();
     Http::fake(['*/domain/list' => Http::sequence([
-        Http::response(['success' => true, 'data' => ['total' => 3, 'list' => [
+        Http::response(['success' => true, 'total' => 3, 'list' => [
             ['domain' => 'eins.de'], ['domain' => 'zwei.de'],
-        ]]]),
-        Http::response(['success' => true, 'data' => ['total' => 3, 'list' => [
+        ]]),
+        Http::response(['success' => true, 'total' => 3, 'list' => [
             ['domain' => 'drei.de'],
-        ]]]),
+        ]]),
     ])]);
 
     $domains = iterator_to_array(anschluss()->domains());
@@ -95,7 +95,7 @@ it('blaetert, bis die Gesamtzahl erreicht ist', function (): void {
 
 it('liest auch den Bestand der Subreseller, aber ohne den Hauptaccount doppelt', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 0, 'list' => []]])]);
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 0, 'list' => []])]);
 
     iterator_to_array(anschluss(['reseller_id' => '58919', 'reseller_ids' => '58919, 59163'])->domains());
 
@@ -116,7 +116,7 @@ it('liest auch den Bestand der Subreseller, aber ohne den Hauptaccount doppelt',
 
 it('schickt den Benutzernamen im Login, aber nie in der Bestandsabfrage', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 0, 'list' => []]])]);
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 0, 'list' => []])]);
 
     iterator_to_array(anschluss()->domains());
 
@@ -166,9 +166,9 @@ it('meldet sich genau einmal neu an, wenn die Sitzung abgelaufen ist', function 
         // Erster Versuch mit alter Sitzung: abgelaufen.
         Http::response(['success' => false, 'state' => 4000, 'stateName' => 'SESSION_EXPIRED']),
         // Nach der Neuanmeldung klappt es.
-        Http::response(['success' => true, 'data' => ['total' => 1, 'list' => [
+        Http::response(['success' => true, 'total' => 1, 'list' => [
             ['domain' => 'beispiel.de'],
-        ]]]),
+        ]]),
     ])]);
 
     $domains = iterator_to_array(anschluss()->domains());
@@ -191,14 +191,13 @@ it('laesst keine schreibende Aktion zu', function (): void {
 });
 
 it('bricht ab, wenn die Antwort keine Liste enthaelt', function (): void {
-    // Bei den Preisen lag die Liste unter data.list, während die alte
-    // Beispielantwort etwas anderes zeigte — stillschweigend nichts einzulesen
-    // wäre schlimmer als ein Abbruch.
+    // Weder unter `list` noch unter `data.list` haelt etwas — stillschweigend
+    // nichts einzulesen wäre schlimmer als ein Abbruch.
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['tld' => []]])]);
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 5, 'andere_felder' => []])]);
 
     iterator_to_array(anschluss()->domains());
-})->throws(RegistrarException::class, 'keine Liste unter data.list');
+})->throws(RegistrarException::class, 'keine Liste');
 
 it('fuehrt keine Zertifikate', function (): void {
     expect(iterator_to_array(anschluss()->certificates()))->toBe([]);
@@ -206,27 +205,30 @@ it('fuehrt keine Zertifikate', function (): void {
 
 it('uebertraegt die Felder aus der Bestandsliste', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 2, 'list' => [
-        [
-            'domain' => 'Beispiel.DE',
-            'domainID' => 4711,
-            'state' => 'ACTIVE',
-            'subState' => 'PENDING',
-            'createDate' => '1785165050',
-            'latestCancellationDate' => '1816613748',
-            'cancellationDate' => null,
-            'deleteMode' => '',
+    Http::fake(['*/domain/list' => Http::response([
+        'success' => true,
+        'total' => 2,
+        'list' => [
+            [
+                'domain' => 'Beispiel.DE',
+                'domainID' => 4711,
+                'state' => 'ACTIVE',
+                'subState' => 'PENDING',
+                'createDate' => '1785165050',
+                'latestCancellationDate' => '1816613748',
+                'cancellationDate' => null,
+                'deleteMode' => '',
+            ],
+            [
+                'domain' => 'gekuendigt.de',
+                'domainID' => 4712,
+                'state' => 'INACTIVE',
+                'subState' => 'REVOKED',
+                'cancellationDate' => '1787810102',
+                'deleteMode' => 'delete',
+            ],
         ],
-        [
-            'domain' => 'gekuendigt.de',
-            'domainID' => 4712,
-            'state' => 'INACTIVE',
-            'subState' => 'REVOKED',
-            'cancellationDate' => '1787810102',
-            'deleteMode' => 'delete',
-        ],
-    ]]])]);
-
+    ])]);
     $domains = iterator_to_array(anschluss()->domains());
 
     expect($domains)->toHaveCount(2)
@@ -242,9 +244,9 @@ it('uebertraegt die Felder aus der Bestandsliste', function (): void {
 
 it('legt den Bestand ueber den gemeinsamen Abgleich an', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'data' => ['total' => 1, 'list' => [
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
         ['domain' => 'beispiel.de', 'domainID' => '4711', 'latestCancellationDate' => '1816613748'],
-    ]]])]);
+    ]])]);
 
     $ergebnis = app(ImportRegistrarInventory::class)(anschluss());
 
