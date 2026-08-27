@@ -253,25 +253,35 @@ it('meldet eine abgelehnte Verbindung, ohne die Seite zu brechen', function (): 
         ->assertOk();
 });
 
-it('verlangt fuer ResellerInterface keine Zugangsdaten', function (): void {
-    // Sie liegen in der Brücke auf demselben Server. Ein zweiter Ort für
-    // dieselben Geheimnisse wäre ein Risiko ohne Gegenwert.
+it('verlangt fuer ResellerInterface Benutzername und Kennwort', function (): void {
+    // Das Portal meldet sich selbst an; die ResellerID des Hauptkontos steht
+    // voreingestellt in der Konfiguration.
     $komponente = Livewire::actingAs($this->benutzer)->test(IntegrationSettings::class);
 
-    expect($komponente->instance()->fieldsFor(RegistrarProvider::ResellerInterface))->toBe([]);
+    $felder = $komponente->instance()->fieldsFor(RegistrarProvider::ResellerInterface);
+
+    expect(array_keys($felder))->toBe(['username', 'password'])
+        ->and($felder['username']['secret'])->toBeTrue()
+        ->and($felder['password']['secret'])->toBeTrue();
 
     $komponente->assertSee('ResellerInterface')
-        ->assertSee('Die Anmeldung übernimmt die Brücke')
-        ->assertDontSeeHtml('wire:model="input.resellerinterface.');
+        ->assertSee('Das Portal meldet sich selbst beim Anbieter an');
 });
 
-it('nennt den Anschluss erst eingerichtet, wenn die Bruecke aufrufbar ist', function (): void {
-    // Auf dem Testrechner gibt es sie nicht — dann darf auch nichts anderes
-    // behauptet werden.
-    $bereit = Livewire::actingAs($this->benutzer)
+it('nennt den Anschluss erst eingerichtet, wenn Zugangsdaten liegen', function (): void {
+    $komponente = Livewire::actingAs($this->benutzer)
         ->test(IntegrationSettings::class)
-        ->instance()
-        ->isReady(RegistrarProvider::ResellerInterface);
+        ->instance();
 
-    expect($bereit)->toBe(is_executable((string) config('services.resellerinterface.command')));
+    // Ohne Zugangsdaten ist der Anschluss nicht bereit...
+    expect($komponente->isReady(RegistrarProvider::ResellerInterface))->toBeFalse();
+
+    // ...mit ihnen schon.
+    IntegrationCredential::query()->create([
+        'provider' => RegistrarProvider::ResellerInterface->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+        'updated_by' => $this->benutzer->id,
+    ]);
+
+    expect($komponente->isReady(RegistrarProvider::ResellerInterface))->toBeTrue();
 });

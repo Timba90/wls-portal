@@ -25,13 +25,17 @@ function anschluss(array $ueberschreibungen = []): ResellerInterfaceClient
 }
 
 /**
- * Eine typische erfolgreiche Anmeldung: Umschlag plus coreSID-Cookie.
+ * Eine typische erfolgreiche Anmeldung: Umschlag plus coreSID-Cookie, wie
+ * ihn der Anbieter per Set-Cookie-Kopf schickt.
  */
 function anmeldungFaken(): void
 {
     Http::fake([
-        '*/reseller/login' => Http::response(['success' => true, 'state' => 1000, 'stateName' => 'OK'])
-            ->withCookie('coreSID', 'sitzung-123'),
+        '*/reseller/login' => Http::response(
+            ['success' => true, 'state' => 1000, 'stateName' => 'OK'],
+            200,
+            ['Set-Cookie' => 'coreSID=sitzung-123; Path=/; HttpOnly'],
+        ),
     ]);
 }
 
