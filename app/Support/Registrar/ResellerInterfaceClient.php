@@ -296,9 +296,11 @@ class ResellerInterfaceClient implements RegistrarClient
             throw $this->fehler('reseller/login', $meldung, $inhalt);
         }
 
-        $sitzung = $antwort->cookie('coreSID');
+        // Die Sitzung kehrt als Cookie `coreSID` zurück — im Roh-Kopf, denn
+        // die Http-Client-Antwort stellt Cookies nicht als Feld bereit.
+        $sitzung = $this->cookieAusKopf($antwort, 'coreSID');
 
-        if (! is_string($sitzung) || $sitzung === '') {
+        if ($sitzung === null) {
             throw new RegistrarException(
                 'ResellerInterface hat nach der Anmeldung keine Sitzungskennung (coreSID) geliefert.',
                 $inhalt,
@@ -320,6 +322,25 @@ class ResellerInterfaceClient implements RegistrarClient
             : 'haupt';
 
         return "registrar.resellerinterface.session.{$konto}";
+    }
+
+    /**
+     * Den Wert eines Cookies aus dem Set-Cookie-Kopf der Antwort lesen.
+     *
+     * Mehrere Kopfzeilen stehen unter demselben Schlüssel; gesucht wird der
+     * mit dem gesuchten Namen, dessen Wert bis zum ersten Semikpon reicht.
+     */
+    private function cookieAusKopf(Response $antwort, string $name): ?string
+    {
+        $kopfzeilen = $antwort->getHeader('Set-Cookie');
+
+        foreach ($kopfzeilen as $zeile) {
+            if (preg_match('/'.$name.'=([^;]+)/', $zeile, $treffer)) {
+                return trim($treffer[1]);
+            }
+        }
+
+        return null;
     }
 
     /**
