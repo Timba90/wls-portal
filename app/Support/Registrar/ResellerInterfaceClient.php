@@ -146,9 +146,9 @@ class ResellerInterfaceClient implements RegistrarClient
                     }
                 }
 
-                // Der Anbieter nennt die Gesamtzahl unter `data.total`; die
+                // Der Anbieter nennt die Gesamtzahl unter `total`; die
                 // Seiten laufen, bis alles gesehen wurde.
-                $gesamt = (int) data_get($antwort, 'data.total', 0);
+                $gesamt = (int) ($antwort['total'] ?? data_get($antwort, 'data.total', 0));
                 $offset += count($liste);
             } while ($offset < $gesamt);
         }
@@ -482,21 +482,22 @@ class ResellerInterfaceClient implements RegistrarClient
     /**
      * Die Liste aus der Antwort.
      *
-     * Der Anbieter legt sie unter `data.list` ab — bei den Preisen war es
-     * genau dieses Feld, waehrend die alte Beispielantwort etwas anderes
-     * zeigte. Wir lesen deshalb nur den belegten Weg und brechen sonst ab,
-     * statt stillschweigend nichts einzulesen.
+     * `domain/list` legt sie direkt unter `list` ab (neben `state` und
+     * `total`), ohne `data`-Umschlag — anders als die Preise, deren Liste
+     * unter `data.list` liegt. Beide Wege werden gelesen, abgebrochen wird,
+     * wenn keiner etwas haelt: stillschweigend nichts einzulesen waere
+     * schlimmer als der Abbruch.
      *
      * @param  array<string, mixed>  $antwort
      * @return array<int, mixed>
      */
     private function liste(array $antwort): array
     {
-        $liste = data_get($antwort, 'data.list');
+        $liste = $antwort['list'] ?? data_get($antwort, 'data.list');
 
         if (! is_array($liste)) {
             throw new RegistrarException(
-                'Die Antwort auf domain/list enthält keine Liste unter data.list.',
+                'Die Antwort auf domain/list enthält keine Liste (weder unter list noch data.list).',
                 $antwort,
             );
         }
