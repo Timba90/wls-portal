@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\EnsureTwoFactorIsEnabled;
+use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\TrackUserSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->web(append: [
             TrackUserSession::class,
+            SecurityHeaders::class,
             EnsureTwoFactorIsEnabled::class,
         ]);
 
