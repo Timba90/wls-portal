@@ -42,6 +42,9 @@ class DomainList extends Component
     #[Url(as: 'zuordnung', except: '')]
     public string $assignment = '';
 
+    #[Url(as: 'kunde', except: '')]
+    public string $customerFilter = '';
+
     #[Url(as: 'ablauf', except: '')]
     public string $expiry = '';
 
@@ -58,14 +61,14 @@ class DomainList extends Component
 
     public function updated(string $property): void
     {
-        if (in_array($property, ['search', 'provider', 'assignment', 'expiry'], true)) {
+        if (in_array($property, ['search', 'provider', 'assignment', 'customerFilter', 'expiry'], true)) {
             $this->resetPage();
         }
     }
 
     public function resetFilters(): void
     {
-        $this->reset('search', 'provider', 'assignment', 'expiry');
+        $this->reset('search', 'provider', 'assignment', 'customerFilter', 'expiry');
         $this->resetPage();
     }
 
@@ -168,6 +171,7 @@ class DomainList extends Component
             ])
             ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
             ->when($this->provider !== '', fn (Builder $query) => $query->where('provider', $this->provider))
+            ->when($this->customerFilter !== '', fn (Builder $query) => $query->where('customer_id', (int) $this->customerFilter))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())
             ->when($this->assignment === 'assigned', fn (Builder $query) => $query->whereNotNull('customer_id'))
             ->when($this->assignment === 'without_service', fn (Builder $query) => $query->withoutService())

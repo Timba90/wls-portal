@@ -57,6 +57,15 @@
             </div>
 
             <div class="lg:w-48">
+                <x-select.styled wire:model.live="customerFilter"
+                                 label="Kunde"
+                                 placeholder="Alle"
+                                 searchable
+                                 :options="$this->assignableCustomers()"
+                                 select="label:name|value:id" />
+            </div>
+
+            <div class="lg:w-48">
                 <x-select.styled wire:model.live="assignment"
                                  label="Zuordnung"
                                  placeholder="Alle"
@@ -266,9 +275,20 @@
             </div>
 
             <x-slot:footer>
-                <div class="flex justify-end gap-2">
-                    <x-button color="secondary" outline wire:click="closeAssignment">Abbrechen</x-button>
-                    <x-button wire:click="saveAssignment">Speichern</x-button>
+                <div class="flex w-full items-center justify-between gap-2">
+                    <x-button color="secondary"
+                              outline
+                              wire:click="createServiceAndAssign"
+                              wire:loading.attr="disabled"
+                              wire:target="createServiceAndAssign"
+                              title="Legt eine Domain-Leistung zum Katalogpreis an und verknüpft sie sofort">
+                        {{ $creatingService ? 'Leistung wird angelegt …' : 'Leistung anlegen & zuordnen' }}
+                    </x-button>
+
+                    <div class="flex justify-end gap-2">
+                        <x-button color="secondary" outline wire:click="closeAssignment">Abbrechen</x-button>
+                        <x-button wire:click="saveAssignment">Speichern</x-button>
+                    </div>
                 </div>
             </x-slot:footer>
         </x-modal>
