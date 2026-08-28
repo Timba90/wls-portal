@@ -31,3 +31,4 @@ Thumbs.db
 
 # Die Browser-Suite legt bei Fehlschlaegen Bildschirmfotos ab.
 /tests/Browser/Screenshots
+ds-bundle/

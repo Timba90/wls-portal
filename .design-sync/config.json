@@ -1,0 +1,7 @@
+{
+    "shape": "package",
+    "scope": "style-layer-only",
+    "readmeHeader": ".design-sync/conventions.md",
+    "build": "node .design-sync/build-style-layer.mjs",
+    "outDir": "ds-bundle"
+}
