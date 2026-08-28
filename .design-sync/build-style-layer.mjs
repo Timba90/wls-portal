@@ -173,6 +173,16 @@ body {
 `);
 
 /*
+ * Eine Zaehlung fuer alle Ausgaben: die eindeutigen Namen der Custom
+ * Properties in der ausgelieferten Datei. Aus einem einzelnen Block gezaehlt
+ * fehlten Marken- und Schrift-Tokens, und zwei Stellen zaehlten verschieden.
+ */
+const tokenNamen = new Set(
+    (readFileSync(join(AUS, 'tokens', 'tokens.css'), 'utf8').match(/^\s*(--[\w-]+):/gm) || [])
+        .map((zeile) => zeile.trim().replace(':', '')),
+);
+
+/*
  * README: der von Hand gepflegte Konventionstext, davor gesetzt, plus ein
  * erzeugtes Verzeichnis der Dateien. Der Text wird nie überschrieben — er
  * gehört seinen Autoren, das Verzeichnis dem Build.
@@ -189,7 +199,7 @@ writeFileSync(join(AUS, 'README.md'), `${kopf}
 | Datei | Inhalt |
 |---|---|
 | \`styles.css\` | Einstieg. Bindet die drei anderen ein und setzt Grund, Textfarbe und Schrift. |
-| \`tokens/tokens.css\` | ${(dunkel.match(/--/g) || []).length} Tokens für Flächen, Ränder, Text, Akzent und Statuspillen, dazu die Markenfläche. Dunkel als Voreinstellung, hell unter \`.light\`. |
+| \`tokens/tokens.css\` | ${tokenNamen.size} Tokens für Flächen, Ränder, Text, Akzent und Statuspillen, dazu die Markenfläche. Dunkel als Voreinstellung, hell unter \`.light\`. |
 | \`tokens/utilities.css\` | Die Klassensprache als einfaches CSS: Flächen, Ränder, Text, Statuspillen, \`tabular\`. |
 | \`fonts/\` | Source Sans 3 (400/500/600/700) und IBM Plex Mono (400/500/600), selbst gehostet — ${schriftschnitte} Schnitte, ${dateien.length} Dateien. |
 
@@ -199,7 +209,7 @@ Die Komponenten selbst liegen als Blade-Vorlagen im Repo (\`resources/views/comp
 `);
 
 console.log(JSON.stringify({
-    tokens: (ersterRoot.match(/--/g) || []).length,
+    tokens: tokenNamen.size,
     schriftdateien: dateien.length,
     schriftschnitte,
 }, null, 1));
