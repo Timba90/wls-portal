@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8">
+<title>Stilebene — Sichtprüfung</title>
+<!-- Bleibt im Repo, wird nicht hochgeladen: die Seite belegt, dass die
+     Stilebene ohne den Tailwind-Build der Anwendung trägt. -->
+<link rel="stylesheet" href="../ds-bundle/styles.css">
+<style>
+ .seite { padding: 24px; display: grid; gap: 16px; max-width: 760px; font-size: 13px; }
+ .karte { border: 1px solid var(--line-subtle); border-radius: 10px; padding: 16px; }
+ .reihe { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+</style></head>
+<body><div class="seite">
+  <div class="karte bg-panel">
+    <div class="text-ink" style="font-weight:600">Kennzahl auf bg-panel</div>
+    <div class="tabular text-ink" style="font-size:22px">1.234,50 €</div>
+    <div class="text-ink-muted">text-ink-muted · Source Sans 3</div>
+    <div class="text-ink-faint">text-ink-faint</div>
+  </div>
+  <div class="karte bg-raised">
+    <div class="reihe">
+      <span class="pill pill-ok">Aktiv</span>
+      <span class="pill pill-warn">Läuft bald ab</span>
+      <span class="pill pill-bad">Abgelaufen</span>
+      <span class="pill pill-info">Hinweis</span>
+      <span class="pill pill-mute">Ohne Kunde</span>
+    </div>
+  </div>
+  <div class="karte bg-shell"><span class="text-accent" style="font-weight:600">text-accent</span></div>
+</div></body></html>
