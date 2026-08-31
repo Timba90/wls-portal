@@ -31,6 +31,8 @@ trait WithInventoryAssignment
 
     public ?string $assignmentServiceId = null;
 
+    public bool $creatingService = false;
+
     /**
      * Der Datensatz, um den es geht — Domain oder Zertifikat.
      *
