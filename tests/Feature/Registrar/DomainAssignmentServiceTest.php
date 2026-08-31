@@ -8,7 +8,7 @@ use App\Models\CustomerService;
 use App\Models\Domain;
 use App\Models\Product;
 use App\Models\User;
-use Illuminate\Support\Facades\Livewire;
+use Livewire\Livewire;
 
 /**
  * Der Knopf „Leistung anlegen & zuordnen" im Zuordnungsdialog.
