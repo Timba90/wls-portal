@@ -89,9 +89,11 @@ it('öffnet die Formulare der Katalog- und Systemlisten', function (string $pfad
 it('öffnet die Zuordnung aus der Domainliste', function (): void {
     $domain = Domain::factory()->create(['name' => 'beispiel.de']);
 
-    // Die Zuordnung ist die eigentliche Arbeit nach einem Import.
+    // Die Zuordnung ist die eigentliche Arbeit nach einem Import. Gewartet
+    // wird auf den Knopf im Dialog-Fuß — der Hinweistext des
+    // Leistungsfelds scrollt auf kleinen Viewports aus dem Sichtbereich.
     visit('/domains')
         ->click('[wire\\:click="startAssignment('.$domain->id.')"]')
-        ->waitForText('Die Verbindung zur Abrechnung')
+        ->waitForText('Leistung anlegen & zuordnen')
         ->assertNoJavaScriptErrors();
 });

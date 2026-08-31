@@ -3,10 +3,14 @@
 namespace App\Livewire\Concerns;
 
 use App\Actions\Registrar\AssignInventory;
+use App\Actions\Services\CreateCustomerService;
+use App\Enums\BillingIntervalUnit;
+use App\Enums\CustomerServiceStatus;
 use App\Models\Certificate;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Domain;
+use App\Models\Product;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 
@@ -26,6 +30,8 @@ trait WithInventoryAssignment
     public ?string $assignmentCustomerId = null;
 
     public ?string $assignmentServiceId = null;
+
+    public bool $creatingService = false;
 
     /**
      * Der Datensatz, um den es geht — Domain oder Zertifikat.
@@ -81,9 +87,77 @@ trait WithInventoryAssignment
         $this->dispatch('zuordnung-gespeichert');
     }
 
+    /**
+     * Legt eine Domain-Leistung für den gewählten Kunden an und verknüpft
+     * sie sofort mit dem Bestandseintrag.
+     *
+     * Der Preis kommt aus dem Katalogartikel „Domain .<tld>" — der
+     * Jahrespreis wird auf den Monat normalisiert, so führen es die
+     * importierten Bestandsleistungen auch. Fehlt der Artikel, entsteht
+     * die Leistung ohne Preise statt den Vorgang scheitern zu lassen;
+     * sie lässt sich danach in der Leistung pflegen.
+     */
+    public function createServiceAndAssign(AssignInventory $zuordnen): void
+    {
+        if ($this->assigningId === null) {
+            return;
+        }
+
+        $eintrag = $this->inventoryModel()::query()->findOrFail($this->assigningId);
+
+        if (filled($this->assignmentCustomerId) === false) {
+            $this->addError('assignmentCustomerId', 'Ohne Kunde kann keine Leistung angelegt werden.');
+
+            return;
+        }
+
+        $kunde = Customer::query()->findOrFail($this->assignmentCustomerId);
+
+        $artikel = Product::query()
+            ->where('name', 'Domain .'.$this->tld($eintrag->name))
+            ->whereNull('archived_at')
+            ->first();
+
+        // Jahrespreis der TLD auf den Monat rechnen, kaufmännisch gerundet.
+        $jahresartikel = $artikel !== null
+            && $artikel->default_billing_interval_unit === BillingIntervalUnit::Year;
+        $faktor = $jahresartikel ? 12 : 1;
+
+        $leistung = app(CreateCustomerService::class)($kunde, [
+            'product_id' => $artikel?->getKey(),
+            'name' => 'Domain '.$eintrag->name,
+            'billing_label' => 'Domain '.$eintrag->name,
+            'status' => CustomerServiceStatus::Active,
+            'purchase_price' => $artikel !== null
+                ? round($artikel->default_purchase_price_cents / 100 / $faktor, 2)
+                : null,
+            'sales_price' => $artikel !== null
+                ? round($artikel->default_sales_price_cents / 100 / $faktor, 2)
+                : null,
+            'billing_interval_unit' => 'month',
+            'billing_interval_count' => 1,
+        ]);
+
+        $zuordnen($eintrag, $kunde, $leistung);
+
+        $this->closeAssignment();
+        $this->dispatch('zuordnung-gespeichert');
+    }
+
+    /**
+     * Die TLD hinter dem letzten Punkt — für die Suche nach dem
+     * Katalogartikel.
+     */
+    private function tld(string $name): string
+    {
+        $teile = explode('.', strtolower(trim($name)));
+
+        return count($teile) < 2 ? '' : (string) end($teile);
+    }
+
     public function closeAssignment(): void
     {
-        $this->reset('showAssignmentForm', 'assigningId', 'assignmentCustomerId', 'assignmentServiceId');
+        $this->reset('showAssignmentForm', 'assigningId', 'assignmentCustomerId', 'assignmentServiceId', 'creatingService');
         $this->resetErrorBag();
     }
 
