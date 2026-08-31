@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Registrar\AssignInventory;
+use App\Enums\BillingIntervalUnit;
 use App\Livewire\Registrar\DomainList;
 use App\Models\Customer;
 use App\Models\CustomerService;
@@ -30,7 +31,7 @@ it('legt eine monatliche Domain-Leistung zum Katalogpreis an und verknüpft sie'
         'name' => 'Domain .de',
         'default_sales_price_cents' => 1500,
         'default_purchase_price_cents' => 252,
-        'default_billing_interval_unit' => App\Enums\BillingIntervalUnit::Year,
+        'default_billing_interval_unit' => BillingIntervalUnit::Year,
     ]);
 
     /** @var DomainList $komponente */
