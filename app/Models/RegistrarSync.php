@@ -4,8 +4,6 @@ namespace App\Models;
 
 use App\Enums\RegistrarProvider;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Scope;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -29,17 +27,6 @@ use Illuminate\Database\Eloquent\Model;
 ])]
 class RegistrarSync extends Model
 {
-    /**
-     * Der jeweils letzte Lauf je Anbieter.
-     *
-     * @param  Builder<RegistrarSync>  $query
-     */
-    #[Scope]
-    protected function latestPerProvider(Builder $query): void
-    {
-        $query->whereIn('id', static::query()->selectRaw('max(id)')->groupBy('provider'));
-    }
-
     public function isFailed(): bool
     {
         return filled($this->error);

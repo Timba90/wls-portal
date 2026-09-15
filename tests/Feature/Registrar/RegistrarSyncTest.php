@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\Registrar\ImportRegistrarInventory;
 use App\Actions\Registrar\SyncRegistrarInventory;
 use App\Enums\RegistrarProvider;
 use App\Livewire\System\IntegrationSettings;
@@ -85,7 +86,7 @@ it('gleicht ueber den Befehl alle eingerichteten Anbieter ab', function (): void
         'data' => [],
     ]));
 
-    $this->artisan('registrar:sync')->assertSuccessful();
+    $this->artisan('registrar:sync --geplant')->assertSuccessful();
 
     expect(RegistrarSync::query()->sole()->trigger)->toBe('scheduled');
 });
@@ -170,5 +171,59 @@ it('steht im Zeitplan, damit ihn niemand aufrufen muss', function (): void {
         ->first(fn (Event $ereignis): bool => str_contains($ereignis->command ?? '', 'registrar:sync'));
 
     expect($eintrag)->not->toBeNull()
-        ->and($eintrag->expression)->toBe('20 3 * * *');
+        ->and($eintrag->expression)->toBe('20 3 * * *')
+        // Ohne die Kennzeichnung stuende jeder naechtliche Lauf als „von Hand"
+        // im Protokoll.
+        ->and($eintrag->command)->toContain('--geplant');
+});
+
+it('haelt auch einen unerwarteten Fehler fest, statt den Lauf offen zu lassen', function (): void {
+    // Nicht nur die erwartete RegistrarException: ein Datenbankfehler mitten
+    // im Abgleich waere sonst ein Lauf ohne Ende und ohne Meldung.
+    $this->mock(ImportRegistrarInventory::class)
+        ->shouldReceive('__invoke')
+        ->andThrow(new RuntimeException('Tabelle weg'));
+
+    $lauf = app(SyncRegistrarInventory::class)(abgleichClient());
+
+    expect($lauf->isFailed())->toBeTrue()
+        ->and($lauf->error)->toContain('Unerwarteter Fehler')
+        ->and($lauf->error)->toContain('Tabelle weg')
+        ->and($lauf->finished_at)->not->toBeNull();
+});
+
+it('reisst bei einem unerwarteten Fehler die uebrigen Anbieter nicht mit', function (): void {
+    IntegrationCredential::query()->create([
+        'provider' => RegistrarProvider::AutoDns->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+    ]);
+
+    $this->mock(ImportRegistrarInventory::class)
+        ->shouldReceive('__invoke')
+        ->andThrow(new RuntimeException('Tabelle weg'));
+
+    // Der Befehl meldet den Fehlschlag, bricht aber nicht mit einer Ausnahme
+    // ab — sonst blieben nachfolgende Anbieter ungeprueft.
+    $this->artisan('registrar:sync')->assertFailed();
+
+    expect(RegistrarSync::query()->sole()->error)->toContain('Tabelle weg');
+});
+
+it('unterscheidet den Zeitplan von einem Aufruf per Hand', function (): void {
+    IntegrationCredential::query()->create([
+        'provider' => RegistrarProvider::AutoDns->value,
+        'credentials' => ['username' => 'benutzer', 'password' => 'geheim'],
+    ]);
+
+    Http::fake(fn () => Http::response([
+        'stid' => 'x',
+        'status' => ['code' => 'S0301', 'type' => 'SUCCESS', 'text' => 'ok'],
+        'data' => [],
+    ]));
+
+    $this->artisan('registrar:sync')->assertSuccessful();
+    $this->artisan('registrar:sync --geplant')->assertSuccessful();
+
+    expect(RegistrarSync::query()->orderBy('id')->pluck('trigger')->all())
+        ->toBe(['manual', 'scheduled']);
 });

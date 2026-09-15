@@ -10,7 +10,8 @@ use Illuminate\Console\Command;
  * Der taegliche Abgleich (§60).
  *
  * Laeuft ueber alle eingerichteten Anbieter und traegt jeden Versuch ins
- * Protokoll ein. Anders als `registrar:import` fragt er nichts und gibt
+ * Protokoll ein. Der Zeitplan ruft ihn mit `--geplant` auf; ohne die Angabe
+ * gilt der Lauf als von Hand angestossen, denn dann hat ihn jemand getippt. Anders als `registrar:import` fragt er nichts und gibt
  * knapp aus — er ist fuer den Zeitplan gedacht.
  *
  * Ein Fehlschlag bei einem Anbieter haelt die uebrigen nicht auf; der
@@ -18,7 +19,7 @@ use Illuminate\Console\Command;
  */
 class SyncRegistrarInventoryCommand extends Command
 {
-    protected $signature = 'registrar:sync';
+    protected $signature = 'registrar:sync {--geplant : Kennzeichnet den Lauf im Protokoll als planmäßig}';
 
     protected $description = 'Gleicht den Domainbestand aller eingerichteten Anbieter ab';
 
@@ -35,7 +36,7 @@ class SyncRegistrarInventoryCommand extends Command
         $fehler = false;
 
         foreach ($anschluesse as $client) {
-            $lauf = $sync($client, trigger: 'scheduled');
+            $lauf = $sync($client, trigger: $this->option('geplant') ? 'scheduled' : 'manual');
 
             if ($lauf->isFailed()) {
                 $fehler = true;

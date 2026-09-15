@@ -17,7 +17,7 @@ Schedule::command('preise:faellige-anwenden')
  * der naechste planmaessige Lauf ist frueh genug. Das Protokoll haelt ihn
  * fest; sichtbar wird er unter „Schnittstellen".
  */
-Schedule::command('registrar:sync')
+Schedule::command('registrar:sync --geplant')
     ->dailyAt('03:20')
     ->timezone(config('app.timezone'))
     ->onOneServer()

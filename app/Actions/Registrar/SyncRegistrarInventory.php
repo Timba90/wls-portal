@@ -6,6 +6,7 @@ use App\Models\RegistrarSync;
 use App\Support\Registrar\RegistrarClient;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Support\Facades\Log;
+use Throwable;
 
 /**
  * Ein Bestandsabgleich mit Protokoll.
@@ -38,15 +39,25 @@ class SyncRegistrarInventory
 
         try {
             $ergebnis = ($this->import)($client);
-        } catch (RegistrarException $ausnahme) {
+        } catch (Throwable $ausnahme) {
+            // Bewusst `Throwable` und nicht nur `RegistrarException`: ein
+            // Datenbankfehler mitten im Abgleich waere sonst ein Lauf ohne
+            // Ende und ohne Meldung — und wuerde die uebrigen Anbieter
+            // mitreissen. Genau das soll dieses Protokoll verhindern.
+            $meldung = $ausnahme instanceof RegistrarException
+                ? $ausnahme->getMessage()
+                : sprintf('Unerwarteter Fehler: %s', $ausnahme->getMessage());
+
             $lauf->forceFill([
                 'finished_at' => now(),
-                'error' => $ausnahme->getMessage(),
+                'error' => $meldung,
             ])->save();
 
             Log::warning('Bestandsabgleich fehlgeschlagen', [
                 'anbieter' => $client->provider()->value,
-                'meldung' => $ausnahme->getMessage(),
+                'meldung' => $meldung,
+                // Bei einem unerwarteten Fehler ist die Spur das Wichtigste.
+                'ausnahme' => $ausnahme instanceof RegistrarException ? null : $ausnahme,
             ]);
 
             return $lauf;
