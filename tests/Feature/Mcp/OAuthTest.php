@@ -189,3 +189,17 @@ it('haelt die Zustimmung hinter der Anmeldung, den Token-Endpunkt aber offen', f
 
     expect($middleware->filter(fn (string $eintrag): bool => str_starts_with($eintrag, 'auth')))->not->toBeEmpty();
 });
+
+it('beantwortet die Auffinde-Dokumente auch mit Pfadteil', function (): void {
+    // RFC 8414 erlaubt `/.well-known/oauth-authorization-server/<pfad>`. Beim
+    // geschuetzten Bestand gehoert der Pfad in die Antwort, beim
+    // Autorisierungsserver aendert er nichts — beides muss antworten, statt
+    // an der Signatur des Closures zu scheitern.
+    $this->getJson('/.well-known/oauth-authorization-server/'.config('portal.mcp.path'))
+        ->assertOk()
+        ->assertJsonPath('token_endpoint', route('passport.token'));
+
+    $this->getJson('/.well-known/oauth-protected-resource/'.config('portal.mcp.path'))
+        ->assertOk()
+        ->assertJsonPath('resource', url('/'.config('portal.mcp.path')));
+});

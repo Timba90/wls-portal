@@ -24,8 +24,9 @@ use Laravel\Mcp\Server\Registrar;
 |   verbindet sich dann selbst und bekommt vom Benutzer die Zustimmung —
 |   widerrufbar, zeitlich begrenzt und auf `mcp:use` beschraenkt.
 |
-| Beide sind gleichzeitig zulaessig; `auth:api,sanctum` probiert sie der Reihe
-| nach.
+| Beide sind gleichzeitig zulaessig. Die Reihenfolge in `auth:sanctum,api` ist
+| dabei keine Geschmacksfrage: andersherum beantwortet der OAuth-Guard den
+| Versuch als erster, und ein persoenliches Token laeuft ins Leere.
 |
 */
 
@@ -59,7 +60,11 @@ if (config('portal.mcp.enabled')) {
         ]);
     })->where('pfad', '.*')->name('mcp.oauth.protected-resource');
 
-    Route::get('/.well-known/oauth-authorization-server/{pfad?}', function () {
+    Route::get('/.well-known/oauth-authorization-server/{pfad?}', function (?string $pfad = null) {
+        // Der Pfadteil steht in RFC 8414, aendert hier aber nichts: derselbe
+        // Server, dieselben Endpunkte. Der Parameter wird nur angenommen,
+        // damit die Absicht sichtbar ist.
+
         return response()->json([
             'issuer' => url('/'),
             'authorization_endpoint' => route('passport.authorizations.authorize'),
