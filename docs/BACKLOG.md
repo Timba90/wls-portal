@@ -93,6 +93,7 @@ vortäuschen würde, die keine Daten haben.
 | Geltungsbereich nur für OAuth geprüft | `EnsureMcpScope` verlangt `mcp:use` ausschließlich von einem OAuth-Token. Ein persönliches Token kennt keine Geltungsbereiche; es dort abzuweisen hieße, den ersten Weg zu schließen. |
 | Zustimmungsseite | In der Gestaltung der Anwendung statt in Passports Vorlage: deutsch, dunkel, und sie sagt, was der Zugriff bedeutet — mit den Rechten des Benutzers, sichtbar in der Änderungshistorie, jederzeit widerrufbar. |
 | Signierschlüssel | Unter `storage/` und von `.gitignore` erfasst (`/storage/*.key`); alternativ aus `PASSPORT_PRIVATE_KEY`/`PASSPORT_PUBLIC_KEY`. Kein Geheimnis im Repository. |
+| Genau das ließ die CI scheitern | Lokal lagen die Schlüssel, in der CI nicht — neun Tests brachen mit „Invalid key supplied" ab, auch der Browser-Test der Zustimmungsseite. Gelöst in `TestCase::setUp()` statt in der CI-Konfiguration: fehlen die Schlüssel, legt sie der erste Test des Laufs an. Damit läuft auch ein frisch geklontes Repo ohne zusätzlichen Handgriff. Nachgestellt durch Löschen der Schlüssel, danach volle Suite und Browser-Suite aus dem leeren Zustand. |
 
 ### Domains und Zertifikate
 
