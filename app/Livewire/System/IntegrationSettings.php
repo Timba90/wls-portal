@@ -4,6 +4,7 @@ namespace App\Livewire\System;
 
 use App\Enums\RegistrarProvider;
 use App\Models\IntegrationCredential;
+use App\Models\RegistrarSync;
 use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
@@ -118,6 +119,21 @@ class IntegrationSettings extends Component
                 .'sperren das Konto — nach einem Fehlschlag erst klären, dann erneut versuchen.',
             default => null,
         };
+    }
+
+    /**
+     * Der letzte Bestandsabgleich dieses Anbieters.
+     *
+     * Ein Abgleich, der nachts still scheitert, sieht am naechsten Morgen aus
+     * wie ein Bestand ohne Aenderungen. Deshalb steht er hier, wo auch der
+     * Zugang gepflegt wird.
+     */
+    public function lastSync(RegistrarProvider $provider): ?RegistrarSync
+    {
+        return RegistrarSync::query()
+            ->where('provider', $provider->value)
+            ->latest('started_at')
+            ->first();
     }
 
     public function lastChange(RegistrarProvider $provider): ?IntegrationCredential

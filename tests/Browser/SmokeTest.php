@@ -1,5 +1,7 @@
 <?php
 
+use App\Enums\RegistrarProvider;
+use App\Models\RegistrarSync;
 use App\Models\User;
 use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\ClientRepository;
@@ -71,5 +73,23 @@ it('zeigt die Zustimmungsseite von OAuth ohne Fehler', function (): void {
         ->assertSee('Zugriff erlauben?')
         ->assertSee('Claude')
         ->assertSee('Erlauben')
+        ->assertNoJavaScriptErrors();
+});
+
+it('zeigt einen fehlgeschlagenen Abgleich unter Schnittstellen', function (): void {
+    RegistrarSync::query()->create([
+        'provider' => RegistrarProvider::AutoDns->value,
+        'trigger' => 'scheduled',
+        'started_at' => now()->subHours(6),
+        'finished_at' => now()->subHours(6),
+        'error' => 'autoDNS meldet zu domain/_search: Authorization failed (EF01001)',
+    ]);
+
+    $this->actingAs(User::factory()->create());
+
+    // Der Kasten ist rot eingefärbt und steht sonst in keinem Rundgang.
+    visit('/schnittstellen')
+        ->assertSee('Letzter Abgleich fehlgeschlagen')
+        ->assertSee('Authorization failed')
         ->assertNoJavaScriptErrors();
 });

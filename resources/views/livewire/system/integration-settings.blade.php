@@ -17,6 +17,7 @@
                     // bei dem einen sind es Zugangsdaten, beim anderen eine
                     // aufrufbare Brücke.
                     $bereit = $this->isReady($anbieter);
+                    $abgleich = $this->lastSync($anbieter);
                 @endphp
 
                 <x-card wire:key="anbieter-{{ $anbieter->value }}">
@@ -49,6 +50,30 @@
                             </div>
                         @endforeach
                     </div>
+
+                    @if ($abgleich)
+                        {{-- Der letzte Lauf, im Guten wie im Schlechten. --}}
+                        <div @class([
+                            'mt-4 rounded-[8px] border px-3 py-2.5 text-[12.5px] leading-relaxed',
+                            'border-[color:var(--pill-bad-line)] bg-[color:var(--pill-bad-bg)] text-[color:var(--pill-bad-ink)]' => $abgleich->isFailed(),
+                            'border-line bg-raised text-ink-muted' => ! $abgleich->isFailed(),
+                        ])>
+                            <span class="font-medium">
+                                {{ $abgleich->isFailed() ? 'Letzter Abgleich fehlgeschlagen' : 'Zuletzt abgeglichen' }}
+                            </span>
+                            am {{ $abgleich->started_at->format('d.m.Y H:i') }}
+                            ({{ $abgleich->trigger === 'scheduled' ? 'planmäßig' : 'von Hand' }})
+
+                            @if ($abgleich->isFailed())
+                                <span class="mt-1 block">{{ $abgleich->error }}</span>
+                            @else
+                                —
+                                {{ $abgleich->domains_new + $abgleich->certificates_new }} neu,
+                                {{ $abgleich->domains_updated + $abgleich->certificates_updated }} geändert@if ($abgleich->skipped > 0),
+                                    {{ $abgleich->skipped }} übergangen@endif.
+                            @endif
+                        </div>
+                    @endif
 
                     <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3">
                         <span class="text-[11px] text-ink-faint">
