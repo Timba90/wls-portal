@@ -7,9 +7,12 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
+use Laravel\Passport\Client;
+use Laravel\Passport\Passport;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password'])]
@@ -18,6 +21,24 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable, TwoFactorAuthenticatable;
+
+    /**
+     * OAuth-Clients, die diesem Benutzer gehoeren.
+     *
+     * Passports eigenes Trait laesst sich nicht dazunehmen: es deklariert
+     * dieselbe Eigenschaft `$accessToken` wie Sanctum, und Eigenschaften
+     * lassen sich in einer Trait-Zusammensetzung nicht aufloesen. Gebraucht
+     * wird davon ohnehin nur diese Beziehung — `passport:client` legt damit
+     * einen Client mit Eigentuemer an. Alles Weitere erledigt Sanctums Trait
+     * mit: `withAccessToken()` setzt auch ein OAuth-Token, und
+     * `currentAccessToken()` gibt es zurueck.
+     *
+     * @return MorphMany<Client, $this>
+     */
+    public function oauthApps(): MorphMany
+    {
+        return $this->morphMany(Passport::clientModel(), 'owner');
+    }
 
     /**
      * Aktive Sitzungen dieses Benutzers.
