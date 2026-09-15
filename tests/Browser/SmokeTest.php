@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use Laravel\Mcp\Server\Registrar;
+use Laravel\Passport\ClientRepository;
 
 /**
  * Rundgang durch die Anwendung im echten Browser.
@@ -41,5 +43,33 @@ it('lädt jede Seite ohne Fehler in der Konsole', function (): void {
 it('zeigt die Anmeldeseite ohne Fehler', function (): void {
     visit('/login')
         ->assertSee('weblab studio')
+        ->assertNoJavaScriptErrors();
+});
+
+it('zeigt die Zustimmungsseite von OAuth ohne Fehler', function (): void {
+    $benutzer = User::factory()->create();
+
+    $client = app(ClientRepository::class)->createAuthorizationCodeGrantClient(
+        'Claude',
+        ['https://client.test/rueckruf'],
+        confidential: false,
+    );
+
+    $this->actingAs($benutzer);
+
+    // Die Seite steht im Layout der Anmeldung und wird sonst von keinem
+    // Rundgang berührt.
+    visit('/oauth/authorize?'.http_build_query([
+        'client_id' => $client->getKey(),
+        'redirect_uri' => 'https://client.test/rueckruf',
+        'response_type' => 'code',
+        'scope' => Registrar::OAUTH_SCOPE,
+        'state' => 'zustand',
+        'code_challenge' => str_repeat('a', 43),
+        'code_challenge_method' => 'S256',
+    ]))
+        ->assertSee('Zugriff erlauben?')
+        ->assertSee('Claude')
+        ->assertSee('Erlauben')
         ->assertNoJavaScriptErrors();
 });

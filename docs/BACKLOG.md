@@ -80,6 +80,20 @@ vortäuschen würde, die keine Daten haben.
 | Voreingestellte Spalten der Leistungsübersicht | Sieben statt dreizehn: Kunde, Leistung, Turnus, Verkauf, Monatswert, Status, Abrechnung. Katalogartikel, Kategorie, Einkauf, Marge, Verantwortlich und Leistungsbeginn bleiben zuschaltbar. Die Abrechnungsspalte bleibt voreingestellt, weil sie erklärt, warum eine Leistung *nicht* in den Kennzahlen steht. |
 | Zähler der Kategorienleiste | Zeigen, was der Klick tatsächlich einlöst — also Artikel mit dieser Kategorie **oder** Unterkategorie, unter Berücksichtigung von Suche, Status und Tag. Kein Aufsummieren der Unterkategorien: ein Artikel dort trägt immer auch die Oberkategorie und würde doppelt zählen. |
 
+### MCP-Zugang
+
+| Element | Umsetzung |
+|---|---|
+| Zwei Wege hinein | Persönliche Tokens (Sanctum, `portal:mcp-token`) und OAuth nebeneinander. Die Tokens sind schnell eingerichtet und tragen die vollen Rechte ihres Benutzers; OAuth ist widerrufbar, zeitlich begrenzt und auf `mcp:use` beschränkt. Auf Ansage bleiben beide. |
+| Die Reihenfolge der Guards ist keine Geschmacksfrage | `auth:api,sanctum` ließ persönliche Tokens ins Leere laufen — der OAuth-Guard beantwortet den Versuch als erster und die Kette bricht ab. Mit `auth:sanctum,api` funktionieren beide. Gefunden von den bestehenden MCP-Tests, festgehalten von einem eigenen. |
+| Passports Trait ließ sich nicht dazunehmen | Es deklariert dieselbe Eigenschaft `$accessToken` wie Sanctums Trait, und Eigenschaften lassen sich in einer Trait-Zusammensetzung nicht auflösen — anders als Methoden. Gebraucht wird davon ohnehin nur `oauthApps()`; die steht jetzt von Hand am Modell. `withAccessToken()` und `currentAccessToken()` aus Sanctums Trait bedienen beide Tokenarten. |
+| Keine Selbstregistrierung von Clients | `Mcp::oauthRoutes()` hängt `POST /oauth/register` an, die offene Registrierung nach RFC 7591. Sie wäre die einzige Ausnahme von der Regel, dass außer Anmeldung und Passwort-Rücksetzung nichts offen ist. Die beiden Auffinde-Dokumente sind deshalb von Hand geschrieben, ohne `registration_endpoint` — das Feld ist in RFC 8414 freigestellt, und ein Client, der es nicht findet, fragt nach Zugangsdaten. Clients legt `php artisan passport:client` an. |
+| Device-Grant abgeschaltet | Sein Endpunkt `oauth/device/code` wäre ebenfalls ohne Anmeldung erreichbar, und gebraucht wird er nicht. Der Schalter steht in `register()`, nicht in `boot()`: Passport legt seine Routen beim Booten an, dort wäre er zu spät. |
+| Drei benannte Ausnahmen beim Routen-Wächter | Der Test, der jede Seite gegen Gäste prüft, hat die neuen Routen sofort gefunden. Eingetragen sind genau drei: die beiden Auffinde-Dokumente (enthalten nur ohnehin bekannte Adressen) und `oauth/authorize` — das schickt einen Gast bei gültiger Anfrage zur Anmeldung, antwortet ohne Pflichtangaben aber vorher mit 400. |
+| Geltungsbereich nur für OAuth geprüft | `EnsureMcpScope` verlangt `mcp:use` ausschließlich von einem OAuth-Token. Ein persönliches Token kennt keine Geltungsbereiche; es dort abzuweisen hieße, den ersten Weg zu schließen. |
+| Zustimmungsseite | In der Gestaltung der Anwendung statt in Passports Vorlage: deutsch, dunkel, und sie sagt, was der Zugriff bedeutet — mit den Rechten des Benutzers, sichtbar in der Änderungshistorie, jederzeit widerrufbar. |
+| Signierschlüssel | Unter `storage/` und von `.gitignore` erfasst (`/storage/*.key`); alternativ aus `PASSPORT_PRIVATE_KEY`/`PASSPORT_PUBLIC_KEY`. Kein Geheimnis im Repository. |
+
 ### Domains und Zertifikate
 
 | Element | Umsetzung |

@@ -87,6 +87,34 @@ return [
 
         'token_expiration_days' => (int) env('MCP_TOKEN_EXPIRATION_DAYS', 90),
 
+        /*
+        |----------------------------------------------------------------------
+        | OAuth
+        |----------------------------------------------------------------------
+        |
+        | Der zweite Weg in den Server, neben den persoenlichen Tokens: ein
+        | Client verbindet sich selbst und handelt danach im Namen des
+        | Benutzers, der zugestimmt hat.
+        |
+        | Clients werden von Hand angelegt (`php artisan passport:client`).
+        | Eine offene Selbstregistrierung gibt es bewusst nicht — alle Seiten
+        | ausser Anmeldung und Passwort-Ruecksetzung sind authentifizierungs-
+        | pflichtig, und ein offener Endpunkt waere die Ausnahme davon.
+        |
+        */
+
+        'oauth' => [
+
+            // Wie lange ein Zugriffstoken gilt. Kurz gehalten: der Client holt
+            // sich mit dem Refresh-Token ein neues.
+            'access_token_minutes' => (int) env('MCP_OAUTH_ACCESS_TOKEN_MINUTES', 60),
+
+            // Wie lange ein Refresh-Token gilt — danach ist eine erneute
+            // Zustimmung noetig.
+            'refresh_token_days' => (int) env('MCP_OAUTH_REFRESH_TOKEN_DAYS', 90),
+
+        ],
+
     ],
 
 ];

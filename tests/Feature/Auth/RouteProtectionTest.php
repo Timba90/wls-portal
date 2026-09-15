@@ -21,6 +21,27 @@ const OEFFENTLICHE_SEITEN = [
 
     // Der MCP-Zugang authentifiziert über ein Token, nicht über die Sitzung.
     'mcp/portal',
+
+    /*
+     * OAuth für den MCP-Server. Drei Endpunkte müssen ohne Anmeldung
+     * erreichbar sein, weil das Protokoll es so vorsieht — und nur diese drei:
+     *
+     * Die beiden Auffinde-Dokumente holt ein Client, bevor er irgendein Token
+     * hat; genau das ist ihr Zweck. Sie enthalten ausschließlich Adressen, die
+     * ohnehin bekannt sind — kein Bestand, keine Namen, keine Geheimnisse.
+     *
+     * `oauth/authorize` ist der Zustimmungsschritt und schickt einen Gast bei
+     * einer gültigen Anfrage zur Anmeldung. Ohne Pflichtangaben antwortet
+     * Passport vorher mit 400, weil es die Anfrage prüft, bevor es nach dem
+     * Benutzer fragt; deshalb steht die Route hier statt beim Wächter.
+     *
+     * Was hier bewusst NICHT steht: eine offene Selbstregistrierung von
+     * Clients (RFC 7591) und der Device-Grant. Beide sind abgeschaltet, und
+     * `tests/Feature/Mcp/OAuthTest.php` hält das fest.
+     */
+    '.well-known/oauth-protected-resource/{pfad?}',
+    '.well-known/oauth-authorization-server/{pfad?}',
+    'oauth/authorize',
 ];
 
 /**

@@ -42,6 +42,16 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+
+        /*
+         * Zugriffstoken aus dem OAuth-Fluss des MCP-Servers. Die persoenlichen
+         * Tokens laufen weiter ueber Sanctum; die Route des Servers nimmt
+         * beides an.
+         */
+        'api' => [
+            'driver' => 'passport',
+            'provider' => 'users',
+        ],
     ],
 
     /*

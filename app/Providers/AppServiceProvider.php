@@ -17,12 +17,22 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Laravel\Mcp\Server\Registrar;
+use Laravel\Passport\Passport;
 use TallStackUi\Facades\TallStackUi;
 
 class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        /*
+         * Der Device-Grant wird nicht genutzt, und sein Endpunkt
+         * `oauth/device/code` waere ohne Anmeldung erreichbar. Der Schalter
+         * steht hier und nicht in boot(): Passport legt seine Routen beim
+         * Booten an, und dort waere er zu spaet.
+         */
+        Passport::$deviceCodeGrantEnabled = false;
+
         //
     }
 
@@ -34,8 +44,41 @@ class AppServiceProvider extends ServiceProvider
         $this->configureNavigationCounts();
         $this->configureFormFieldPaddings();
         $this->configureProgressTrack();
+        $this->configureOAuth();
 
         Date::use(Carbon::class);
+    }
+
+    /**
+     * OAuth fuer den MCP-Server.
+     *
+     * Bewusst eng gefasst: nur der Autorisierungscode-Fluss mit PKCE, ein
+     * einziger Geltungsbereich, keine Selbstregistrierung von Clients und
+     * kein Device-Grant. Dessen Endpunkt `oauth/device/code` waere ohne
+     * Anmeldung erreichbar, und das Portal hat ausser Anmeldung und
+     * Passwort-Ruecksetzung keine offenen Seiten.
+     */
+    private function configureOAuth(): void
+    {
+        Passport::tokensCan([
+            Registrar::OAUTH_SCOPE => 'Zugriff auf den MCP-Server im eigenen Namen',
+        ]);
+
+        // Das Geheimnis eines Clients hasht Passport von sich aus; im Klartext
+        // ist es nur beim Anlegen zu sehen.
+
+        // Die Zustimmungsseite in der Gestaltung der Anwendung: deutsch, dunkel
+        // und mit dem, was der Zugriff bedeutet, statt nur dem Namen des
+        // Geltungsbereichs.
+        Passport::authorizationView('oauth.authorize');
+
+        Passport::tokensExpireIn(
+            now()->addMinutes(config('portal.mcp.oauth.access_token_minutes')),
+        );
+
+        Passport::refreshTokensExpireIn(
+            now()->addDays(config('portal.mcp.oauth.refresh_token_days')),
+        );
     }
 
     /**
