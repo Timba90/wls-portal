@@ -42,6 +42,16 @@ class ResolveClientFromMetadataDocument
 
         $bekannt = OauthClientDocument::query()->where('url', $clientId)->first();
 
+        /*
+         * Ein von Hand widerrufener Client bleibt widerrufen. Ohne diese
+         * Pruefung wuerde ihn das naechste Holen des Dokuments wieder
+         * freischalten — der Widerruf haette dann eine Halbwertszeit von
+         * einem Tag.
+         */
+        if ($bekannt?->client?->revoked === true) {
+            return null;
+        }
+
         if ($bekannt !== null && $bekannt->isFresh()) {
             return $bekannt->client;
         }
@@ -79,8 +89,10 @@ class ResolveClientFromMetadataDocument
                 'provider' => null,
                 'redirect_uris' => $dokument['redirect_uris'],
                 'grant_types' => $dokument['grant_types'],
-                'revoked' => false,
-            ]);
+                // `revoked` steht hier bewusst nicht: beim Anlegen setzt es
+                // die Vorgabe unten, beim Aktualisieren bliebe es sonst nie
+                // bestehen.
+            ] + ($neu ? ['revoked' => false] : []));
 
             $minuten = (int) config('portal.mcp.oauth.client_documents.cache_minutes');
 

@@ -15,9 +15,12 @@ namespace App\Support\Oauth;
 class PublicHostGuard
 {
     /**
+     * @return list<string> die geprueften Adressen, an die die Anfrage
+     *                      danach gebunden wird
+     *
      * @throws ClientIdMetadataException
      */
-    public function assertPublic(string $host): void
+    public function assertPublic(string $host): array
     {
         $adressen = $this->resolve($host);
 
@@ -34,6 +37,8 @@ class PublicHostGuard
                 );
             }
         }
+
+        return $adressen;
     }
 
     /**

@@ -20,6 +20,14 @@ use Laravel\Passport\Client;
 class OauthClientDocument extends Model
 {
     /**
+     * Dieselbe Verbindung wie die Tabellen von Passport.
+     */
+    public function getConnectionName(): ?string
+    {
+        return $this->connection ?? config('passport.connection');
+    }
+
+    /**
      * @return BelongsTo<Client, $this>
      */
     public function client(): BelongsTo

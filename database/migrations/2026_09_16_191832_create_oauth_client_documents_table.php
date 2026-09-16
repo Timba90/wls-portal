@@ -31,4 +31,14 @@ return new class extends Migration
     {
         Schema::dropIfExists('oauth_client_documents');
     }
+
+    /**
+     * Dieselbe Verbindung wie die Tabellen von Passport: die Zeilen hier
+     * zeigen auf `oauth_clients`, und getrennte Verbindungen wuerden diese
+     * Verbindung zerreissen.
+     */
+    public function getConnection(): ?string
+    {
+        return $this->connection ?? config('passport.connection');
+    }
 };

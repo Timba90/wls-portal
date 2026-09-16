@@ -3,6 +3,7 @@
 namespace App\Support\Oauth;
 
 use Illuminate\Support\Facades\Http;
+use Psr\Http\Message\StreamInterface;
 use Throwable;
 
 /**
@@ -30,9 +31,9 @@ class ClientIdMetadataFetcher
      */
     public function fetch(string $clientId): array
     {
-        $this->assertUsableUrl($clientId);
+        $adressen = $this->assertUsableUrlAndResolve($clientId);
 
-        $antwort = $this->request($clientId);
+        $antwort = $this->request($clientId, $adressen);
 
         return $this->assertUsableDocument($clientId, $antwort);
     }
@@ -49,9 +50,11 @@ class ClientIdMetadataFetcher
     }
 
     /**
+     * @return list<string>
+     *
      * @throws ClientIdMetadataException
      */
-    private function assertUsableUrl(string $clientId): void
+    private function assertUsableUrlAndResolve(string $clientId): array
     {
         $teile = parse_url($clientId);
 
@@ -75,8 +78,19 @@ class ClientIdMetadataFetcher
 
         $host = $teile['host'] ?? '';
 
+        /*
+         * Eine Zusicherung, kein erreichbarer Fall: `parse_url` gibt bei
+         * jeder Adresse ohne Host `false` zurueck, und das faengt die Pruefung
+         * oben schon ab. Sie steht hier, damit die Annahme „ab hier gibt es
+         * einen Host" nicht stillschweigend gilt.
+         */
+        if ($host === '') {
+            throw new ClientIdMetadataException('Eine Client-Kennung braucht einen Hostnamen.');
+        }
+
         $this->assertAllowedHost($host);
-        $this->hostGuard->assertPublic($host);
+
+        return $this->hostGuard->assertPublic($host);
     }
 
     /**
@@ -110,9 +124,11 @@ class ClientIdMetadataFetcher
     }
 
     /**
+     * @param  list<string>  $adressen
+     *
      * @throws ClientIdMetadataException
      */
-    private function request(string $clientId): string
+    private function request(string $clientId, array $adressen): string
     {
         $grenze = (int) config('portal.mcp.oauth.client_documents.max_bytes');
 
@@ -122,6 +138,12 @@ class ClientIdMetadataFetcher
                 // gefolgt werden: sonst entschiede der Client nach der
                 // Host-Pruefung noch einmal neu, wo wir hinfassen.
                 'allow_redirects' => false,
+
+                // Nicht die ganze Antwort in den Speicher: wir lesen unten
+                // nur so viel, wie erlaubt ist.
+                'stream' => true,
+
+                'curl' => $this->pinTo($clientId, $adressen),
             ])
                 ->timeout((int) config('portal.mcp.oauth.client_documents.timeout'))
                 ->accept('application/json')
@@ -139,7 +161,53 @@ class ClientIdMetadataFetcher
             );
         }
 
-        $koerper = $antwort->body();
+        return $this->read($antwort->toPsrResponse()->getBody(), $grenze);
+    }
+
+    /**
+     * Bindet die Anfrage an die Adressen, die wir eben geprueft haben.
+     *
+     * Sonst bliebe zwischen Pruefung und Abruf eine Luecke: wer den
+     * Namensdienst fuer einen erlaubten Host kontrolliert, koennte in genau
+     * diesem Moment auf eine interne Adresse umschwenken und unsere Pruefung
+     * ins Leere laufen lassen.
+     *
+     * @param  list<string>  $adressen
+     * @return array<int, mixed>
+     */
+    private function pinTo(string $clientId, array $adressen): array
+    {
+        if ($adressen === [] || ! defined('CURLOPT_RESOLVE')) {
+            return [];
+        }
+
+        $host = (string) parse_url($clientId, PHP_URL_HOST);
+        $port = parse_url($clientId, PHP_URL_PORT) ?? 443;
+
+        return [
+            CURLOPT_RESOLVE => [sprintf('%s:%d:%s', $host, $port, implode(',', $adressen))],
+        ];
+    }
+
+    /**
+     * Liest hoechstens eine Byte-Grenze weit und bricht ab, sobald klar ist,
+     * dass mehr kommt.
+     *
+     * @throws ClientIdMetadataException
+     */
+    private function read(StreamInterface $strom, int $grenze): string
+    {
+        $koerper = '';
+
+        while (! $strom->eof() && strlen($koerper) <= $grenze) {
+            $stueck = $strom->read($grenze + 1 - strlen($koerper));
+
+            if ($stueck === '') {
+                break;
+            }
+
+            $koerper .= $stueck;
+        }
 
         if (strlen($koerper) > $grenze) {
             throw new ClientIdMetadataException(

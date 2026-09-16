@@ -187,6 +187,25 @@ it('weist ein zu großes Dokument ab', function (): void {
     expect(app(ResolveClientFromMetadataDocument::class)(KENNUNG))->toBeNull();
 });
 
+it('schaltet einen widerrufenen Client nicht wieder frei', function (): void {
+    $stoerung = false;
+    Http::fake(function () use (&$stoerung) {
+        return $stoerung ? Http::response('', 503) : Http::response(dokument());
+    });
+
+    $client = app(ResolveClientFromMetadataDocument::class)(KENNUNG);
+
+    // Von Hand widerrufen, etwa weil der Client auffällig geworden ist.
+    $client->forceFill(['revoked' => true])->save();
+
+    OauthClientDocument::query()->update(['refresh_after' => now()->subMinute()]);
+
+    // Ohne die Prüfung hätte der Widerruf eine Halbwertszeit von einem Tag:
+    // das nächste Holen des Dokuments würde ihn aufheben.
+    expect(app(ResolveClientFromMetadataDocument::class)(KENNUNG))->toBeNull()
+        ->and($client->fresh()->revoked)->toBeTrue();
+});
+
 it('weist Kennungen ohne Pfad ab', function (): void {
     Http::fake();
 
