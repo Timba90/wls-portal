@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\RegistrarProvider;
+use App\Models\Domain;
 use App\Models\RegistrarSync;
 use App\Models\User;
 use Laravel\Mcp\Server\Registrar;
@@ -32,6 +33,8 @@ it('lädt jede Seite ohne Fehler in der Konsole', function (): void {
         '/artikel',
         '/artikel/neu',
         '/artikel/kategorien',
+        '/domains',
+        '/zertifikate',
         '/archiv',
         '/benutzer',
         '/felder',
@@ -91,5 +94,20 @@ it('zeigt einen fehlgeschlagenen Abgleich unter Schnittstellen', function (): vo
     visit('/schnittstellen')
         ->assertSee('Letzter Abgleich fehlgeschlagen')
         ->assertSee('Authorization failed')
+        ->assertNoJavaScriptErrors();
+});
+
+it('wechselt auf der Domainseite zwischen den Bereichen', function (): void {
+    $this->actingAs(User::factory()->create());
+
+    $domain = Domain::factory()->create(['name' => 'rundgang.de']);
+
+    visit("/domains/{$domain->id}")
+        ->assertSee('rundgang.de')
+        ->assertSee('Technischer Stand')
+        ->click('Dokumente')
+        ->waitForText('Noch keine Dokumente')
+        ->click('Verlauf')
+        ->waitForText('Änderungen an dieser Domain')
         ->assertNoJavaScriptErrors();
 });

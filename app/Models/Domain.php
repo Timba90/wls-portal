@@ -4,6 +4,9 @@ namespace App\Models;
 
 use App\Enums\RegistrarProvider;
 use App\Models\Concerns\Auditable;
+use App\Models\Concerns\HasCustomFields;
+use App\Models\Concerns\HasDocuments;
+use App\Models\Concerns\HasNotes;
 use Carbon\CarbonInterface;
 use Database\Factories\DomainFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -35,7 +38,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Domain extends Model
 {
     /** @use HasFactory<DomainFactory> */
-    use Auditable, HasFactory;
+    use Auditable, HasCustomFields, HasDocuments, HasFactory, HasNotes;
 
     /**
      * @return BelongsTo<Customer, $this>
