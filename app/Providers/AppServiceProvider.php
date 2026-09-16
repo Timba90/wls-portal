@@ -9,6 +9,7 @@ use App\Models\CustomerService;
 use App\Models\Domain;
 use App\Models\Product;
 use App\Models\Project;
+use App\Passport\ClientIdMetadataClientRepository;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -18,6 +19,7 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Laravel\Mcp\Server\Registrar;
+use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
 use TallStackUi\Facades\TallStackUi;
 
@@ -33,7 +35,13 @@ class AppServiceProvider extends ServiceProvider
          */
         Passport::$deviceCodeGrantEnabled = false;
 
-        //
+        /*
+         * Clients duerfen sich ueber ein Metadatendokument ausweisen. Passport
+         * loest seine Bridge aus dem Container auf, deshalb reicht es, hier
+         * eine erweiterte Fassung einzutragen — der Rest von Passport bleibt
+         * unberuehrt.
+         */
+        $this->app->bind(ClientRepository::class, ClientIdMetadataClientRepository::class);
     }
 
     public function boot(): void
