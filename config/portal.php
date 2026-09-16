@@ -109,6 +109,49 @@ return [
             // sich mit dem Refresh-Token ein neues.
             'access_token_minutes' => (int) env('MCP_OAUTH_ACCESS_TOKEN_MINUTES', 60),
 
+            /*
+            |------------------------------------------------------------------
+            | Client-ID-Metadatendokumente
+            |------------------------------------------------------------------
+            |
+            | Der dritte Weg, einen Client bekannt zu machen — neben „von Hand
+            | anlegen“ und der offenen Selbstregistrierung, die es hier nicht
+            | gibt. Der Client schickt als Kennung eine HTTPS-Adresse, unter
+            | der er beschreibt, wer er ist und wohin zurückgeleitet werden
+            | soll. Er weist sich also dadurch aus, dass er eine Adresse
+            | kontrolliert. ChatGPT verbindet sich so.
+            |
+            | `allowed_hosts` begrenzt, wessen Dokumente wir überhaupt holen.
+            | Leer hieße: jeder im Netz darf bei uns einen Zustimmungsdialog
+            | auslösen. Zustimmen müsste weiterhin ein angemeldeter Benutzer —
+            | aber ein Dialog, den niemand zu sehen bekommt, kann auch
+            | niemanden täuschen.
+            |
+            */
+
+            'client_documents' => [
+
+                'enabled' => (bool) env('MCP_OAUTH_CLIENT_DOCUMENTS', true),
+
+                'allowed_hosts' => array_values(array_filter(array_map(
+                    trim(...),
+                    explode(',', (string) env('MCP_OAUTH_CLIENT_DOCUMENT_HOSTS', 'chatgpt.com,openai.com'))
+                ))),
+
+                // Wie lange ein geholtes Dokument gilt, bevor wir erneut
+                // nachsehen.
+                'cache_minutes' => (int) env('MCP_OAUTH_CLIENT_DOCUMENT_CACHE_MINUTES', 1440),
+
+                // Wie lange ein zuletzt geprüftes Dokument eine Störung beim
+                // Client überbrückt.
+                'grace_days' => (int) env('MCP_OAUTH_CLIENT_DOCUMENT_GRACE_DAYS', 7),
+
+                // Aus der Spezifikation: mehr als 5 KB lesen wir nicht.
+                'max_bytes' => 5120,
+
+                'timeout' => 5,
+            ],
+
             // Wie lange ein Refresh-Token gilt — danach ist eine erneute
             // Zustimmung noetig.
             'refresh_token_days' => (int) env('MCP_OAUTH_REFRESH_TOKEN_DAYS', 90),
