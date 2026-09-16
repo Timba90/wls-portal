@@ -23,6 +23,7 @@ use App\Livewire\Projects\ProjectForm;
 use App\Livewire\Projects\ProjectList;
 use App\Livewire\Projects\ProjectTypeList;
 use App\Livewire\Registrar\CertificateList;
+use App\Livewire\Registrar\DomainDetail;
 use App\Livewire\Registrar\DomainList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
@@ -67,6 +68,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
 
     Route::livewire('/domains', DomainList::class)->name('domains.index');
+    Route::livewire('/domains/{domain}', DomainDetail::class)->name('domains.show');
     Route::livewire('/zertifikate', CertificateList::class)->name('certificates.index');
 
     Route::livewire('/schnittstellen', IntegrationSettings::class)->name('integrations.index');

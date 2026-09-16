@@ -141,7 +141,9 @@
                             <div role="cell" class="min-w-0">
                                 @switch($spalte['index'])
                                     @case('domain')
-                                        <span class="truncate font-mono text-[12.5px] text-ink-base">{{ $domain->name }}</span>
+                                        <a href="{{ route('domains.show', $domain) }}"
+                                           wire:navigate
+                                           class="block truncate font-mono text-[12.5px] text-ink-base hover:text-accent hover:underline">{{ $domain->name }}</a>
                                         @break
 
                                     @case('customer')
