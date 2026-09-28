@@ -160,6 +160,59 @@ it('schickt den Benutzernamen im Login, aber nie in der Bestandsabfrage', functi
     });
 });
 
+it('fordert die Nameserver mit an', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 0, 'list' => []])]);
+
+    iterator_to_array(anschluss()->domains());
+
+    Http::assertSent(function ($request): bool {
+        // Ohne `include` nennt die Liste keine Nameserver — und ein zweiter
+        // Aufruf je Domain ist bei diesem Anbieter genau das, was man nicht tut.
+        return str_contains($request->url(), 'domain/list')
+            && $request['include'] === ['nameserver'];
+    });
+});
+
+it('nimmt die geltende Delegierung, nicht die fehlgeschlagene', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [[
+        'domain' => 'beispiel.de',
+        'nameserver' => [
+            'LIVE' => [['nameserver' => 'ns1.example.org', 'status' => 'LIVE']],
+            // Ein fehlgeschlagener Satz gilt gerade nicht; ihn anzuzeigen hieße,
+            // eine Störung als Zustand auszugeben.
+            'FAILED' => [['nameserver' => 'ns-kaputt.example.org', 'status' => 'FAILED']],
+        ],
+    ]]])]);
+
+    $domains = iterator_to_array(anschluss()->domains());
+
+    expect($domains[0]->nameservers)->toBe(['ns1.example.org']);
+});
+
+it('nimmt ohne geltende Delegierung die angemeldete', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 2, 'list' => [
+        [
+            // Eine Domain mitten in einer Änderung: die angemeldete Delegierung
+            // ist das Einzige, was über sie bekannt ist.
+            'domain' => 'imwandel.de',
+            'nameserver' => ['PENDING' => [['nameserver' => 'ns1.neu.example.org', 'status' => 'PENDING']]],
+        ],
+        [
+            // Nur ein fehlgeschlagener Satz heißt: keine Delegierung.
+            'domain' => 'gescheitert.de',
+            'nameserver' => ['FAILED' => [['nameserver' => 'ns-kaputt.example.org', 'status' => 'FAILED']]],
+        ],
+    ]])]);
+
+    $domains = iterator_to_array(anschluss()->domains());
+
+    expect($domains[0]->nameservers)->toBe(['ns1.neu.example.org'])
+        ->and($domains[1]->nameservers)->toBe([]);
+});
+
 it('prueft die Verbindung ueber tld/list, ohne den Bestand zu lesen', function (): void {
     anmeldungFaken();
     Http::fake(['*/tld/list' => Http::response(['success' => true, 'stateName' => 'OK'])]);
@@ -358,6 +411,10 @@ it('uebertraegt die Felder aus der Bestandsliste', function (): void {
                 'latestCancellationDate' => '1816613748',
                 'cancellationDate' => null,
                 'deleteMode' => '',
+                'nameserver' => ['LIVE' => [
+                    ['nameserver' => 'NS1.Example.ORG', 'glueRecordIpv4' => '', 'status' => 'LIVE'],
+                    ['nameserver' => 'ns2.example.org.', 'glueRecordIpv4' => '', 'status' => 'LIVE'],
+                ]],
             ],
             [
                 'domain' => 'gekuendigt.de',
@@ -378,7 +435,10 @@ it('uebertraegt die Felder aus der Bestandsliste', function (): void {
         ->and($domains[0]->registeredOn?->timestamp)->toBe(1785165050)
         ->and($domains[0]->expiresOn?->timestamp)->toBe(1816613748)
         ->and($domains[0]->autoRenew)->toBeTrue()
-        ->and($domains[0]->nameservers)->toBe([])
+        // Kleingeschrieben und ohne Punkt am Ende, wie überall im Portal.
+        ->and($domains[0]->nameservers)->toBe(['ns1.example.org', 'ns2.example.org'])
+        // Ohne Angabe bleibt die Liste leer statt geraten.
+        ->and($domains[1]->nameservers)->toBe([])
         ->and($domains[1]->autoRenew)->toBeFalse();
 });
 
@@ -386,7 +446,12 @@ it('legt den Bestand ueber den gemeinsamen Abgleich an', function (): void {
     anmeldungFaken();
     Http::fake([
         '*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
-            ['domain' => 'beispiel.de', 'domainID' => '4711', 'latestCancellationDate' => '1816613748'],
+            [
+                'domain' => 'beispiel.de',
+                'domainID' => '4711',
+                'latestCancellationDate' => '1816613748',
+                'nameserver' => ['LIVE' => [['nameserver' => 'ns1.example.org', 'status' => 'LIVE']]],
+            ],
         ]]),
         '*/tls/list' => Http::response(['state' => 1000, 'total' => 1, 'list' => [zertifikatsEintrag()]]),
     ]);
@@ -400,7 +465,8 @@ it('legt den Bestand ueber den gemeinsamen Abgleich an', function (): void {
 
     expect($domain->provider)->toBe(RegistrarProvider::ResellerInterface)
         ->and($domain->provider_reference)->toBe('4711')
-        ->and($domain->expires_on->toDateString())->toBe('2027-07-26');
+        ->and($domain->expires_on->toDateString())->toBe('2027-07-26')
+        ->and($domain->nameservers)->toBe(['ns1.example.org']);
 
     $zertifikat = Certificate::query()->sole();
 

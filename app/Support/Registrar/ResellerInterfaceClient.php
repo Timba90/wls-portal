@@ -142,7 +142,15 @@ class ResellerInterfaceClient implements RegistrarClient
             $offset = 0;
 
             do {
-                $params = ['limit' => self::SEITENGROESSE, 'offset' => $offset];
+                $params = [
+                    'limit' => self::SEITENGROESSE,
+                    'offset' => $offset,
+                    // Ohne diese Angabe nennt die Liste keine Nameserver. Sie
+                    // gehoeren zum technischen Stand einer Domain, und ein
+                    // zweiter Aufruf je Domain waere bei diesem Anbieter genau
+                    // das, was man nicht tut.
+                    'include' => ['nameserver'],
+                ];
 
                 if ($resellerId !== null) {
                     $params['resellerID'] = $resellerId;
@@ -934,12 +942,87 @@ class ResellerInterfaceClient implements RegistrarClient
             // der Liste nicht.
             autoRenew: ($eintrag['cancellationDate'] ?? null) === null
                 && blank($this->text($eintrag, 'deleteMode')),
-            // `domain/list` nennt Nameserver nur, wenn der Aufruf sie mit
-            // `include[] = nameserver` anfordert. Der Import tut das nicht:
-            // wer sie sehen will, schlaegt die Zone auf, und die kommt
-            // vollstaendig aus `dns/getZoneDetails`.
-            nameservers: [],
+            nameservers: $this->delegierung($eintrag),
         );
+    }
+
+    /**
+     * Die Delegierung einer Domain aus ihrem Listeneintrag.
+     *
+     * Die Form ist ungewoehnlich und stammt so aus der Beschreibung: nicht
+     * eine Liste von Namen, sondern eine Zuordnung `Status => Eintraege`, wobei
+     * der Status `LIVE`, `PENDING`, `OPEN` oder `FAILED` heisst und jeder
+     * Eintrag `nameserver` samt Glue-Records fuehrt.
+     *
+     * Genommen wird `LIVE`: das ist die Delegierung, die bei der Registry
+     * tatsaechlich gilt. Fehlt sie, treten die uebrigen Gruppen an ihre Stelle
+     * — eine Domain mitten in einer Aenderung hat noch keine geltende
+     * Delegierung, und die angemeldete ist dann das Einzige, was bekannt ist.
+     * `FAILED` bleibt aussen vor: ein fehlgeschlagener Satz gilt gerade nicht,
+     * und ihn als Stand auszugeben hiesse, eine Stoerung als Zustand zu zeigen.
+     *
+     * Die Glue-Records werden nicht mitgefuehrt: das Portal fuehrt Nameserver
+     * als Namen und hat kein Feld dafuer. Wer sie braucht, sieht sie beim
+     * Anbieter.
+     *
+     * @param  array<string, mixed>  $eintrag
+     * @return array<int, string>
+     */
+    private function delegierung(array $eintrag): array
+    {
+        $gruppen = $eintrag['nameserver'] ?? null;
+
+        if (! is_array($gruppen)) {
+            return [];
+        }
+
+        $geltend = $this->hostnamen($gruppen['LIVE'] ?? null);
+
+        if ($geltend !== []) {
+            return $geltend;
+        }
+
+        $namen = [];
+
+        foreach ($gruppen as $status => $eintraege) {
+            if ($status === 'FAILED') {
+                continue;
+            }
+
+            $namen = [...$namen, ...$this->hostnamen($eintraege)];
+        }
+
+        return array_values(array_unique($namen));
+    }
+
+    /**
+     * Die Hostnamen einer Nameserver-Gruppe.
+     *
+     * @return array<int, string>
+     */
+    private function hostnamen(mixed $eintraege): array
+    {
+        if (! is_array($eintraege)) {
+            return [];
+        }
+
+        $namen = [];
+
+        foreach ($eintraege as $eintrag) {
+            // Die Gruppe fuehrt Objekte mit `nameserver`; ein blanker Name
+            // wird ebenso genommen, falls der Anbieter ihn so liefert.
+            $name = is_array($eintrag)
+                ? $this->text($eintrag, 'nameserver')
+                : (is_scalar($eintrag) ? (string) $eintrag : null);
+
+            if ($name === null || $name === '') {
+                continue;
+            }
+
+            $namen[] = mb_strtolower(rtrim($name, '.'));
+        }
+
+        return array_values(array_unique($namen));
     }
 
     /**
