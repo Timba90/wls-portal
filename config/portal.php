@@ -61,6 +61,45 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | DNS-Zonen der Registrare
+    |--------------------------------------------------------------------------
+    |
+    | Die Zone einer Domain wird beim Anbieter gelesen, wenn jemand sie auf der
+    | Detailseite aufschlägt — nicht importiert und nicht nächtlich
+    | abgeglichen. Sie ändert sich selten und gehört nicht uns; eine Kopie in
+    | der Datenbank wäre nur ein zweiter, älterer Stand.
+    |
+    | `cache_minutes` hält das Ergebnis kurz vor, damit ein Wechsel zwischen
+    | den Reitern nicht jedes Mal beim Anbieter anklopft. Beide Anschlüsse
+    | wiederholen einen fehlgeschlagenen Aufruf nie — häufige Versuche hat
+    | ResellerInterface schon einmal als Angriff gewertet und das Konto
+    | gesperrt.
+    |
+    | Geschrieben wird nur, wenn `writes_enabled` es erlaubt — und die Vorgabe
+    | ist aus. Lange gab es diesen Schalter gar nicht, mit Absicht; auf Ansage
+    | ist er dazugekommen, damit sich Mail-Einträge (SPF, DKIM, DMARC) und
+    | andere Records über den MCP-Server setzen lassen. Die Regeln dahinter
+    | stehen im Code und nicht nur hier: gelesen wird vor jeder Änderung, jede
+    | Änderung braucht eine Prüfsumme aus genau diesem gelesenen Stand, und
+    | jede wird protokolliert. Ein Anschluss ohne Schreibrecht beim Anbieter
+    | sagt es von sich aus.
+    |
+    | Der Schalter gilt je Umgebung. Wer ihn einschaltet, entscheidet, dass
+    | dieses Portal fremde Zonen ändern darf — ein falscher Eintrag schaltet
+    | eine Kundenseite oder deren Mailempfang sofort ab.
+    |
+    */
+
+    'dns' => [
+
+        'cache_minutes' => (int) env('REGISTRAR_DNS_CACHE_MINUTES', 10),
+
+        'writes_enabled' => (bool) env('REGISTRAR_DNS_WRITES_ENABLED', false),
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | MCP-Zugang
     |--------------------------------------------------------------------------
     |
@@ -108,6 +147,49 @@ return [
             // Wie lange ein Zugriffstoken gilt. Kurz gehalten: der Client holt
             // sich mit dem Refresh-Token ein neues.
             'access_token_minutes' => (int) env('MCP_OAUTH_ACCESS_TOKEN_MINUTES', 60),
+
+            /*
+            |------------------------------------------------------------------
+            | Client-ID-Metadatendokumente
+            |------------------------------------------------------------------
+            |
+            | Der dritte Weg, einen Client bekannt zu machen — neben „von Hand
+            | anlegen“ und der offenen Selbstregistrierung, die es hier nicht
+            | gibt. Der Client schickt als Kennung eine HTTPS-Adresse, unter
+            | der er beschreibt, wer er ist und wohin zurückgeleitet werden
+            | soll. Er weist sich also dadurch aus, dass er eine Adresse
+            | kontrolliert. ChatGPT verbindet sich so.
+            |
+            | `allowed_hosts` begrenzt, wessen Dokumente wir überhaupt holen.
+            | Leer hieße: jeder im Netz darf bei uns einen Zustimmungsdialog
+            | auslösen. Zustimmen müsste weiterhin ein angemeldeter Benutzer —
+            | aber ein Dialog, den niemand zu sehen bekommt, kann auch
+            | niemanden täuschen.
+            |
+            */
+
+            'client_documents' => [
+
+                'enabled' => (bool) env('MCP_OAUTH_CLIENT_DOCUMENTS', true),
+
+                'allowed_hosts' => array_values(array_filter(array_map(
+                    trim(...),
+                    explode(',', (string) env('MCP_OAUTH_CLIENT_DOCUMENT_HOSTS', 'chatgpt.com,openai.com'))
+                ))),
+
+                // Wie lange ein geholtes Dokument gilt, bevor wir erneut
+                // nachsehen.
+                'cache_minutes' => (int) env('MCP_OAUTH_CLIENT_DOCUMENT_CACHE_MINUTES', 1440),
+
+                // Wie lange ein zuletzt geprüftes Dokument eine Störung beim
+                // Client überbrückt.
+                'grace_days' => (int) env('MCP_OAUTH_CLIENT_DOCUMENT_GRACE_DAYS', 7),
+
+                // Aus der Spezifikation: mehr als 5 KB lesen wir nicht.
+                'max_bytes' => 5120,
+
+                'timeout' => 5,
+            ],
 
             // Wie lange ein Refresh-Token gilt — danach ist eine erneute
             // Zustimmung noetig.

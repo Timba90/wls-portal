@@ -80,6 +80,12 @@ return [
         // Unser Kontext ist 4. Er ist kein Geheimnis und steht deshalb hier
         // statt bei den Zugangsdaten; 1 waere das Testsystem von autoDNS.
         'context' => env('AUTODNS_CONTEXT', '4'),
+
+        // Der verwaltende Nameserver, falls das Konto ihn beim Lesen einer
+        // Zone verlangt: dieselbe Zone kann auf mehreren liegen. Ohne Angabe
+        // liest der Anschluss `zone/{name}` und laesst den Anbieter
+        // entscheiden.
+        'name_server' => env('AUTODNS_NAME_SERVER'),
     ],
 
 ];

@@ -71,7 +71,16 @@ class TestRegistrarConnectionCommand extends Command
             $this->components->error(sprintf(
                 'Unbekannter Anbieter „%s". Möglich sind: %s.',
                 $gewaehlt,
-                implode(', ', array_column(RegistrarProvider::cases(), 'value')),
+                implode(', ', array_column(RegistrarProvider::withClient(), 'value')),
+            ));
+
+            return null;
+        }
+
+        if (! $anbieter->hasClient()) {
+            $this->components->error(sprintf(
+                'Für „%s" gibt es keine Verbindung zu prüfen: solche Domains werden von Hand gepflegt.',
+                $anbieter->label(),
             ));
 
             return null;

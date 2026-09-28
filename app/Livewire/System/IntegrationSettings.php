@@ -33,7 +33,7 @@ class IntegrationSettings extends Component
 
     public function mount(): void
     {
-        foreach (RegistrarProvider::cases() as $anbieter) {
+        foreach (RegistrarProvider::withClient() as $anbieter) {
             $this->input[$anbieter->value] = array_fill_keys(
                 array_keys($this->fieldsFor($anbieter)),
                 '',
@@ -44,7 +44,9 @@ class IntegrationSettings extends Component
     public function render(): View
     {
         return view('livewire.system.integration-settings', [
-            'providers' => RegistrarProvider::cases(),
+            // Nur Anbieter mit Anschluss: fuer von Hand gepflegte Domains
+            // gibt es keine Zugangsdaten zu hinterlegen.
+            'providers' => RegistrarProvider::withClient(),
         ]);
     }
 

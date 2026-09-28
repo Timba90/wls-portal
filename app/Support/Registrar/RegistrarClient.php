@@ -41,4 +41,22 @@ interface RegistrarClient
      * @return iterable<int, RemoteCertificate>
      */
     public function certificates(): iterable;
+
+    /**
+     * Kann dieser Anschluss die DNS-Zone einer Domain lesen?
+     *
+     * Nicht jeder kann es: die Schnittstelle des einen Anbieters nennt den
+     * Lesezugriff, die des anderen nicht. Die Oberflaeche fragt vorher, damit
+     * sie „kann dieser Anbieter nicht" sagen kann, statt einen Fehlschlag zu
+     * zeigen.
+     */
+    public function canReadZone(): bool;
+
+    /**
+     * Liest die DNS-Zone einer Domain.
+     *
+     * Nur lesend, wie alles hier. Wirft eine RegistrarException, wenn der
+     * Anschluss es nicht kann oder der Anbieter ablehnt.
+     */
+    public function zone(string $domain): DnsZone;
 }

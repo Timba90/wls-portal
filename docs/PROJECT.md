@@ -367,13 +367,91 @@ neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
 `issuer`, `issued_on`, `expires_on`, `alternative_names` (json),
 `customer_id` / `customer_service_id`, `synced_at`.
 
+#### `dns_changes`
+Protokoll der ausgefuehrten DNS-Aenderungen, sichtbar unter dem DNS-Reiter
+einer Domain („Aus dem Portal geaendert") — auch dann, wenn die Zone gerade
+nicht gelesen werden kann, denn nach einer Stoerung im Mailempfang ist „wer hat
+wann was gesetzt" die erste Frage. Felder: `domain_id` (nullable) und
+`domain_name` als Text daneben, `provider`, `operation` (anlegen, aendern,
+loeschen), `record_name`, `record_type`, `before`, `after`, `fingerprint`,
+`verified`, `note`, `user_id`, `applied_at`. Wie ein Audit-Eintrag
+unveraenderlich und ueber die Anwendung nicht loeschbar. `verified = false` ist
+der interessante Fall: der Anbieter hat den Aufruf angenommen, die Zone zeigt
+danach aber etwas anderes als bestellt.
+
 Der technische Stand beider Tabellen kommt aus der Schnittstelle des
 Registrars (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
 Hand. Angebunden sind zwei Anbieter: autoDNS (InterNetX Domainrobot) ueber die
-JSON-API `https://api.autodns.com/v1/` und ResellerInterface (do.de) ueber
-die Bruecke `domain-api-call`, die auf demselben Server liegt und die
-Anmeldung uebernimmt — das Portal meldet sich dort nie selbst an; die Zugangsdaten liegen verschluesselt in
-`integration_credentials`, in der Umgebung steht nur ein abweichender Endpunkt.
+JSON-API `https://api.autodns.com/v1/` und ResellerInterface (do.de) ueber die
+CoreAPI `https://core.resellerinterface.de`. Bei beiden meldet sich das Portal
+selbst an; die Zugangsdaten liegen verschluesselt in `integration_credentials`,
+in der Umgebung steht nur ein abweichender Endpunkt. Eine fruehere Variante
+rief fuer ResellerInterface eine Bruecke (`domain-api-call`) auf demselben
+Server auf und ueberliess ihr die Anmeldung; die ist entfallen, seit Login und
+Sitzung im Anschluss selbst liegen.
+
+Bei ResellerInterface steht die Anmeldung unter besonderer Aufsicht, weil ein
+selbstgebautes Login-Skript dort schon einmal das Konto gesperrt und damit die
+DNS-Aenderungen aller Kunden blockiert hat: die Sitzung (`coreSID`) wird eine
+Viertelstunde im Zwischenspeicher gehalten statt je Aufruf neu geholt, ein
+fehlgeschlagener Aufruf wird nie wiederholt, und eine Positivliste bestimmt,
+welche Aktionen der Anschluss ueberhaupt aufrufen darf. Auf ihr stehen nur
+lesende: `domain/list`, `domain/check`, `tld/list`, `tls/list` und
+`dns/getZoneDetails`.
+
+Die `nameservers` einer Domain kommen aus derselben Bestandsliste wie ihr
+uebriger Stand — bei ResellerInterface nur, wenn der Aufruf sie mit
+`include[] = nameserver` anfordert, denn ein zweiter Aufruf je Domain kaeme
+bei diesem Anbieter nicht in Frage. Eingetragen wird die Delegierung, die bei
+der Registry gilt (`LIVE`); ohne sie die angemeldete, und eine
+fehlgeschlagene gar nicht — sie waere eine Stoerung und kein Stand. Die
+Begruendung im Einzelnen steht in `docs/BACKLOG.md`.
+
+Nicht jede Domain kommt aus einem Import. §60 verlangt, dass Domains anderer
+Anbieter „ebenfalls manuell verwaltbar" sind; sie tragen deshalb den Anbieter
+`RegistrarProvider::Manual` und werden von Hand gepflegt — anlegen unter
+`/domains/neu`, aendern unter `/domains/{domain}/bearbeiten`, beides
+`App\Livewire\Registrar\DomainForm` mit `CreateManualDomain` und
+`UpdateManualDomain`. Zu diesem Anbieter gehoert kein Anschluss: `hasClient()`
+sagt es, und wer es nicht fragt, bekommt von der Fabrik eine Ausnahme statt
+eines Clients, den es nicht gibt. Umgekehrt bleibt der technische Stand einer
+*importierten* Domain hier unberuehrbar — er kommt vom Anbieter, und der
+naechste Abgleich wuerde eine Eingabe ohnehin ueberschreiben. Bei wem eine von
+Hand gepflegte Domain tatsaechlich liegt, gehoert in eine Notiz oder ein eigenes
+Feld: das Enum benennt Anschluesse, keine Registrare ohne solchen.
+
+Beide Anschluesse lesen auch die DNS-Zone einer Domain (`canReadZone()`) —
+autoDNS ueber „Zone Info", ResellerInterface ueber `dns/getZoneDetails`.
+Gespeichert wird sie nicht; sie gehoert dem Anbieter und wird auf Zuruf
+gelesen, wenn jemand den Reiter auf der Detailseite aufschlaegt.
+
+Aendern koennen beide sie ebenfalls, aber nur ueber eine eigene Schnittstelle
+(`ZoneWriter`) und nur, wenn `portal.dns.writes_enabled` es erlaubt — die
+Vorgabe ist aus. `RegistrarClient` verspricht in seinem Kopf weiter, nur zu
+lesen, und das bleibt so: wer schreiben will, fragt ausdruecklich nach
+`ZoneWriter`, und ein Aufrufer, der nur den Bestand einliest, kann dort nicht
+versehentlich landen. Geaendert wird immer genau ein Eintrag, nie die Zone —
+autoDNS ueber `PATCH /zone/{name}/{virtualNameServer}` mit
+`resourceRecordsRem` und `resourceRecordsAdd` in einem Aufruf,
+ResellerInterface ueber `dns/updateRecord`, `dns/createRecord` und
+`dns/deleteRecord` mit der Record-ID aus dem Lesen. `PUT` bei autoDNS und
+`dns/setRecords` bei ResellerInterface bleiben ungenutzt: beide schreiben die
+Zone neu.
+
+Der Weg dorthin fuehrt ueber zwei Schritte. `App\Actions\Registrar\PlanDnsChange`
+liest die Zone, bestimmt den gemeinten Eintrag und gibt Ist, Soll und eine
+Pruefsumme zurueck; `ApplyDnsChange` nimmt die Pruefsumme wieder an, liest die
+Zone **frisch**, rechnet den Plan neu und fuehrt nur aus, wenn beide Summen
+gleich sind. Danach liest es erneut und sieht nach, ob dort steht, was bestellt
+war. Die Pruefsumme deckt alle Eintraege mit demselben Namen und Typ ab: eine
+Aenderung an anderer Stelle der Zone macht einen Plan nicht ungueltig, eine an
+dieser schon.
+
+Das Bestimmen des Eintrags ist der eigentliche Inhalt der Planung. An einem
+Namen koennen mehrere Eintraege desselben Typs liegen — ein SPF-Eintrag neben
+einem Bestaetigungs-Token, mehrere A-Adressen, mehrere MX. „Der TXT-Eintrag an
+der Domain" ist dann keine Angabe; die Planung bricht ab und nennt die
+vorhandenen, statt sich einen auszusuchen.
 
 #### `project_types`
 Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,
@@ -563,7 +641,7 @@ Jahresumsatz ein.
 
 ### AE-15 — MCP-Server mit vollen Schreibrechten
 Der Datenbestand ist über einen MCP-Server für KI-Clients erreichbar
-(`app/Mcp`, Route `mcp/portal`, 36 Werkzeuge). Der Auftraggeber hat sich
+(`app/Mcp`, Route `mcp/portal`, 44 Werkzeuge). Der Auftraggeber hat sich
 ausdrücklich für den vollen Umfang **ohne Leitplanken** entschieden: neben
 Lesen und Schreiben auch endgültiges Löschen und das direkte Überschreiben von
 Preisen am Preisverlauf vorbei. Das steht bewusst quer zu den Grundsätzen
@@ -588,13 +666,27 @@ den Actions:
   `preisaenderung-planen`; `preis-direkt-setzen` umgeht es naturgemäß, weil es
   gar keinen Verlaufseintrag schreibt.
 
-Die sechs gefährlichen Werkzeuge (`kunde-loeschen`,
+Die sieben gefährlichen Werkzeuge (`kunde-loeschen`,
 `ansprechpartner-loeschen`, `produkt-loeschen`, `leistung-loeschen`,
-`projekt-loeschen`, `preis-direkt-setzen`) tragen die MCP-Annotation
-`destructiveHint` und verlangen eine inhaltliche Bestätigung — die
-Kundennummer, den Nachnamen, den internen Namen, den Leistungsnamen, die
-Projektnummer beziehungsweise die Zeichenkette `ohne-preisverlauf`. Das
-schützt nicht vor Absicht, aber vor einem falsch aufgelösten Datensatz.
+`projekt-loeschen`, `preis-direkt-setzen`, `dns-aenderung-anwenden`) tragen die
+MCP-Annotation `destructiveHint` und verlangen eine inhaltliche Bestätigung —
+die Kundennummer, den Nachnamen, den internen Namen, den Leistungsnamen, die
+Projektnummer, die Zeichenkette `ohne-preisverlauf` beziehungsweise den
+Domainnamen. Das schützt nicht vor Absicht, aber vor einem falsch aufgelösten
+Datensatz.
+
+`dns-aenderung-anwenden` faellt aus der Reihe: es ist das einzige Werkzeug, das
+etwas **ausserhalb dieser Anwendung** aendert — eine fremde DNS-Zone, deren
+falscher Eintrag eine Kundenseite oder deren Mailempfang sofort abschaltet. Es
+traegt deshalb mehr als eine Bestaetigung: der Schreibpfad ist je Umgebung
+abschaltbar (`REGISTRAR_DNS_WRITES_ENABLED`, Vorgabe aus), jede Aenderung
+braucht die Pruefsumme aus `dns-aenderung-planen` und damit einen zuvor
+gelesenen Stand, nach dem Schreiben wird die Zone erneut gelesen und
+nachgesehen, und jeder Vorgang landet in `dns_changes`. Die Anleitung des
+Servers sagt ausserdem ausdruecklich, dass ein Client den neuen Wert eines
+Eintrags nicht selbst zusammenrechnet: ein Pruefbericht nennt oft einen
+„Soll-Record", der nur eine Ergaenzung meint, und wer ihn wortgleich schreibt,
+stellt den Mailversand ab.
 
 Meilensteine und Projektpositionen fallen bewusst **nicht** darunter: sie sind
 Planung, kein Beleg, und werden auch in der Oberfläche endgültig entfernt.

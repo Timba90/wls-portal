@@ -10,10 +10,22 @@
 @endphp
 
 <div>
-    <x-page title="Domains" subtitle="Der importierte Bestand der Registrare mit Ablauf und Zuordnung.">
+    <x-page title="Domains"
+            subtitle="Der Bestand der Registrare mit Ablauf und Zuordnung — importiert, und von Hand gepflegt, wo es keine Schnittstelle gibt.">
         <x-slot:actions>
             <x-button color="secondary" outline :href="route('certificates.index')" wire:navigate>
                 Zertifikate
+            </x-button>
+
+            {{--
+                Fuer Domains, deren Registrar hier keine Schnittstelle hat
+                (§60). Importierte entstehen im Abgleich, nicht hier.
+            --}}
+            <x-button icon="plus"
+                      :href="route('domains.create')"
+                      wire:navigate
+                      title="Eine Domain von Hand anlegen, deren Registrar hier keine Schnittstelle hat">
+                Domain anlegen
             </x-button>
         </x-slot:actions>
 

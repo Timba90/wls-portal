@@ -1,6 +1,7 @@
 @php
     $reiter = [
         'notizen' => 'Notizen',
+        'dns' => 'DNS',
         'dokumente' => 'Dokumente',
         'felder' => 'Eigene Felder',
         'verlauf' => 'Verlauf',
@@ -15,6 +16,21 @@
             back-label="Domains"
             :back-url="route('domains.index')">
         <x-slot:actions>
+            @if ($domain->isMaintainedByHand())
+                {{--
+                    Nur hier: der technische Stand einer importierten Domain
+                    kommt vom Anbieter und wird dort geändert.
+                --}}
+                <x-button sm
+                          color="secondary"
+                          outline
+                          icon="pencil-square"
+                          :href="route('domains.edit', $domain)"
+                          wire:navigate>
+                    Bearbeiten
+                </x-button>
+            @endif
+
             <x-button sm
                       color="secondary"
                       outline
@@ -41,6 +57,21 @@
                 </div>
 
                 @switch($tab)
+                    @case('dns')
+                        <div class="rounded-[10px] border border-line bg-panel">
+                            <div class="flex flex-col gap-[3px] border-b border-line px-[17px] py-[15px]">
+                                <h3 class="text-[13.5px] font-semibold tracking-[-0.01em] text-ink">DNS-Zone</h3>
+                                <span class="text-[11.5px] text-ink-faint">
+                                    Der Stand beim Anbieter, nur zu lesen — geändert wird er dort
+                                </span>
+                            </div>
+
+                            <div class="p-[17px]">
+                                <livewire:registrar.domain-dns-panel :domain="$domain" :key="'dns-domain-'.$domain->id" />
+                            </div>
+                        </div>
+                        @break
+
                     @case('dokumente')
                         <div class="rounded-[10px] border border-line bg-panel p-[17px]">
                             <livewire:shared.documents-panel :documentable="$domain" :key="'dokumente-domain-'.$domain->id" />

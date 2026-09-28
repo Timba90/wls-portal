@@ -24,6 +24,7 @@ use App\Livewire\Projects\ProjectList;
 use App\Livewire\Projects\ProjectTypeList;
 use App\Livewire\Registrar\CertificateList;
 use App\Livewire\Registrar\DomainDetail;
+use App\Livewire\Registrar\DomainForm;
 use App\Livewire\Registrar\DomainList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
@@ -68,7 +69,10 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
 
     Route::livewire('/domains', DomainList::class)->name('domains.index');
+    // `neu` steht vor dem Platzhalter, sonst faengt der es als Domainnamen.
+    Route::livewire('/domains/neu', DomainForm::class)->name('domains.create');
     Route::livewire('/domains/{domain}', DomainDetail::class)->name('domains.show');
+    Route::livewire('/domains/{domain}/bearbeiten', DomainForm::class)->name('domains.edit');
     Route::livewire('/zertifikate', CertificateList::class)->name('certificates.index');
 
     Route::livewire('/schnittstellen', IntegrationSettings::class)->name('integrations.index');

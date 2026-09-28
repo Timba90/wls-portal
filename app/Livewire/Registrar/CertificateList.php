@@ -73,7 +73,9 @@ class CertificateList extends Component
         return view('livewire.registrar.certificate-list', [
             'certificates' => $this->certificates(),
             'metrics' => $this->metrics(),
-            'providerOptions' => RegistrarProvider::options(),
+            // Ohne den Fall „von Hand gepflegt": Zertifikate werden hier
+            // nicht von Hand gepflegt, der Filter fände nie etwas.
+            'providerOptions' => RegistrarProvider::options(RegistrarProvider::withClient()),
         ]);
     }
 

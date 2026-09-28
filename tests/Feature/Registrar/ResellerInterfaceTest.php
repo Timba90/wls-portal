@@ -2,6 +2,7 @@
 
 use App\Actions\Registrar\ImportRegistrarInventory;
 use App\Enums\RegistrarProvider;
+use App\Models\Certificate;
 use App\Models\Domain;
 use App\Support\Registrar\RegistrarException;
 use App\Support\Registrar\ResellerInterfaceClient;
@@ -37,6 +38,36 @@ function anmeldungFaken(): void
             ['Set-Cookie' => 'coreSID=sitzung-123; Path=/; HttpOnly'],
         ),
     ]);
+}
+
+/**
+ * Ein Zertifikatseintrag, wie `tls/list` ihn liefert.
+ *
+ * Feldnamen und Beispielwerte stammen aus der OpenAPI-Beschreibung des
+ * Anbieters (Schemata `tls` und `tlsCertificate`): der Eintrag beschreibt den
+ * Vertrag, das Zertifikat selbst liegt darin unter `activeCertificate`.
+ */
+function zertifikatsEintrag(array $ueberschreibungen = []): array
+{
+    return array_merge([
+        'tlsID' => 25,
+        'alias' => 'TLS25 (instantSSL)',
+        'state' => 'ACTIVE',
+        'subState' => '',
+        'domains' => ['Example.com', 'www.example.com'],
+        'createDate' => '1596405600',
+        'nextBillingDate' => '1628114401',
+        'activeCertificateID' => 77,
+        'isWildcard' => false,
+        'activeCertificate' => [
+            'id' => 77,
+            'san' => ['example.com', 'www.example.com'],
+            'validFrom' => '1596492000',
+            'validTill' => '1628114400',
+            'issuedAt' => '1596492000',
+            'state' => 'active',
+        ],
+    ], $ueberschreibungen);
 }
 
 it('haelt einen Anschluss ohne Zugangsdaten fuer nicht eingerichtet', function (): void {
@@ -129,6 +160,59 @@ it('schickt den Benutzernamen im Login, aber nie in der Bestandsabfrage', functi
     });
 });
 
+it('fordert die Nameserver mit an', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 0, 'list' => []])]);
+
+    iterator_to_array(anschluss()->domains());
+
+    Http::assertSent(function ($request): bool {
+        // Ohne `include` nennt die Liste keine Nameserver — und ein zweiter
+        // Aufruf je Domain ist bei diesem Anbieter genau das, was man nicht tut.
+        return str_contains($request->url(), 'domain/list')
+            && $request['include'] === ['nameserver'];
+    });
+});
+
+it('nimmt die geltende Delegierung, nicht die fehlgeschlagene', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [[
+        'domain' => 'beispiel.de',
+        'nameserver' => [
+            'LIVE' => [['nameserver' => 'ns1.example.org', 'status' => 'LIVE']],
+            // Ein fehlgeschlagener Satz gilt gerade nicht; ihn anzuzeigen hieße,
+            // eine Störung als Zustand auszugeben.
+            'FAILED' => [['nameserver' => 'ns-kaputt.example.org', 'status' => 'FAILED']],
+        ],
+    ]]])]);
+
+    $domains = iterator_to_array(anschluss()->domains());
+
+    expect($domains[0]->nameservers)->toBe(['ns1.example.org']);
+});
+
+it('nimmt ohne geltende Delegierung die angemeldete', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 2, 'list' => [
+        [
+            // Eine Domain mitten in einer Änderung: die angemeldete Delegierung
+            // ist das Einzige, was über sie bekannt ist.
+            'domain' => 'imwandel.de',
+            'nameserver' => ['PENDING' => [['nameserver' => 'ns1.neu.example.org', 'status' => 'PENDING']]],
+        ],
+        [
+            // Nur ein fehlgeschlagener Satz heißt: keine Delegierung.
+            'domain' => 'gescheitert.de',
+            'nameserver' => ['FAILED' => [['nameserver' => 'ns-kaputt.example.org', 'status' => 'FAILED']]],
+        ],
+    ]])]);
+
+    $domains = iterator_to_array(anschluss()->domains());
+
+    expect($domains[0]->nameservers)->toBe(['ns1.neu.example.org'])
+        ->and($domains[1]->nameservers)->toBe([]);
+});
+
 it('prueft die Verbindung ueber tld/list, ohne den Bestand zu lesen', function (): void {
     anmeldungFaken();
     Http::fake(['*/tld/list' => Http::response(['success' => true, 'stateName' => 'OK'])]);
@@ -199,8 +283,117 @@ it('bricht ab, wenn die Antwort keine Liste enthaelt', function (): void {
     iterator_to_array(anschluss()->domains());
 })->throws(RegistrarException::class, 'keine Liste');
 
-it('fuehrt keine Zertifikate', function (): void {
+it('liest den Zertifikatsbestand ueber tls/list', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response([
+        'state' => 1000,
+        'total' => 1,
+        'list' => [zertifikatsEintrag()],
+    ])]);
+
+    $zertifikate = iterator_to_array(anschluss()->certificates());
+
+    expect($zertifikate)->toHaveCount(1)
+        ->and($zertifikate[0]->commonName)->toBe('example.com')
+        ->and($zertifikate[0]->reference)->toBe('25')
+        ->and($zertifikate[0]->status)->toBe('ACTIVE')
+        // `validTill` ist das Ende der Gültigkeit, nicht die nächste
+        // Abrechnung — die läge eine Sekunde später.
+        ->and($zertifikate[0]->expiresOn?->timestamp)->toBe(1628114400)
+        ->and($zertifikate[0]->issuedOn?->timestamp)->toBe(1596492000)
+        ->and($zertifikate[0]->alternativeNames)->toBe(['www.example.com'])
+        // Einen Aussteller nennt die Liste nicht; erfunden wird keiner.
+        ->and($zertifikate[0]->issuer)->toBeNull();
+});
+
+it('fordert das aktive Zertifikat mit an', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response(['state' => 1000, 'total' => 0, 'list' => []])]);
+
+    iterator_to_array(anschluss()->certificates());
+
+    Http::assertSent(function ($request): bool {
+        // Ohne `include` nennt die Liste nur die Kennung des Zertifikats —
+        // und damit läge kein Ende der Gültigkeit vor.
+        return str_contains($request->url(), 'tls/list')
+            && $request['include'] === ['certificates']
+            && (int) $request['limit'] === 1000;
+    });
+});
+
+it('nimmt ohne aktives Zertifikat die naechste Abrechnung als Naehrung', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response([
+        'state' => 1000,
+        'total' => 1,
+        'list' => [zertifikatsEintrag([
+            // So sieht ein Vertrag aus, dessen Zertifikat noch nicht
+            // ausgestellt ist.
+            'state' => 'PENDING',
+            'subState' => 'WAITING',
+            'activeCertificate' => null,
+            'activeCertificateID' => null,
+        ])],
+    ])]);
+
+    $zertifikate = iterator_to_array(anschluss()->certificates());
+
+    expect($zertifikate[0]->status)->toBe('PENDING WAITING')
+        ->and($zertifikate[0]->expiresOn?->timestamp)->toBe(1628114401)
+        ->and($zertifikate[0]->issuedOn?->timestamp)->toBe(1596405600)
+        // Ohne Zertifikat bleiben die Domains des Vertrags.
+        ->and($zertifikate[0]->alternativeNames)->toBe(['www.example.com']);
+});
+
+it('haelt ein Konto ohne Zertifikate nicht fuer eine kaputte Antwort', function (): void {
+    anmeldungFaken();
+    // Kein `list`-Feld, Gesamtzahl 0: der Bestand ist leer, nicht verschwunden.
+    Http::fake(['*/tls/list' => Http::response(['state' => 1000, 'stateName' => 'OK', 'total' => 0])]);
+
     expect(iterator_to_array(anschluss()->certificates()))->toBe([]);
+});
+
+it('bricht aber ab, wenn eine Liste fehlt und der Anbieter Zertifikate nennt', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response(['state' => 1000, 'total' => 3])]);
+
+    iterator_to_array(anschluss()->certificates());
+})->throws(RegistrarException::class, 'keine Liste');
+
+it('bricht bei einem Zertifikat ohne Domain ab', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response([
+        'state' => 1000,
+        'total' => 1,
+        'list' => [zertifikatsEintrag(['domains' => [], 'activeCertificate' => null])],
+    ])]);
+
+    iterator_to_array(anschluss()->certificates());
+})->throws(RegistrarException::class, 'ohne Domain');
+
+it('blaettert auch durch den Zertifikatsbestand', function (): void {
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::sequence()
+        ->push(['state' => 1000, 'total' => 2, 'list' => [zertifikatsEintrag(['tlsID' => 25])]])
+        ->push(['state' => 1000, 'total' => 2, 'list' => [zertifikatsEintrag(['tlsID' => 26])]]),
+    ]);
+
+    $zertifikate = iterator_to_array(anschluss()->certificates());
+
+    expect($zertifikate)->toHaveCount(2)
+        ->and($zertifikate[1]->reference)->toBe('26');
+});
+
+it('haelt das Blaettern an, wenn eine Seite leer bleibt', function (): void {
+    // Nennt der Anbieter eine Gesamtzahl, die er nicht ausliefert, liefe die
+    // Schleife sonst endlos — und mit ihr die Aufrufe bei genau dem Anbieter,
+    // der das Konto schon einmal gesperrt hat.
+    anmeldungFaken();
+    Http::fake(['*/tls/list' => Http::response(['state' => 1000, 'total' => 5, 'list' => []])]);
+
+    expect(iterator_to_array(anschluss()->certificates()))->toBe([]);
+
+    Http::assertSentCount(2); // 1 Login + 1 Liste
 });
 
 it('uebertraegt die Felder aus der Bestandsliste', function (): void {
@@ -218,6 +411,10 @@ it('uebertraegt die Felder aus der Bestandsliste', function (): void {
                 'latestCancellationDate' => '1816613748',
                 'cancellationDate' => null,
                 'deleteMode' => '',
+                'nameserver' => ['LIVE' => [
+                    ['nameserver' => 'NS1.Example.ORG', 'glueRecordIpv4' => '', 'status' => 'LIVE'],
+                    ['nameserver' => 'ns2.example.org.', 'glueRecordIpv4' => '', 'status' => 'LIVE'],
+                ]],
             ],
             [
                 'domain' => 'gekuendigt.de',
@@ -238,23 +435,43 @@ it('uebertraegt die Felder aus der Bestandsliste', function (): void {
         ->and($domains[0]->registeredOn?->timestamp)->toBe(1785165050)
         ->and($domains[0]->expiresOn?->timestamp)->toBe(1816613748)
         ->and($domains[0]->autoRenew)->toBeTrue()
-        ->and($domains[0]->nameservers)->toBe([])
+        // Kleingeschrieben und ohne Punkt am Ende, wie überall im Portal.
+        ->and($domains[0]->nameservers)->toBe(['ns1.example.org', 'ns2.example.org'])
+        // Ohne Angabe bleibt die Liste leer statt geraten.
+        ->and($domains[1]->nameservers)->toBe([])
         ->and($domains[1]->autoRenew)->toBeFalse();
 });
 
 it('legt den Bestand ueber den gemeinsamen Abgleich an', function (): void {
     anmeldungFaken();
-    Http::fake(['*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
-        ['domain' => 'beispiel.de', 'domainID' => '4711', 'latestCancellationDate' => '1816613748'],
-    ]])]);
+    Http::fake([
+        '*/domain/list' => Http::response(['success' => true, 'total' => 1, 'list' => [
+            [
+                'domain' => 'beispiel.de',
+                'domainID' => '4711',
+                'latestCancellationDate' => '1816613748',
+                'nameserver' => ['LIVE' => [['nameserver' => 'ns1.example.org', 'status' => 'LIVE']]],
+            ],
+        ]]),
+        '*/tls/list' => Http::response(['state' => 1000, 'total' => 1, 'list' => [zertifikatsEintrag()]]),
+    ]);
 
     $ergebnis = app(ImportRegistrarInventory::class)(anschluss());
 
-    expect($ergebnis['domains'])->toBe(['new' => 1, 'updated' => 0]);
+    expect($ergebnis['domains'])->toBe(['new' => 1, 'updated' => 0])
+        ->and($ergebnis['certificates'])->toBe(['new' => 1, 'updated' => 0]);
 
     $domain = Domain::query()->sole();
 
     expect($domain->provider)->toBe(RegistrarProvider::ResellerInterface)
         ->and($domain->provider_reference)->toBe('4711')
-        ->and($domain->expires_on->toDateString())->toBe('2027-07-26');
+        ->and($domain->expires_on->toDateString())->toBe('2027-07-26')
+        ->and($domain->nameservers)->toBe(['ns1.example.org']);
+
+    $zertifikat = Certificate::query()->sole();
+
+    expect($zertifikat->provider)->toBe(RegistrarProvider::ResellerInterface)
+        ->and($zertifikat->provider_reference)->toBe('25')
+        ->and($zertifikat->common_name)->toBe('example.com')
+        ->and($zertifikat->expires_on->toDateString())->toBe('2021-08-04');
 });

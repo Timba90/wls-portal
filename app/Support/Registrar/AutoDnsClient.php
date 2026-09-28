@@ -25,9 +25,12 @@ use Throwable;
  *     { "stid": "…", "status": { "code": "S0301", "type": "SUCCESS" },
  *       "object": { … }, "data": [ … ] }
  *
- * Nur lesend: `/hello`, `/domain/_search` und `/certificate/_search`.
+ * Lesend: `/hello`, `/domain/_search`, `/certificate/_search` und
+ * `/zone/{name}`. Schreibend nur eines, und nur wenn
+ * `portal.dns.writes_enabled` es erlaubt: `PATCH
+ * /zone/{name}/{virtualNameServer}` fuer einen einzelnen Eintrag.
  */
-class AutoDnsClient implements RegistrarClient
+class AutoDnsClient implements RegistrarClient, ZoneWriter
 {
     /**
      * Wie viele Eintraege je Abfrage. Die Schnittstelle blaettert ueber
@@ -36,7 +39,7 @@ class AutoDnsClient implements RegistrarClient
     private const SEITENGROESSE = 100;
 
     /**
-     * @param  array{endpoint?: string, username?: string, password?: string, context?: string}  $config
+     * @param  array{endpoint?: string, username?: string, password?: string, context?: string, name_server?: string}  $config
      */
     public function __construct(private readonly array $config) {}
 
@@ -134,6 +137,220 @@ class AutoDnsClient implements RegistrarClient
         }
     }
 
+    public function canReadZone(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Liest eine Zone ueber `GET zone/{name}` — „Zone Info" (0205).
+     *
+     * Die Schnittstelle kennt denselben Aufruf auch mit dem verwaltenden
+     * Nameserver im Pfad (`zone/{name}/{virtualNameServer}`). Manche Konten
+     * brauchen ihn, weil dieselbe Zone auf mehreren Nameservern liegen kann;
+     * er steht darum als Einstellung bereit und wird nur mitgeschickt, wenn er
+     * gesetzt ist. Geraten wird er nicht.
+     */
+    public function zone(string $domain): DnsZone
+    {
+        $this->guardConfigured();
+
+        $name = mb_strtolower(trim($domain));
+
+        if ($name === '') {
+            throw new RegistrarException('Ohne Domainnamen lässt sich keine Zone lesen.');
+        }
+
+        $nameserver = $this->text($this->config, 'name_server');
+
+        $pfad = $nameserver === null
+            ? 'zone/'.rawurlencode($name)
+            : 'zone/'.rawurlencode($name).'/'.rawurlencode($nameserver);
+
+        $umschlag = $this->envelope($this->send('get', $pfad), $pfad);
+
+        $zone = $umschlag['data'][0] ?? null;
+
+        if (! is_array($zone)) {
+            throw new RegistrarException(
+                "autoDNS hat zu {$name} keine Zone geliefert.",
+                $umschlag,
+            );
+        }
+
+        return new DnsZone(
+            origin: $this->text($zone, 'origin') ?? $name,
+            nameservers: $this->names($zone, 'nameServers'),
+            records: $this->records($zone),
+            ttl: $this->number($zone['soa'] ?? [], 'ttl'),
+            soaEmail: is_array($zone['soa'] ?? null) ? $this->text($zone['soa'], 'email') : null,
+            updatedAt: $this->date($zone, 'updated'),
+            // Den verwaltenden Nameserver nennt die Zone selbst. Jede Aenderung
+            // braucht ihn im Pfad; aus der Einstellung kommt er nur als
+            // Rueckfall, geraten wird er nicht.
+            nameServer: $this->text($zone, 'virtualNameServer') ?? $this->text($this->config, 'name_server'),
+        );
+    }
+
+    public function canWriteZone(): bool
+    {
+        return $this->isConfigured() && (bool) config('portal.dns.writes_enabled', false);
+    }
+
+    /**
+     * Aendert einen Eintrag ueber `PATCH /zone/{name}/{virtualNameServer}`.
+     *
+     * autoDNS nimmt Entfernen und Anlegen in *einem* Aufruf
+     * (`resourceRecordsRem` und `resourceRecordsAdd`, beide dokumentiert als
+     * „Adds new zone records to the existings" beziehungsweise „Removes the
+     * zone records if exists"). Die Zone wird dabei nicht neu geschrieben — das
+     * taete `PUT`, und genau deshalb wird `PUT` hier nicht benutzt.
+     *
+     * Den Pfad gibt es nur mit dem verwaltenden Nameserver; ohne ihn bricht der
+     * Aufruf ab, statt einen zu erfinden.
+     */
+    public function applyZoneChange(DnsZone $zone, ?DnsRecord $entfernen, ?DnsRecord $anlegen): void
+    {
+        $this->guardConfigured();
+        $this->guardWritesEnabled();
+
+        if ($entfernen === null && $anlegen === null) {
+            throw new RegistrarException('Eine Änderung ohne alten und ohne neuen Eintrag ist keine.');
+        }
+
+        if ($zone->nameServer === null) {
+            throw new RegistrarException(
+                "autoDNS nennt für {$zone->origin} keinen verwaltenden Nameserver, und ohne ihn gibt es den "
+                .'Pfad für eine Änderung nicht. Er lässt sich als AUTODNS_NAME_SERVER hinterlegen.',
+            );
+        }
+
+        $koerper = [];
+
+        if ($entfernen !== null) {
+            $koerper['resourceRecordsRem'] = [$this->toResourceRecord($entfernen, $zone)];
+        }
+
+        if ($anlegen !== null) {
+            $koerper['resourceRecordsAdd'] = [$this->toResourceRecord($anlegen, $zone)];
+        }
+
+        $pfad = 'zone/'.rawurlencode($zone->origin).'/'.rawurlencode($zone->nameServer);
+
+        $this->envelope($this->send('patch', $pfad, $koerper), $pfad);
+    }
+
+    /**
+     * Ein Eintrag in der Form, in der autoDNS ihn selbst liefert.
+     *
+     * Beim Ursprung faellt `name` weg: so gibt autoDNS ihn aus (die Leseseite
+     * setzt dafuer `@`), und `resourceRecordsRem` trifft einen Eintrag ueber
+     * seine Felder. Zurueckzuschicken, was der Anbieter geliefert hat, ist
+     * hier die einzige Form, die nicht geraten ist.
+     *
+     * @return array<string, mixed>
+     */
+    private function toResourceRecord(DnsRecord $record, DnsZone $zone): array
+    {
+        $eintrag = [
+            'type' => $record->type,
+            'value' => $record->content,
+        ];
+
+        if ($record->name !== '@' && $record->name !== '' && $record->name !== $zone->origin) {
+            $eintrag['name'] = $record->name;
+        }
+
+        if ($record->ttl !== null) {
+            $eintrag['ttl'] = $record->ttl;
+        }
+
+        if ($record->priority !== null) {
+            $eintrag['pref'] = $record->priority;
+        }
+
+        return $eintrag;
+    }
+
+    private function guardWritesEnabled(): void
+    {
+        if ((bool) config('portal.dns.writes_enabled', false)) {
+            return;
+        }
+
+        throw new RegistrarException(
+            'Schreibende DNS-Änderungen sind in dieser Umgebung nicht eingeschaltet '
+            .'(REGISTRAR_DNS_WRITES_ENABLED).',
+        );
+    }
+
+    /**
+     * Die Eintraege einer Zone.
+     *
+     * Neben `resourceRecords` fuehrt autoDNS die Haupt-IP getrennt: aus ihr
+     * entsteht der A-Eintrag auf dem Ursprung, und bei `wwwInclude` zusaetzlich
+     * der auf `www`. Beide stehen in keiner Eintragsliste, gelten im DNS aber
+     * trotzdem — sie fehlten hier sonst genau dort, wo man sie zuerst sucht.
+     * Sie sind als abgeleitet gekennzeichnet, damit die Anzeige sie nicht als
+     * echte Zeilen der Zone ausgibt.
+     *
+     * @param  array<string, mixed>  $zone
+     * @return array<int, DnsRecord>
+     */
+    private function records(array $zone): array
+    {
+        $records = [];
+
+        $eintraege = $zone['resourceRecords'] ?? [];
+
+        foreach (is_array($eintraege) ? $eintraege : [] as $eintrag) {
+            if (! is_array($eintrag)) {
+                continue;
+            }
+
+            $typ = $this->text($eintrag, 'type');
+            $wert = $this->text($eintrag, 'value');
+
+            if ($typ === null || $wert === null) {
+                continue;
+            }
+
+            $records[] = new DnsRecord(
+                name: $this->text($eintrag, 'name') ?? '@',
+                type: mb_strtoupper($typ),
+                content: $wert,
+                ttl: $this->number($eintrag, 'ttl'),
+                priority: $this->number($eintrag, 'pref'),
+            );
+        }
+
+        $haupt = $zone['main'] ?? null;
+        $adresse = is_array($haupt) ? $this->text($haupt, 'address') : null;
+
+        if ($adresse !== null) {
+            $ttl = is_array($haupt) ? $this->number($haupt, 'ttl') : null;
+            $typ = str_contains($adresse, ':') ? 'AAAA' : 'A';
+
+            $records[] = new DnsRecord('@', $typ, $adresse, $ttl, derived: true);
+
+            if (($zone['wwwInclude'] ?? false) === true) {
+                $records[] = new DnsRecord('www', $typ, $adresse, $ttl, derived: true);
+            }
+        }
+
+        return $records;
+    }
+
+    /**
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function number(array $eintrag, string $feld): ?int
+    {
+        $wert = $eintrag[$feld] ?? null;
+
+        return is_numeric($wert) ? (int) $wert : null;
+    }
+
     /**
      * Blaettert durch eine Suche, bis eine Seite nicht mehr voll ist.
      *
@@ -179,6 +396,7 @@ class AutoDnsClient implements RegistrarClient
             return match ($verb) {
                 'get' => $this->request()->get($pfad),
                 'post' => $this->request()->post($pfad, $koerper ?? []),
+                'patch' => $this->request()->patch($pfad, $koerper ?? []),
             };
         } catch (Throwable $fehler) {
             throw new RegistrarException(

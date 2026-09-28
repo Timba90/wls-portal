@@ -73,6 +73,17 @@ if (config('portal.mcp.enabled')) {
             'grant_types_supported' => ['authorization_code', 'refresh_token'],
             'code_challenge_methods_supported' => ['S256'],
             'scopes_supported' => [Registrar::OAUTH_SCOPE],
+            'token_endpoint_auth_methods_supported' => ['none'],
+
+            /*
+             * Statt eines Registrierungsendpunkts: der Client schickt als
+             * Kennung eine HTTPS-Adresse, unter der er sich beschreibt, und
+             * wir holen uns dieses Dokument. Nichts muss offen sein, damit ein
+             * Client sich bekannt machen kann.
+             */
+            'client_id_metadata_document_supported' => (bool) config(
+                'portal.mcp.oauth.client_documents.enabled'
+            ),
         ]);
     })->where('pfad', '.*')->name('mcp.oauth.authorization-server');
 }

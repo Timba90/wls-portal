@@ -109,5 +109,13 @@ it('wechselt auf der Domainseite zwischen den Bereichen', function (): void {
         ->waitForText('Noch keine Dokumente')
         ->click('Verlauf')
         ->waitForText('Änderungen an dieser Domain')
+        /*
+         * Die DNS-Zone wird beim Anbieter gelesen. Ohne hinterlegte
+         * Zugangsdaten kommt der Anschluss gar nicht bis zum Netz — der
+         * Rundgang zeigt deshalb verlaesslich die Meldung und ruft nichts auf.
+         */
+        ->click('DNS')
+        ->waitForText('Die Zone konnte nicht gelesen werden.')
+        ->assertSee('keine Zugangsdaten hinterlegt')
         ->assertNoJavaScriptErrors();
 });
