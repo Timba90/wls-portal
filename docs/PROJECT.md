@@ -387,6 +387,14 @@ welche Aktionen der Anschluss ueberhaupt aufrufen darf. Auf ihr stehen nur
 lesende: `domain/list`, `domain/check`, `tld/list`, `tls/list` und
 `dns/getZoneDetails`.
 
+Die `nameservers` einer Domain kommen aus derselben Bestandsliste wie ihr
+uebriger Stand — bei ResellerInterface nur, wenn der Aufruf sie mit
+`include[] = nameserver` anfordert, denn ein zweiter Aufruf je Domain kaeme
+bei diesem Anbieter nicht in Frage. Eingetragen wird die Delegierung, die bei
+der Registry gilt (`LIVE`); ohne sie die angemeldete, und eine
+fehlgeschlagene gar nicht — sie waere eine Stoerung und kein Stand. Die
+Begruendung im Einzelnen steht in `docs/BACKLOG.md`.
+
 Beide Anschluesse lesen auch die DNS-Zone einer Domain (`canReadZone()`) —
 autoDNS ueber „Zone Info", ResellerInterface ueber `dns/getZoneDetails`.
 Gespeichert wird sie nicht; sie gehoert dem Anbieter und wird auf Zuruf
