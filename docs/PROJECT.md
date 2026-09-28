@@ -370,10 +370,27 @@ neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
 Der technische Stand beider Tabellen kommt aus der Schnittstelle des
 Registrars (`app/Support/Registrar/`), die Zuordnung zu Kunde und Leistung von
 Hand. Angebunden sind zwei Anbieter: autoDNS (InterNetX Domainrobot) ueber die
-JSON-API `https://api.autodns.com/v1/` und ResellerInterface (do.de) ueber
-die Bruecke `domain-api-call`, die auf demselben Server liegt und die
-Anmeldung uebernimmt — das Portal meldet sich dort nie selbst an; die Zugangsdaten liegen verschluesselt in
-`integration_credentials`, in der Umgebung steht nur ein abweichender Endpunkt.
+JSON-API `https://api.autodns.com/v1/` und ResellerInterface (do.de) ueber die
+CoreAPI `https://core.resellerinterface.de`. Bei beiden meldet sich das Portal
+selbst an; die Zugangsdaten liegen verschluesselt in `integration_credentials`,
+in der Umgebung steht nur ein abweichender Endpunkt. Eine fruehere Variante
+rief fuer ResellerInterface eine Bruecke (`domain-api-call`) auf demselben
+Server auf und ueberliess ihr die Anmeldung; die ist entfallen, seit Login und
+Sitzung im Anschluss selbst liegen.
+
+Bei ResellerInterface steht die Anmeldung unter besonderer Aufsicht, weil ein
+selbstgebautes Login-Skript dort schon einmal das Konto gesperrt und damit die
+DNS-Aenderungen aller Kunden blockiert hat: die Sitzung (`coreSID`) wird eine
+Viertelstunde im Zwischenspeicher gehalten statt je Aufruf neu geholt, ein
+fehlgeschlagener Aufruf wird nie wiederholt, und eine Positivliste bestimmt,
+welche Aktionen der Anschluss ueberhaupt aufrufen darf. Auf ihr stehen nur
+lesende: `domain/list`, `domain/check`, `tld/list`, `tls/list` und
+`dns/getZoneDetails`.
+
+Beide Anschluesse lesen auch die DNS-Zone einer Domain (`canReadZone()`) —
+autoDNS ueber „Zone Info", ResellerInterface ueber `dns/getZoneDetails`.
+Gespeichert wird sie nicht; sie gehoert dem Anbieter und wird auf Zuruf
+gelesen, wenn jemand den Reiter auf der Detailseite aufschlaegt.
 
 #### `project_types`
 Frei definierbare Projekttypen (§61): `name` unique, `short_label`, `icon`,
