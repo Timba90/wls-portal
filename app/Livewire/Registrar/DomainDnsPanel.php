@@ -3,12 +3,14 @@
 namespace App\Livewire\Registrar;
 
 use App\Actions\Registrar\ReadDnsZone;
+use App\Models\DnsChange;
 use App\Models\Domain;
 use App\Support\Registrar\DnsRecord;
 use App\Support\Registrar\DnsZone;
 use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Collection;
 use Livewire\Component;
 
 /**
@@ -62,7 +64,30 @@ class DomainDnsPanel extends Component
             // Zwei verschiedene Gruende, warum hier keine Zone steht: kein
             // Anschluss, oder ein Anschluss ohne lesenden Aufruf.
             'vonHand' => ! $this->domain->provider->hasClient(),
+            'aenderungen' => $this->aenderungen(),
         ]);
+    }
+
+    /**
+     * Die letzten Aenderungen an dieser Zone, die aus dem Portal kamen.
+     *
+     * Bis hierher war das Protokoll nur beschreibbar: geaendert werden konnte
+     * ueber den MCP-Server, nachsehen liess sich es nirgends. Genau danach
+     * fragt aber die erste Minute einer Stoerung im Mailempfang — und eine
+     * Aenderung, die der Anbieter danach anders zeigte als bestellt
+     * (`verified = false`), faellt hier auf, statt in einer Tabelle zu
+     * verstauben.
+     *
+     * @return Collection<int, DnsChange>
+     */
+    private function aenderungen(): Collection
+    {
+        return DnsChange::query()
+            ->with('user')
+            ->where('domain_id', $this->domain->getKey())
+            ->latest('applied_at')
+            ->limit(5)
+            ->get();
     }
 
     /**

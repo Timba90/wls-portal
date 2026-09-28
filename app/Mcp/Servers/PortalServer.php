@@ -38,6 +38,7 @@ use App\Mcp\Tools\Registrar\BestandZuordnen;
 use App\Mcp\Tools\Registrar\DnsAenderungAnwenden;
 use App\Mcp\Tools\Registrar\DnsAenderungPlanen;
 use App\Mcp\Tools\Registrar\DnsZoneLesen;
+use App\Mcp\Tools\Registrar\DomainSpeichern;
 use App\Mcp\Tools\Services\KatalogabgleichLesen;
 use App\Mcp\Tools\Services\KatalogaenderungEntscheiden;
 use App\Mcp\Tools\Services\LeistungenSuchen;
@@ -87,6 +88,12 @@ use Laravel\Mcp\Server\Attributes\Version;
       die Verbindung zur Abrechnung fehlt noch.
     - Die Kundenleistung ist freiwillig. Nicht jede Domain wird einzeln
       berechnet, manche laeuft in einem Paket mit.
+    - `domain-speichern` ist fuer Domains, deren Registrar hier keine
+      Schnittstelle hat. Den technischen Stand einer *importierten* Domain
+      aendert es nicht — der kommt vom Anbieter. Bei wem eine von Hand
+      gepflegte Domain liegt, gehoert in eine Notiz (`notiz-speichern` mit
+      `typ: domain`): das Anbieterfeld benennt Anschluesse, keine Registrare
+      ohne solchen.
 
     Zu DNS-Eintraegen:
 
@@ -163,6 +170,7 @@ class PortalServer extends Server
 
         BestandSuchen::class,
         BestandZuordnen::class,
+        DomainSpeichern::class,
 
         DnsZoneLesen::class,
         DnsAenderungPlanen::class,

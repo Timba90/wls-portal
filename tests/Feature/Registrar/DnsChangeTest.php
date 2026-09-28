@@ -4,6 +4,7 @@ use App\Actions\Registrar\ApplyDnsChange;
 use App\Actions\Registrar\PlanDnsChange;
 use App\Enums\RegistrarProvider;
 use App\Exceptions\ReadOnlyRecordException;
+use App\Livewire\Registrar\DomainDnsPanel;
 use App\Models\DnsChange;
 use App\Models\Domain;
 use App\Models\IntegrationCredential;
@@ -11,6 +12,7 @@ use App\Models\User;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
+use Livewire\Livewire;
 
 /**
  * Der einzige schreibende Zugriff dieses Portals.
@@ -486,4 +488,40 @@ it('bricht bei autoDNS ab, wenn kein verwaltender Nameserver bekannt ist', funct
         ->toThrow(RegistrarException::class, 'keinen verwaltenden Nameserver');
 
     Http::assertNotSent(fn (Request $request): bool => $request->method() === 'PATCH');
+});
+
+it('zeigt die Aenderungen auf der Detailseite, auch wenn die Zone nicht lesbar ist', function (): void {
+    $domain = riDomain();
+
+    DnsChange::query()->create([
+        'domain_id' => $domain->getKey(),
+        'domain_name' => $domain->name,
+        'provider' => RegistrarProvider::ResellerInterface,
+        'operation' => 'aendern',
+        'record_name' => '_dmarc',
+        'record_type' => 'TXT',
+        'before' => '_dmarc TXT v=DMARC1; p=none',
+        'after' => '_dmarc TXT v=DMARC1; p=quarantine',
+        'fingerprint' => str_repeat('b', 64),
+        'verified' => false,
+        'note' => 'Der neue Eintrag steht nach der Änderung nicht in der Zone.',
+        'user_id' => $this->benutzer->getKey(),
+        'applied_at' => now(),
+    ]);
+
+    /*
+     * Der Anbieter antwortet nicht. Das Protokoll muss trotzdem dastehen: nach
+     * einer Störung im Mailempfang ist „wer hat wann was gesetzt" die erste
+     * Frage, und die Antwort darf nicht am Anbieter hängen.
+     */
+    Http::fake(['*' => Http::response([], 500)]);
+
+    Livewire::actingAs($this->benutzer)
+        ->test(DomainDnsPanel::class, ['domain' => $domain])
+        ->assertSee('Aus dem Portal geändert')
+        ->assertSee('_dmarc')
+        ->assertSee($this->benutzer->name)
+        // Der Anbieter hat den Aufruf angenommen, die Zone zeigte danach etwas
+        // anderes — das muss auffallen.
+        ->assertSee('nicht bestätigt');
 });

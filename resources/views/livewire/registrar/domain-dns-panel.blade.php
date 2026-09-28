@@ -136,4 +136,54 @@
             </div>
         @endif
     @endif
+
+    {{--
+        Was aus diesem Portal heraus geändert wurde. Steht auch dann da, wenn
+        die Zone gerade nicht gelesen werden kann — nach einer Störung ist das
+        die erste Frage, und die Antwort darf nicht am Anbieter hängen.
+    --}}
+    @if ($aenderungen->isNotEmpty())
+        <div class="mt-4 border-t border-line pt-3.5">
+            <p class="mb-2 text-[11.5px] font-medium text-ink-muted">
+                Aus dem Portal geändert
+            </p>
+
+            <ul class="space-y-1.5">
+                @foreach ($aenderungen as $aenderung)
+                    <li class="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11.5px]"
+                        wire:key="dns-aenderung-{{ $aenderung->id }}">
+                        <span class="tabular text-ink-faint">
+                            {{ $aenderung->applied_at->format('d.m.Y H:i') }}
+                        </span>
+
+                        <span class="font-mono text-ink-muted">
+                            {{ $aenderung->record_name }} {{ $aenderung->record_type }}
+                        </span>
+
+                        <span class="text-ink-base">
+                            @if ($aenderung->before && $aenderung->after)
+                                geändert
+                            @elseif ($aenderung->after)
+                                angelegt
+                            @else
+                                gelöscht
+                            @endif
+                        </span>
+
+                        @if ($aenderung->user)
+                            <span class="text-ink-faint">durch {{ $aenderung->user->name }}</span>
+                        @endif
+
+                        @unless ($aenderung->verified)
+                            {{--
+                                Der Anbieter hat den Aufruf angenommen, die Zone
+                                zeigte danach aber etwas anderes als bestellt.
+                            --}}
+                            <x-badge color="amber" text="nicht bestätigt" sm />
+                        @endunless
+                    </li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
 </div>

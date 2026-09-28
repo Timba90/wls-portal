@@ -368,7 +368,10 @@ neue Werte fest, und ein Kennwort gehoert dort nicht hinein (§50).
 `customer_id` / `customer_service_id`, `synced_at`.
 
 #### `dns_changes`
-Protokoll der ausgefuehrten DNS-Aenderungen: `domain_id` (nullable) und
+Protokoll der ausgefuehrten DNS-Aenderungen, sichtbar unter dem DNS-Reiter
+einer Domain („Aus dem Portal geaendert") — auch dann, wenn die Zone gerade
+nicht gelesen werden kann, denn nach einer Stoerung im Mailempfang ist „wer hat
+wann was gesetzt" die erste Frage. Felder: `domain_id` (nullable) und
 `domain_name` als Text daneben, `provider`, `operation` (anlegen, aendern,
 loeschen), `record_name`, `record_type`, `before`, `after`, `fingerprint`,
 `verified`, `note`, `user_id`, `applied_at`. Wie ein Audit-Eintrag
@@ -638,7 +641,7 @@ Jahresumsatz ein.
 
 ### AE-15 — MCP-Server mit vollen Schreibrechten
 Der Datenbestand ist über einen MCP-Server für KI-Clients erreichbar
-(`app/Mcp`, Route `mcp/portal`, 43 Werkzeuge). Der Auftraggeber hat sich
+(`app/Mcp`, Route `mcp/portal`, 44 Werkzeuge). Der Auftraggeber hat sich
 ausdrücklich für den vollen Umfang **ohne Leitplanken** entschieden: neben
 Lesen und Schreiben auch endgültiges Löschen und das direkte Überschreiben von
 Preisen am Preisverlauf vorbei. Das steht bewusst quer zu den Grundsätzen

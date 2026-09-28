@@ -8,6 +8,7 @@ use App\Mcp\Tools\PortalTool;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
+use App\Models\Domain;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\JsonSchema\Types\Type;
@@ -17,7 +18,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('notiz-speichern')]
-#[Description('Hinterlegt eine Notiz an einem Kunden, Ansprechpartner oder einer Kundenleistung. Ohne notiz_id entsteht ein neuer Eintrag, mit notiz_id wird ein bestehender überschrieben.')]
+#[Description('Hinterlegt eine Notiz an einem Kunden, Ansprechpartner, einer Kundenleistung oder einer Domain. Ohne notiz_id entsteht ein neuer Eintrag, mit notiz_id wird ein bestehender überschrieben. Bei einer von Hand gepflegten Domain gehört hierher, bei welchem Registrar sie liegt — das Anbieterfeld benennt Anschlüsse, keine Registrare ohne solchen.')]
 class NotizSpeichern extends PortalTool
 {
     /**
@@ -27,6 +28,7 @@ class NotizSpeichern extends PortalTool
         'kunde' => Customer::class,
         'ansprechpartner' => Contact::class,
         'leistung' => CustomerService::class,
+        'domain' => Domain::class,
     ];
 
     public function __construct(private readonly SaveNote $saveNote) {}
@@ -34,7 +36,7 @@ class NotizSpeichern extends PortalTool
     public function handle(Request $request): Response
     {
         $eingabe = $request->validate([
-            'typ' => ['required', 'string', 'in:kunde,ansprechpartner,leistung'],
+            'typ' => ['required', 'string', 'in:kunde,ansprechpartner,leistung,domain'],
             'id' => ['required', 'integer'],
             'kategorie' => ['required', 'string', 'in:general,technical,billing,contract'],
             'text' => ['required', 'string'],
@@ -80,7 +82,7 @@ class NotizSpeichern extends PortalTool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'typ' => $schema->string()->enum(['kunde', 'ansprechpartner', 'leistung'])
+            'typ' => $schema->string()->enum(['kunde', 'ansprechpartner', 'leistung', 'domain'])
                 ->description('Art des Datensatzes, an dem die Notiz hängt.')
                 ->required(),
             'id' => $schema->integer()->description('Interne ID dieses Datensatzes.')->required(),
