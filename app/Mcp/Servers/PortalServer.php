@@ -35,6 +35,9 @@ use App\Mcp\Tools\Projects\ProjektTeamSetzen;
 use App\Mcp\Tools\Projects\ProjekttypenVerwalten;
 use App\Mcp\Tools\Registrar\BestandSuchen;
 use App\Mcp\Tools\Registrar\BestandZuordnen;
+use App\Mcp\Tools\Registrar\DnsAenderungAnwenden;
+use App\Mcp\Tools\Registrar\DnsAenderungPlanen;
+use App\Mcp\Tools\Registrar\DnsZoneLesen;
 use App\Mcp\Tools\Services\KatalogabgleichLesen;
 use App\Mcp\Tools\Services\KatalogaenderungEntscheiden;
 use App\Mcp\Tools\Services\LeistungenSuchen;
@@ -84,6 +87,27 @@ use Laravel\Mcp\Server\Attributes\Version;
       die Verbindung zur Abrechnung fehlt noch.
     - Die Kundenleistung ist freiwillig. Nicht jede Domain wird einzeln
       berechnet, manche laeuft in einem Paket mit.
+
+    Zu DNS-Eintraegen:
+
+    - `dns-zone-lesen` zeigt die Zone beim Anbieter. Geaendert wird in zwei
+      Schritten: `dns-aenderung-planen` zeigt Ist, Soll und eine Pruefsumme,
+      `dns-aenderung-anwenden` fuehrt sie mit genau dieser Pruefsumme aus.
+      Ohne vorherigen Plan gibt es keine Aenderung.
+    - **Rechne einen Eintragswert nie stillschweigend selbst zusammen.** Ein
+      Pruefbericht nennt oft einen „Soll-Record", der nur eine Ergaenzung
+      meint: wer bei SPF das Soll wortgleich schreibt, entfernt die uebrigen
+      Absender und stellt den Mailversand ab. Den vollstaendigen neuen Wert
+      bestimmt der Mensch — zeige Ist und Soll, benenne den Unterschied, und
+      frage nach, bevor du anwendest.
+    - An einer Stelle koennen mehrere Eintraege desselben Typs liegen (SPF
+      neben einem Bestaetigungs-Token, mehrere A oder MX). Dann sagt
+      `alt_inhalt`, welcher gemeint ist; ohne die Angabe bricht die Planung ab
+      und nennt die vorhandenen.
+    - Ein zweiter SPF- oder DMARC-Eintrag macht beide ungueltig. Ergaenzen
+      heisst deshalb `aendern`, nicht `anlegen`.
+    - Passt die Pruefsumme nicht mehr, hat sich die Zone bewegt: neu planen und
+      den neuen Stand ansehen, nicht die alte Pruefsumme erneut schicken.
 
     Zum Einstieg eignen sich `kennzahlen-lesen` fuer den Gesamtueberblick und
     `global-suchen`, wenn nur ein Stichwort bekannt ist.
@@ -139,6 +163,10 @@ class PortalServer extends Server
 
         BestandSuchen::class,
         BestandZuordnen::class,
+
+        DnsZoneLesen::class,
+        DnsAenderungPlanen::class,
+        DnsAenderungAnwenden::class,
 
         KennzahlenLesen::class,
         GlobalSuchen::class,

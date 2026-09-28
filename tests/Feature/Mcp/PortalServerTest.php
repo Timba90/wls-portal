@@ -54,7 +54,7 @@ it('beschreibt jedes Werkzeug mit Name, Titel und Beschreibung', function (): vo
 
     $werkzeuge = $antwort->json('result.tools');
 
-    expect($werkzeuge)->toHaveCount(40);
+    expect($werkzeuge)->toHaveCount(43);
 
     foreach ($werkzeuge as $werkzeug) {
         expect($werkzeug['name'])->toMatch('/^[a-z]+(-[a-z]+)*$/')
@@ -83,6 +83,9 @@ it('kennzeichnet die löschenden Werkzeuge als destruktiv', function (): void {
 
     expect($destruktiv)->toBe([
         'ansprechpartner-loeschen',
+        // Der einzige Zugriff, der etwas ausserhalb dieser Anwendung aendert:
+        // eine fremde DNS-Zone.
+        'dns-aenderung-anwenden',
         'kunde-loeschen',
         'leistung-loeschen',
         'preis-direkt-setzen',

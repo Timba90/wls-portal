@@ -75,13 +75,26 @@ return [
     | ResellerInterface schon einmal als Angriff gewertet und das Konto
     | gesperrt.
     |
-    | Geschrieben wird nichts. Es gibt keinen Schalter, der das ändert.
+    | Geschrieben wird nur, wenn `writes_enabled` es erlaubt — und die Vorgabe
+    | ist aus. Lange gab es diesen Schalter gar nicht, mit Absicht; auf Ansage
+    | ist er dazugekommen, damit sich Mail-Einträge (SPF, DKIM, DMARC) und
+    | andere Records über den MCP-Server setzen lassen. Die Regeln dahinter
+    | stehen im Code und nicht nur hier: gelesen wird vor jeder Änderung, jede
+    | Änderung braucht eine Prüfsumme aus genau diesem gelesenen Stand, und
+    | jede wird protokolliert. Ein Anschluss ohne Schreibrecht beim Anbieter
+    | sagt es von sich aus.
+    |
+    | Der Schalter gilt je Umgebung. Wer ihn einschaltet, entscheidet, dass
+    | dieses Portal fremde Zonen ändern darf — ein falscher Eintrag schaltet
+    | eine Kundenseite oder deren Mailempfang sofort ab.
     |
     */
 
     'dns' => [
 
         'cache_minutes' => (int) env('REGISTRAR_DNS_CACHE_MINUTES', 10),
+
+        'writes_enabled' => (bool) env('REGISTRAR_DNS_WRITES_ENABLED', false),
 
     ],
 

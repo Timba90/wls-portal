@@ -19,6 +19,10 @@ final readonly class DnsZone
      * @param  int|null  $ttl  Die Vorgabe der Zone, falls der Anbieter sie nennt.
      * @param  string|null  $soaEmail  Der Zonenkontakt.
      * @param  CarbonImmutable|null  $updatedAt  Wann der Anbieter die Zone zuletzt geaendert hat.
+     * @param  string|null  $nameServer  Der Nameserver, unter dem der Anbieter die Zone fuehrt.
+     *                                   autoDNS braucht ihn im Pfad jeder Aenderung und nennt ihn
+     *                                   in der Zone selbst (`virtualNameServer`); geraten wird er
+     *                                   nicht.
      */
     public function __construct(
         public string $origin,
@@ -27,7 +31,32 @@ final readonly class DnsZone
         public ?int $ttl = null,
         public ?string $soaEmail = null,
         public ?CarbonImmutable $updatedAt = null,
+        public ?string $nameServer = null,
     ) {}
+
+    /**
+     * Die echten Eintraege mit diesem Namen und Typ.
+     *
+     * Der Schreibpfad braucht sie, um „genau diesen Eintrag" von „einen von
+     * mehreren" zu unterscheiden: an einem Namen koennen mehrere TXT liegen
+     * (SPF neben einem Bestaetigungs-Token), und ein A-Name kann mehrere
+     * Adressen tragen. Abgeleitete Eintraege bleiben aussen vor — sie stehen in
+     * keiner Eintragsliste des Anbieters und lassen sich nicht aendern.
+     *
+     * @return array<int, DnsRecord>
+     */
+    public function recordsAt(string $name, string $type): array
+    {
+        $name = $name === '' ? '@' : mb_strtolower(rtrim($name, '.'));
+        $type = mb_strtoupper($type);
+
+        return array_values(array_filter(
+            $this->records,
+            fn (DnsRecord $record): bool => ! $record->derived
+                && mb_strtolower($record->name) === $name
+                && $record->type === $type,
+        ));
+    }
 
     /**
      * Die Eintraege nach Typ und Name sortiert.

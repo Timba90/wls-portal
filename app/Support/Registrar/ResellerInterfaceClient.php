@@ -49,7 +49,7 @@ use Throwable;
  * 4. Bei `TOO_MANY_ATTEMPTS` oder `WRONG_USERNAME_OR_PASSWORD` bricht der
  *    Anschluss mit einer unmissverstaendlichen Meldung ab.
  */
-class ResellerInterfaceClient implements RegistrarClient
+class ResellerInterfaceClient implements RegistrarClient, ZoneWriter
 {
     /**
      * Aktionen, die dieser Anschluss aufrufen darf — ausschliesslich lesende.
@@ -64,6 +64,21 @@ class ResellerInterfaceClient implements RegistrarClient
         'tld/list',
         'tls/list',
         'dns/getZoneDetails',
+    ];
+
+    /**
+     * Aktionen, die etwas aendern — eine eigene Liste, damit der Unterschied im
+     * Code steht und nicht im Kopf des Lesers.
+     *
+     * Sie sind nur erreichbar, wenn `portal.dns.writes_enabled` es erlaubt, und
+     * nur ueber `applyZoneChange()`. `dns/setRecords` steht mit Absicht nicht
+     * dabei: es kennt `clearZone` und loescht die Zone vor dem Schreiben.
+     */
+    private const ERLAUBTE_SCHREIBAKTIONEN = [
+        'dns/createRecord',
+        'dns/updateRecord',
+        'dns/deleteRecord',
+        'dns/createBackup',
     ];
 
     /**
@@ -288,6 +303,138 @@ class ResellerInterfaceClient implements RegistrarClient
         );
     }
 
+    public function canWriteZone(): bool
+    {
+        return $this->isConfigured() && (bool) config('portal.dns.writes_enabled', false);
+    }
+
+    /**
+     * Aendert einen Eintrag der Zone.
+     *
+     * Hier ist es punktgenau: `dns/getZoneDetails` nennt je Eintrag eine `id`,
+     * und `dns/updateRecord` und `dns/deleteRecord` arbeiten mit genau dieser
+     * Kennung. Getroffen wird also nie „ein Eintrag, der so aussieht", sondern
+     * der eine, der gemeint ist.
+     *
+     * Vor der Aenderung wird ein Zonen-Backup versucht (`dns/createBackup`).
+     * Es braucht ein anderes Recht als die Aenderung selbst („Zonenkopf (SOA)
+     * verwalten"), kann also fehlen; dann laeuft die Aenderung trotzdem, und
+     * dass kein Backup entstand, steht in der Meldung. Stillschweigend
+     * uebergangen wird es nicht.
+     */
+    public function applyZoneChange(DnsZone $zone, ?DnsRecord $entfernen, ?DnsRecord $anlegen): void
+    {
+        $this->guardConfigured();
+        $this->guardWritesEnabled();
+
+        if ($entfernen === null && $anlegen === null) {
+            throw new RegistrarException('Eine Änderung ohne alten und ohne neuen Eintrag ist keine.');
+        }
+
+        $this->backup($zone->origin);
+
+        // Aendern: ein Aufruf, ueber die Kennung des alten Eintrags.
+        if ($entfernen !== null && $anlegen !== null) {
+            $this->call('dns/updateRecord', [
+                'domain' => $zone->origin,
+                'id' => $this->kennung($entfernen, $zone),
+                ...$this->recordFelder($anlegen, $zone),
+            ]);
+
+            return;
+        }
+
+        if ($anlegen !== null) {
+            $this->call('dns/createRecord', [
+                'domain' => $zone->origin,
+                ...$this->recordFelder($anlegen, $zone),
+            ]);
+
+            return;
+        }
+
+        $this->call('dns/deleteRecord', [
+            'domain' => $zone->origin,
+            'id' => $this->kennung($entfernen, $zone),
+        ]);
+    }
+
+    /**
+     * Die Kennung eines Eintrags — ohne sie gibt es keine gezielte Aenderung.
+     */
+    private function kennung(DnsRecord $record, DnsZone $zone): string
+    {
+        if ($record->reference === null) {
+            throw new RegistrarException(sprintf(
+                'Zum Eintrag „%s" in %s fehlt die Kennung des Anbieters. Ohne sie würde die Änderung raten, '
+                .'welcher Eintrag gemeint ist — die Zone wird deshalb neu gelesen, statt zu schätzen.',
+                $record->describe(),
+                $zone->origin,
+            ));
+        }
+
+        return $record->reference;
+    }
+
+    /**
+     * Ein Eintrag als Formularfelder fuer `dns/createRecord` und
+     * `dns/updateRecord`.
+     *
+     * Der Ursprung wird als voller Domainname geschickt — so gibt der Anbieter
+     * ihn in `dns/getZoneDetails` auch aus. `priority` geht nur mit, wo sie eine
+     * Bedeutung hat; sonst setzt der Anbieter selbst 0.
+     *
+     * @return array<string, mixed>
+     */
+    private function recordFelder(DnsRecord $record, DnsZone $zone): array
+    {
+        $felder = [
+            'name' => $record->name === '@' ? $zone->origin : $record->name,
+            'type' => $record->type,
+            'content' => $record->content,
+        ];
+
+        if ($record->ttl !== null) {
+            $felder['ttl'] = $record->ttl;
+        }
+
+        if ($record->priority !== null) {
+            $felder['priority'] = $record->priority;
+        }
+
+        return $felder;
+    }
+
+    /**
+     * Versucht ein Zonen-Backup und gibt zurueck, ob es entstanden ist.
+     */
+    private function backup(string $domain): void
+    {
+        try {
+            $this->call('dns/createBackup', ['domain' => $domain]);
+        } catch (RegistrarException $fehler) {
+            // Das Backup braucht ein anderes Recht als die Aenderung. Fehlt es,
+            // ist das kein Grund, die Aenderung zu verweigern — aber es gehoert
+            // ins Protokoll.
+            logger()->warning('Kein DNS-Backup vor der Änderung', [
+                'domain' => $domain,
+                'grund' => $fehler->getMessage(),
+            ]);
+        }
+    }
+
+    private function guardWritesEnabled(): void
+    {
+        if ((bool) config('portal.dns.writes_enabled', false)) {
+            return;
+        }
+
+        throw new RegistrarException(
+            'Schreibende DNS-Änderungen sind in dieser Umgebung nicht eingeschaltet '
+            .'(REGISTRAR_DNS_WRITES_ENABLED).',
+        );
+    }
+
     /**
      * Die Eintraege der Zone.
      *
@@ -344,6 +491,10 @@ class ResellerInterfaceClient implements RegistrarClient
                 priority: in_array($typ, ['MX', 'SRV'], strict: true)
                     ? $this->zahl($eintrag, 'priority')
                     : null,
+                // Die `id` des Anbieters. Sie ist der Anker jeder Aenderung:
+                // `dns/updateRecord` und `dns/deleteRecord` arbeiten mit ihr,
+                // nicht mit einem Vergleich der Felder.
+                reference: $this->text($eintrag, 'id'),
             );
         }
 
@@ -602,10 +753,16 @@ class ResellerInterfaceClient implements RegistrarClient
      */
     private function call(string $aktion, array $params = []): array
     {
-        if (! in_array($aktion, self::ERLAUBTE_AKTIONEN, strict: true)) {
+        $schreibend = in_array($aktion, self::ERLAUBTE_SCHREIBAKTIONEN, strict: true);
+
+        if (! $schreibend && ! in_array($aktion, self::ERLAUBTE_AKTIONEN, strict: true)) {
             throw new RegistrarException(
-                "Die Aktion {$aktion} ist für diesen Anschluss nicht vorgesehen. Er liest nur.",
+                "Die Aktion {$aktion} ist für diesen Anschluss nicht vorgesehen.",
             );
+        }
+
+        if ($schreibend) {
+            $this->guardWritesEnabled();
         }
 
         try {
