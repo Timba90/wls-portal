@@ -30,6 +30,17 @@ class ReadDnsZone
      */
     public function __invoke(Domain $domain, bool $force = false): DnsZone
     {
+        /*
+         * Von Hand gepflegte Domains haben keinen Anschluss. Die Frage nach
+         * ihrer Zone hat damit keinen Adressaten — und sie wird gestellt,
+         * bevor die Fabrik einen Anschluss bauen soll, den es nicht gibt.
+         */
+        if (! $domain->provider->hasClient()) {
+            throw new RegistrarException(
+                'Diese Domain wird von Hand gepflegt: es gibt keinen Anschluss, der ihre DNS-Zone lesen könnte.',
+            );
+        }
+
         $client = $this->factory->for($domain->provider);
 
         if (! $client->canReadZone()) {

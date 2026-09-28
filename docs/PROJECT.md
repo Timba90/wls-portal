@@ -395,6 +395,19 @@ der Registry gilt (`LIVE`); ohne sie die angemeldete, und eine
 fehlgeschlagene gar nicht — sie waere eine Stoerung und kein Stand. Die
 Begruendung im Einzelnen steht in `docs/BACKLOG.md`.
 
+Nicht jede Domain kommt aus einem Import. §60 verlangt, dass Domains anderer
+Anbieter „ebenfalls manuell verwaltbar" sind; sie tragen deshalb den Anbieter
+`RegistrarProvider::Manual` und werden von Hand gepflegt — anlegen unter
+`/domains/neu`, aendern unter `/domains/{domain}/bearbeiten`, beides
+`App\Livewire\Registrar\DomainForm` mit `CreateManualDomain` und
+`UpdateManualDomain`. Zu diesem Anbieter gehoert kein Anschluss: `hasClient()`
+sagt es, und wer es nicht fragt, bekommt von der Fabrik eine Ausnahme statt
+eines Clients, den es nicht gibt. Umgekehrt bleibt der technische Stand einer
+*importierten* Domain hier unberuehrbar — er kommt vom Anbieter, und der
+naechste Abgleich wuerde eine Eingabe ohnehin ueberschreiben. Bei wem eine von
+Hand gepflegte Domain tatsaechlich liegt, gehoert in eine Notiz oder ein eigenes
+Feld: das Enum benennt Anschluesse, keine Registrare ohne solchen.
+
 Beide Anschluesse lesen auch die DNS-Zone einer Domain (`canReadZone()`) —
 autoDNS ueber „Zone Info", ResellerInterface ueber `dns/getZoneDetails`.
 Gespeichert wird sie nicht; sie gehoert dem Anbieter und wird auf Zuruf

@@ -1,17 +1,28 @@
 <div>
     @if (! $lesbar)
         {{--
-            Kein Fehler, sondern ein Zustand: die Schnittstelle dieses
-            Anbieters nennt keinen lesenden Aufruf für Zonen.
+            Kein Fehler, sondern ein Zustand — aus einem von zwei Gründen:
+            zu dieser Domain gehört gar kein Anschluss, oder der Anschluss
+            ihres Anbieters kennt keinen lesenden Aufruf für Zonen.
         --}}
         <div class="rounded-[8px] border border-line bg-raised px-3.5 py-3">
-            <p class="text-[12.5px] text-ink-base">
-                {{ $domain->provider->label() }} liefert hier noch keine DNS-Zone.
-            </p>
-            <p class="mt-1 text-[11.5px] text-ink-faint">
-                Der lesende Aufruf der Schnittstelle ist nicht dokumentiert. Er wird nicht geraten —
-                bei diesem Anbieter haben Fehlversuche schon einmal das Konto gesperrt.
-            </p>
+            @if ($vonHand)
+                <p class="text-[12.5px] text-ink-base">
+                    Diese Domain wird von Hand gepflegt.
+                </p>
+                <p class="mt-1 text-[11.5px] text-ink-faint">
+                    Zu ihr gehört kein Anschluss, der eine Zone lesen könnte. Ihre Einträge stehen
+                    bei dem Registrar, bei dem sie liegt.
+                </p>
+            @else
+                <p class="text-[12.5px] text-ink-base">
+                    {{ $domain->provider->label() }} liefert hier keine DNS-Zone.
+                </p>
+                <p class="mt-1 text-[11.5px] text-ink-faint">
+                    Der Anschluss dieses Anbieters kennt keinen lesenden Aufruf für Zonen. Geraten
+                    wird keiner — ein falscher Name kann eine echte Zone ändern.
+                </p>
+            @endif
         </div>
     @else
         <div class="mb-3.5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">

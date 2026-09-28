@@ -41,6 +41,29 @@ class Domain extends Model
     use Auditable, HasCustomFields, HasDocuments, HasFactory, HasNotes;
 
     /**
+     * Ein Domainname in der Schreibweise, in der er hier gespeichert wird.
+     *
+     * Kleingeschrieben und ohne Punkt am Ende: `Beispiel.DE.` und `beispiel.de`
+     * sind dieselbe Domain, und `name` ist eindeutig. Die Anschluesse bringen
+     * ihre Namen schon so mit; von Hand getippte gehen hier durch.
+     */
+    public static function normalizeName(string $name): string
+    {
+        return mb_strtolower(rtrim(trim($name), '.'));
+    }
+
+    /**
+     * Wird diese Domain von Hand gepflegt?
+     *
+     * Dann gibt es keinen Anbieter, der ihren technischen Stand liefert — und
+     * nur dann darf er hier bearbeitet werden.
+     */
+    public function isMaintainedByHand(): bool
+    {
+        return ! $this->provider->hasClient();
+    }
+
+    /**
      * @return BelongsTo<Customer, $this>
      */
     public function customer(): BelongsTo

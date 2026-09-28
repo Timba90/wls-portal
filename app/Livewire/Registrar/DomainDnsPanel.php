@@ -59,6 +59,9 @@ class DomainDnsPanel extends Component
             'records' => $zone instanceof DnsZone ? $this->records($zone) : [],
             'typen' => $zone?->countsByType() ?? [],
             'lesbar' => $this->providerCanRead(),
+            // Zwei verschiedene Gruende, warum hier keine Zone steht: kein
+            // Anschluss, oder ein Anschluss ohne lesenden Aufruf.
+            'vonHand' => ! $this->domain->provider->hasClient(),
         ]);
     }
 
@@ -83,6 +86,12 @@ class DomainDnsPanel extends Component
     {
         // Gemerkt: die Antwort steht fest, das Erzeugen des Anschlusses liest
         // aber jedes Mal die verschluesselten Zugangsdaten aus der Datenbank.
+        // Ohne Anschluss gibt es nichts zu fragen: von Hand gepflegte Domains
+        // haben keinen, und die Fabrik soll dafuer auch keinen bauen.
+        if (! $this->domain->provider->hasClient()) {
+            return $this->lesbar = false;
+        }
+
         return $this->lesbar ??= app(RegistrarClientFactory::class)
             ->for($this->domain->provider)
             ->canReadZone();

@@ -16,6 +16,21 @@
             back-label="Domains"
             :back-url="route('domains.index')">
         <x-slot:actions>
+            @if ($domain->isMaintainedByHand())
+                {{--
+                    Nur hier: der technische Stand einer importierten Domain
+                    kommt vom Anbieter und wird dort geändert.
+                --}}
+                <x-button sm
+                          color="secondary"
+                          outline
+                          icon="pencil-square"
+                          :href="route('domains.edit', $domain)"
+                          wire:navigate>
+                    Bearbeiten
+                </x-button>
+            @endif
+
             <x-button sm
                       color="secondary"
                       outline

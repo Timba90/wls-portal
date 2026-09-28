@@ -34,6 +34,20 @@ class DomainFactory extends Factory
         ];
     }
 
+    /**
+     * Eine von Hand gepflegte Domain (§60): kein Anbieter mit Anschluss, keine
+     * Kennung dort, und nie abgeglichen.
+     */
+    public function manual(): static
+    {
+        return $this->state(fn (): array => [
+            'provider' => RegistrarProvider::Manual,
+            'provider_reference' => null,
+            'status' => 'aktiv',
+            'synced_at' => null,
+        ]);
+    }
+
     public function expired(): static
     {
         return $this->state(fn (): array => ['expires_on' => now()->subDays(7)->startOfDay()]);

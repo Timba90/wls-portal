@@ -489,9 +489,29 @@ describe('Anzeige', function (): void {
 
         Livewire::actingAs($this->benutzer)
             ->test(DomainDnsPanel::class, ['domain' => $domain])
-            ->assertSee('liefert hier noch keine DNS-Zone')
+            ->assertSee('liefert hier keine DNS-Zone')
             ->assertDontSee('Neu laden');
 
+        Http::assertNothingSent();
+    });
+
+    it('sagt bei einer von Hand gepflegten Domain, dass es keinen Anschluss gibt', function (): void {
+        $domain = Domain::factory()->create(['provider' => RegistrarProvider::Manual]);
+
+        Http::fake();
+
+        /*
+         * Zwei verschiedene Gruende, warum hier keine Zone steht, und die
+         * Oberflaeche nennt den richtigen: hier gibt es gar keinen Anschluss,
+         * nicht einen ohne lesenden Aufruf.
+         */
+        Livewire::actingAs($this->benutzer)
+            ->test(DomainDnsPanel::class, ['domain' => $domain])
+            ->assertSee('Diese Domain wird von Hand gepflegt')
+            ->assertDontSee('liefert hier keine DNS-Zone')
+            ->assertDontSee('Neu laden');
+
+        // Entscheidend: es wurde kein Anschluss gebaut und nichts aufgerufen.
         Http::assertNothingSent();
     });
 
