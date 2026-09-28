@@ -29,6 +29,11 @@ use Throwable;
  * - Jede Antwort ist ein JSON-Umschlag: `success`, `state`, `stateName`
  *   und die Nutzdaten unter `data`.
  *
+ * Die Feldnamen der einzelnen Aufrufe stammen aus der offiziellen
+ * OpenAPI-Beschreibung des Anbieters („CoreAPI - Reseller-Interface", 1.0).
+ * Dort stehen `domain/list`, `tls/list` und `dns/getZoneDetails` mit ihren
+ * Parametern und Antwortfeldern; geraten ist hier nichts.
+ *
  * Warum so streng: ein selbstgebautes Login-Skript hat sich mit leeren
  * Zugangsdaten dutzendfach angemeldet und das Konto gesperrt; DNS-Aenderungen
  * waren danach fuer alle Kunden blockiert. Daraus folgen Regeln, die hier im
@@ -53,7 +58,13 @@ class ResellerInterfaceClient implements RegistrarClient
      * nicht. `domain/transfer` mit einem Testnamen hat schon einmal einen
      * echten Transfer ausgeloest.
      */
-    private const ERLAUBTE_AKTIONEN = ['domain/list', 'domain/check', 'tld/list'];
+    private const ERLAUBTE_AKTIONEN = [
+        'domain/list',
+        'domain/check',
+        'tld/list',
+        'tls/list',
+        'dns/getZoneDetails',
+    ];
 
     /**
      * Ohne Angabe liefert `domain/list` nur 25 Eintraege. Das ist kein Fehler
@@ -138,7 +149,7 @@ class ResellerInterfaceClient implements RegistrarClient
                 }
 
                 $antwort = $this->call('domain/list', $params);
-                $liste = $this->liste($antwort);
+                $liste = $this->liste($antwort, 'domain/list');
 
                 foreach ($liste as $eintrag) {
                     if (is_array($eintrag)) {
@@ -147,55 +158,408 @@ class ResellerInterfaceClient implements RegistrarClient
                 }
 
                 // Der Anbieter nennt die Gesamtzahl unter `total`; die
-                // Seiten laufen, bis alles gesehen wurde.
+                // Seiten laufen, bis alles gesehen wurde. Eine leere Seite
+                // beendet das Blaettern ebenfalls: nennt der Anbieter eine
+                // Gesamtzahl, die er nicht ausliefert, liefe die Schleife
+                // sonst endlos.
                 $gesamt = (int) ($antwort['total'] ?? data_get($antwort, 'data.total', 0));
                 $offset += count($liste);
-            } while ($offset < $gesamt);
+            } while ($liste !== [] && $offset < $gesamt);
         }
     }
 
     /**
-     * ResellerInterface fuehrt in diesem Anschluss keine Zertifikate.
+     * Der Zertifikatsbestand ueber `tls/list`.
      *
-     * Die Anleitung nennt fuer den Bestand `domain/*`, `dns/*` und
-     * `handle/*`; ein Zertifikatsbestand kommt darin nicht vor. Eine leere
-     * Liste ist deshalb die ehrliche Antwort — geraten wird hier nichts.
-     * S/MIME-Zertifikate stammen von autoDNS.
+     * Frueher stand hier eine leere Liste mit der Begruendung, die Anleitung
+     * kenne keinen Zertifikatsbestand. Die OpenAPI-Beschreibung des Anbieters
+     * kennt ihn: `tls/list` liest ihn mit dem Recht „SSL-Zertifikate einsehen"
+     * (api.tls.view), also rein lesend, und blaettert wie `domain/list` ueber
+     * `limit` und `offset`.
      *
      * @return iterable<int, RemoteCertificate>
      */
     public function certificates(): iterable
     {
-        return [];
+        $this->guardConfigured();
+
+        foreach ($this->resellerIds() as $resellerId) {
+            $offset = 0;
+
+            do {
+                $params = [
+                    'limit' => self::SEITENGROESSE,
+                    'offset' => $offset,
+                    // Ohne diese Angabe nennt die Liste nur die Kennung des
+                    // aktiven Zertifikats. Erst damit liegt das Zertifikat
+                    // selbst daneben — und mit ihm `validTill`, das echte Ende
+                    // der Gueltigkeit. Ein Abrechnungsdatum waere es nicht.
+                    'include' => ['certificates'],
+                ];
+
+                if ($resellerId !== null) {
+                    $params['resellerID'] = $resellerId;
+                }
+
+                $antwort = $this->call('tls/list', $params);
+                $gesamt = (int) ($antwort['total'] ?? data_get($antwort, 'data.total', 0));
+
+                /*
+                 * Ein Konto ohne Zertifikate ist der Normalfall und keine
+                 * kaputte Antwort: nennt der Anbieter die Gesamtzahl 0 und
+                 * fuehrt gar keine Liste, ist der Bestand eben leer. Bei
+                 * `domain/list` ist das anders — dort waere eine fehlende
+                 * Liste ein verschwundener Bestand.
+                 */
+                if ($gesamt === 0 && ($antwort['list'] ?? null) === null) {
+                    break;
+                }
+
+                $liste = $this->liste($antwort, 'tls/list');
+
+                foreach ($liste as $eintrag) {
+                    if (is_array($eintrag)) {
+                        yield $this->toCertificate($eintrag);
+                    }
+                }
+
+                $offset += count($liste);
+            } while ($liste !== [] && $offset < $gesamt);
+        }
     }
 
     /**
-     * Dieser Anschluss kann noch keine Zone lesen.
+     * Dieser Anschluss kann eine Zone lesen.
      *
-     * Dass es die Kategorie `dns/*` gibt, ist gesichert — die Anleitung nennt
-     * sie, und die Plesk-Erweiterung des Anbieters ruft dort vier *schreibende*
-     * Funktionen auf (Zone anlegen, Zone aendern, Eintraege setzen, Zone
-     * loeschen). Der *lesende* Aufruf kommt in keiner oeffentlichen Quelle vor:
-     * nicht in der Anleitung, nicht in den drei eigenen API-Clients des
-     * Anbieters, nicht in seiner Plesk-Erweiterung.
+     * Lange stand hier `false`: die Kategorie `dns/*` war bekannt, aber von
+     * ihren Funktionen waren nur *schreibende* belegt (Zone anlegen, aendern,
+     * Eintraege setzen, loeschen). Der lesende Name wurde nicht erraten, weil
+     * ein Fehlversuch bei genau diesem Anbieter schon einmal das Konto
+     * gesperrt hat.
      *
-     * Er wird deshalb nicht erraten. Ein Name, der zufaellig auf eine
-     * schreibende Funktion trifft, aendert eine echte Zone; ein Name, der
-     * daneben liegt, erzeugt Fehlversuche bei genau dem Anbieter, der das Konto
-     * schon einmal gesperrt hat. Sobald der Name feststeht, sind es drei
-     * Zeilen: die Aktion in die Positivliste, der Aufruf hier, die Zuordnung
-     * der Felder.
+     * Die OpenAPI-Beschreibung nennt ihn: `dns/getZoneDetails` („Details zu
+     * einer Zone anzeigen", Alias `dns/listRecords`) mit dem Recht „Zonen
+     * einsehen" (api.dns.view). Damit steht der Name fest und ist nicht
+     * geraten.
      */
     public function canReadZone(): bool
     {
-        return false;
+        return true;
     }
 
+    /**
+     * Liest eine Zone ueber `dns/getZoneDetails`.
+     *
+     * Pflichtparameter ist allein der Domainname; die Antwort haelt die SOA
+     * unter `soa`, die Eintraege unter `records` und den virtuellen
+     * Nameserver-Satz unter `vns`. Der Aufruf liest und aendert nichts — das
+     * Recht dazu heisst „Zonen einsehen".
+     */
     public function zone(string $domain): DnsZone
     {
-        throw new RegistrarException(
-            'ResellerInterface kann hier noch keine DNS-Zone liefern: der lesende Aufruf der Schnittstelle ist nicht dokumentiert und wird nicht geraten.',
+        $this->guardConfigured();
+
+        $name = mb_strtolower(trim($domain));
+
+        if ($name === '') {
+            throw new RegistrarException('Ohne Domainnamen lässt sich keine Zone lesen.');
+        }
+
+        $antwort = $this->call('dns/getZoneDetails', ['domain' => $name]);
+
+        $soa = is_array($antwort['soa'] ?? null) ? $antwort['soa'] : [];
+        $records = $this->records($antwort, $name);
+
+        return new DnsZone(
+            origin: mb_strtolower($this->text($antwort, 'domain') ?? $name),
+            nameservers: $this->nameserver($antwort, $records),
+            records: $records,
+            ttl: $this->zahl($soa, 'ttl'),
+            soaEmail: $this->text($soa, 'mail'),
+            updatedAt: $this->seriennummer($soa),
         );
+    }
+
+    /**
+     * Die Eintraege der Zone.
+     *
+     * Anders als bei anderen Anbietern ist `records` keine Liste, sondern eine
+     * Zuordnung `Record-ID => Eintrag`. Nur die Werte sind gemeint; die
+     * Schluessel wiederholen die `id` daneben.
+     *
+     * Fehlt `records` ganz, bricht der Aufruf ab: eine leere Zone anzuzeigen,
+     * wo der Anbieter etwas anderes gemeint hat, waere schlimmer als ein
+     * Fehler — jemand koennte daraus schliessen, ein Eintrag sei verschwunden.
+     *
+     * @param  array<string, mixed>  $antwort
+     * @return array<int, DnsRecord>
+     */
+    private function records(array $antwort, string $zone): array
+    {
+        $eintraege = $antwort['records'] ?? null;
+
+        if (! is_array($eintraege)) {
+            throw new RegistrarException(
+                "ResellerInterface hat zu {$zone} keine Eintragsliste geliefert (records fehlt).",
+                $antwort,
+            );
+        }
+
+        $records = [];
+
+        foreach ($eintraege as $eintrag) {
+            if (! is_array($eintrag)) {
+                continue;
+            }
+
+            $typ = $this->text($eintrag, 'type');
+
+            if ($typ === null) {
+                continue;
+            }
+
+            $typ = mb_strtoupper($typ);
+            $inhalt = $this->text($eintrag, 'content') ?? $this->sonderdaten($eintrag);
+
+            if ($inhalt === null) {
+                continue;
+            }
+
+            $records[] = new DnsRecord(
+                name: $this->recordName($eintrag, $zone),
+                type: $typ,
+                content: $inhalt,
+                ttl: $this->zahl($eintrag, 'ttl'),
+                // Der Anbieter fuehrt `priority` bei jedem Eintrag und setzt
+                // sie sonst auf 0. Uebernommen wird sie nur, wo sie eine
+                // Bedeutung hat — bei MX und SRV ist auch die 0 eine Angabe.
+                priority: in_array($typ, ['MX', 'SRV'], strict: true)
+                    ? $this->zahl($eintrag, 'priority')
+                    : null,
+            );
+        }
+
+        return $records;
+    }
+
+    /**
+     * Der Name eines Eintrags, relativ zur Zone.
+     *
+     * Der Anbieter schreibt den Ursprung als vollen Domainnamen
+     * (`john-doe.de`) und Unternamen verkuerzt (`www`). Das Portal zeigt den
+     * Ursprung wie ueberall als `@`; ein voll ausgeschriebener Untername wird
+     * auf denselben Stand gebracht, damit zwei Anbieter dieselbe Zone gleich
+     * darstellen.
+     *
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function recordName(array $eintrag, string $zone): string
+    {
+        $name = $this->text($eintrag, 'name');
+
+        if ($name === null) {
+            return '@';
+        }
+
+        $name = mb_strtolower(rtrim($name, '.'));
+
+        if ($name === '' || $name === $zone) {
+            return '@';
+        }
+
+        if (str_ends_with($name, '.'.$zone)) {
+            return mb_substr($name, 0, -mb_strlen('.'.$zone));
+        }
+
+        return $name;
+    }
+
+    /**
+     * Die Angaben eines Spezial-Records.
+     *
+     * Eintraege wie `HEADER` (eine Weiterleitung) tragen kein `content`,
+     * sondern ihre Angaben unter `data` — die Beschreibung nennt das Feld
+     * „Enthaelt weitere Daten fuer Spezial-Records", ohne festen Satz an
+     * Schluesseln. Sie werden als `feld=wert` aneinandergereiht: das gibt
+     * wieder, was dort steht, ohne eine Bedeutung zu erfinden. Sie ganz zu
+     * uebergehen waere schlechter — eine Weiterleitung fehlte dann genau dort,
+     * wo man sie sucht.
+     *
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function sonderdaten(array $eintrag): ?string
+    {
+        $daten = $eintrag['data'] ?? null;
+
+        if (! is_array($daten)) {
+            return null;
+        }
+
+        $teile = [];
+
+        foreach ($daten as $feld => $wert) {
+            if (! is_scalar($wert) || (string) $wert === '') {
+                continue;
+            }
+
+            $teile[] = is_string($feld) ? "{$feld}={$wert}" : (string) $wert;
+        }
+
+        return $teile === [] ? null : implode(' ', $teile);
+    }
+
+    /**
+     * Die Nameserver der Zone.
+     *
+     * Der Anbieter nennt sie an zwei Stellen: unter `vns.hostname` steht der
+     * virtuelle Nameserver-Satz, mit dem er die Zone fuehrt, und in der Zone
+     * selbst liegen NS-Eintraege auf dem Ursprung. Vorrang hat `vns` — das ist
+     * die Zuordnung des Anbieters, die NS-Eintraege sind ihr Abbild.
+     *
+     * @param  array<string, mixed>  $antwort
+     * @param  array<int, DnsRecord>  $records
+     * @return array<int, string>
+     */
+    private function nameserver(array $antwort, array $records): array
+    {
+        $vns = $antwort['vns'] ?? null;
+
+        $namen = is_array($vns) ? $this->namen($vns, 'hostname') : [];
+
+        if ($namen !== []) {
+            return $namen;
+        }
+
+        $ausRecords = [];
+
+        foreach ($records as $record) {
+            if ($record->type === 'NS' && $record->name === '@') {
+                $ausRecords[] = mb_strtolower(rtrim($record->content, '.'));
+            }
+        }
+
+        return array_values(array_unique($ausRecords));
+    }
+
+    /**
+     * Wann die Zone zuletzt geaendert wurde — aus der Seriennummer der SOA.
+     *
+     * Ein eigenes Aenderungsdatum liefert der Anbieter nicht. Seine
+     * Seriennummer folgt dem ueblichen Muster JJJJMMTT plus Zaehler (das
+     * Beispiel der Beschreibung lautet `2026092886`). Gelesen werden nur die
+     * ersten acht Ziffern, und nur wenn sie ein gueltiges Datum ergeben: eine
+     * Zone mit fortlaufend gezaehlter Seriennummer liefert dann eben kein
+     * Datum statt eines falschen.
+     *
+     * @param  array<string, mixed>  $soa
+     */
+    private function seriennummer(array $soa): ?CarbonImmutable
+    {
+        $serial = $this->text($soa, 'serial');
+
+        if ($serial === null || preg_match('/^(\d{8})\d{0,2}$/', $serial, $treffer) !== 1) {
+            return null;
+        }
+
+        $jahr = (int) mb_substr($treffer[1], 0, 4);
+        $monat = (int) mb_substr($treffer[1], 4, 2);
+        $tag = (int) mb_substr($treffer[1], 6, 2);
+
+        if (! checkdate($monat, $tag, $jahr)) {
+            return null;
+        }
+
+        return CarbonImmutable::create($jahr, $monat, $tag) ?: null;
+    }
+
+    /**
+     * Ein Zertifikat aus `tls/list`.
+     *
+     * Der Eintrag beschreibt den Vertrag (`tlsID`, Status, Abrechnung), das
+     * Zertifikat selbst liegt darin unter `activeCertificate` mit `san`,
+     * `issuedAt`, `validFrom` und `validTill`.
+     *
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function toCertificate(array $eintrag): RemoteCertificate
+    {
+        $domains = $this->namen($eintrag, 'domains');
+
+        $zertifikat = is_array($eintrag['activeCertificate'] ?? null)
+            ? $eintrag['activeCertificate']
+            : [];
+
+        $san = $this->namen($zertifikat, 'san');
+
+        $name = $domains[0] ?? $san[0] ?? null;
+
+        if ($name === null) {
+            throw new RegistrarException(
+                'ResellerInterface hat einen Zertifikatseintrag ohne Domain geliefert.',
+                $eintrag,
+            );
+        }
+
+        return new RemoteCertificate(
+            commonName: $name,
+            reference: $this->text($eintrag, 'tlsID'),
+            status: implode(' ', array_filter([
+                $this->text($eintrag, 'state'),
+                $this->text($eintrag, 'subState'),
+            ])) ?: 'unknown',
+            // Keinen Aussteller: die Liste nennt nur eine Produkt-ID
+            // (`tlsProductID`), und `type` heisst dort etwa „legacy". Beides
+            // ist keine ausstellende Stelle, und erfunden wird hier keine.
+            issuer: null,
+            issuedOn: $this->zeitstempel($zertifikat, 'issuedAt')
+                ?? $this->zeitstempel($zertifikat, 'validFrom')
+                ?? $this->zeitstempel($eintrag, 'createDate'),
+            // `validTill` ist das echte Ende der Gueltigkeit. Fehlt das aktive
+            // Zertifikat — etwa solange eine Bestellung laeuft —, bleibt nur
+            // die naechste Abrechnung als Naehrung; sie ist als solche zu
+            // lesen und nicht als Ablauf des Zertifikats.
+            expiresOn: $this->zeitstempel($zertifikat, 'validTill')
+                ?? $this->zeitstempel($eintrag, 'nextBillingDate'),
+            alternativeNames: array_values(array_diff($san !== [] ? $san : $domains, [$name])),
+        );
+    }
+
+    /**
+     * Eine Liste von Namen aus der Antwort, kleingeschrieben und ohne Punkt
+     * am Ende.
+     *
+     * @param  array<string, mixed>  $eintrag
+     * @return array<int, string>
+     */
+    private function namen(array $eintrag, string $feld): array
+    {
+        $werte = $eintrag[$feld] ?? null;
+
+        if (! is_array($werte)) {
+            return [];
+        }
+
+        $namen = [];
+
+        foreach ($werte as $wert) {
+            if (! is_scalar($wert) || (string) $wert === '') {
+                continue;
+            }
+
+            $namen[] = mb_strtolower(rtrim((string) $wert, '.'));
+        }
+
+        return array_values(array_unique($namen));
+    }
+
+    /**
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function zahl(array $eintrag, string $feld): ?int
+    {
+        $wert = $eintrag[$feld] ?? null;
+
+        return is_numeric($wert) ? (int) $wert : null;
     }
 
     /**
@@ -511,22 +875,22 @@ class ResellerInterfaceClient implements RegistrarClient
     /**
      * Die Liste aus der Antwort.
      *
-     * `domain/list` legt sie direkt unter `list` ab (neben `state` und
-     * `total`), ohne `data`-Umschlag — anders als die Preise, deren Liste
-     * unter `data.list` liegt. Beide Wege werden gelesen, abgebrochen wird,
-     * wenn keiner etwas haelt: stillschweigend nichts einzulesen waere
+     * `domain/list` und `tls/list` legen sie direkt unter `list` ab (neben
+     * `state` und `total`), ohne `data`-Umschlag — anders als die Preise, deren
+     * Liste unter `data.list` liegt. Beide Wege werden gelesen, abgebrochen
+     * wird, wenn keiner etwas haelt: stillschweigend nichts einzulesen waere
      * schlimmer als der Abbruch.
      *
      * @param  array<string, mixed>  $antwort
      * @return array<int, mixed>
      */
-    private function liste(array $antwort): array
+    private function liste(array $antwort, string $aktion): array
     {
         $liste = $antwort['list'] ?? data_get($antwort, 'data.list');
 
         if (! is_array($liste)) {
             throw new RegistrarException(
-                'Die Antwort auf domain/list enthält keine Liste (weder unter list noch data.list).',
+                "Die Antwort auf {$aktion} enthält keine Liste (weder unter list noch data.list).",
                 $antwort,
             );
         }
@@ -570,8 +934,10 @@ class ResellerInterfaceClient implements RegistrarClient
             // der Liste nicht.
             autoRenew: ($eintrag['cancellationDate'] ?? null) === null
                 && blank($this->text($eintrag, 'deleteMode')),
-            // Nameserver liegen nicht in `domain/list` — die Zone liest man
-            // nur ueber `dns/*`, und das ist bewusst nicht Teil des Imports.
+            // `domain/list` nennt Nameserver nur, wenn der Aufruf sie mit
+            // `include[] = nameserver` anfordert. Der Import tut das nicht:
+            // wer sie sehen will, schlaegt die Zone auf, und die kommt
+            // vollstaendig aus `dns/getZoneDetails`.
             nameservers: [],
         );
     }

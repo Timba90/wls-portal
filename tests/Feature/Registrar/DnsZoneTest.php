@@ -7,6 +7,8 @@ use App\Models\Domain;
 use App\Models\IntegrationCredential;
 use App\Models\User;
 use App\Support\Registrar\AutoDnsClient;
+use App\Support\Registrar\RegistrarClient;
+use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use App\Support\Registrar\ResellerInterfaceClient;
 use Illuminate\Http\Client\Request;
@@ -41,6 +43,71 @@ function autodnsAnschluss(array $ueberschreibungen = []): AutoDnsClient
         'password' => 'geheim',
         'context' => '4',
     ], $ueberschreibungen));
+}
+
+/**
+ * Setzt einen Anschluss ein, der keine Zone lesen kann.
+ *
+ * Beide echten Anschluesse koennen es inzwischen. Die Schnittstelle sieht den
+ * Fall weiter vor — ein kuenftiger Anbieter ohne Lesezugriff —, und die
+ * Oberflaeche muss ihn beherrschen: „kann dieser Anbieter nicht" ist ein
+ * Zustand, kein Fehlschlag. Geprueft wird er darum an einer Attrappe.
+ */
+function anschlussOhneZone(): void
+{
+    $anschluss = Mockery::mock(RegistrarClient::class);
+    $anschluss->shouldReceive('canReadZone')->andReturnFalse();
+
+    $attrappe = Mockery::mock(RegistrarClientFactory::class);
+    $attrappe->shouldReceive('for')->andReturn($anschluss);
+
+    app()->instance(RegistrarClientFactory::class, $attrappe);
+}
+
+function riAnschluss(array $ueberschreibungen = []): ResellerInterfaceClient
+{
+    return new ResellerInterfaceClient(array_merge([
+        'endpoint' => 'https://core.resellerinterface.de',
+        'branch' => 'stable',
+        'username' => 'benutzer',
+        'password' => 'geheim',
+    ], $ueberschreibungen));
+}
+
+/**
+ * Eine Zone, wie ResellerInterface sie liefert.
+ *
+ * Form und Feldnamen stammen aus der OpenAPI-Beschreibung des Anbieters
+ * („CoreAPI - Reseller-Interface", `dns/getZoneDetails`): `records` ist dort
+ * keine Liste, sondern eine Zuordnung `Record-ID => Eintrag`, der Ursprung
+ * steht als voller Domainname, und der Nameserver-Satz liegt unter `vns`.
+ */
+function riZone(): array
+{
+    return [
+        'state' => 1000,
+        'stateName' => 'OK',
+        'domainID' => 4711,
+        'zoneID' => 12345,
+        'domain' => 'beispiel.de',
+        'soa' => [
+            'active' => true,
+            'primary' => 'ns1.example.net',
+            'mail' => 'hostmaster@beispiel.de',
+            'serial' => '2026092886',
+            'refresh' => 10800,
+            'ttl' => 86400,
+        ],
+        'records' => [
+            '15666749' => ['id' => 15666749, 'name' => 'beispiel.de', 'ttl' => 86400, 'type' => 'A', 'priority' => 0, 'content' => '203.0.113.10'],
+            '15666750' => ['id' => 15666750, 'name' => 'www', 'ttl' => 3600, 'type' => 'CNAME', 'priority' => 0, 'content' => 'beispiel.de.'],
+            '15666751' => ['id' => 15666751, 'name' => 'beispiel.de', 'ttl' => 86400, 'type' => 'MX', 'priority' => 10, 'content' => 'mail.beispiel.de.'],
+            '15666752' => ['id' => 15666752, 'name' => 'alt.beispiel.de', 'ttl' => 86400, 'type' => 'TXT', 'priority' => 0, 'content' => 'v=spf1 -all'],
+            '15666753' => ['id' => 15666753, 'name' => 'ziel', 'ttl' => 86400, 'type' => 'HEADER', 'priority' => 0, 'content' => '', 'data' => ['uri' => 'beispiel.de', 'redirectCode' => '301']],
+        ],
+        'total' => 5,
+        'vns' => ['vnsID' => 12345, 'soaMail' => 'info@example.org', 'hostname' => ['ns1.example.net', 'ns2.example.net']],
+    ];
 }
 
 /**
@@ -152,21 +219,116 @@ it('verlangt einen Domainnamen', function (): void {
     Http::assertNothingSent();
 });
 
-it('liest keine Zone bei ResellerInterface und raet den Aufruf nicht', function (): void {
-    $anschluss = new ResellerInterfaceClient([
-        'endpoint' => 'https://core.resellerinterface.de',
-        'branch' => 'stable',
-        'username' => 'benutzer',
-        'password' => 'geheim',
-    ]);
+describe('ResellerInterface', function (): void {
+    /*
+     * Lange konnte dieser Anschluss keine Zone lesen: von `dns/*` waren nur
+     * schreibende Funktionen belegt, und der lesende Name wurde nicht geraten —
+     * Fehlversuche bei genau diesem Anbieter haben das Konto schon einmal
+     * gesperrt. Die OpenAPI-Beschreibung des Anbieters nennt ihn:
+     * `dns/getZoneDetails` („Details zu einer Zone anzeigen") mit dem Recht
+     * „Zonen einsehen" (api.dns.view). Damit steht er fest.
+     */
+    beforeEach(function (): void {
+        Http::fake([
+            '*/reseller/login' => Http::response(
+                ['state' => 1000, 'stateName' => 'OK'],
+                200,
+                ['Set-Cookie' => 'coreSID=sitzung-123; Path=/; HttpOnly'],
+            ),
+        ]);
+    });
 
-    expect($anschluss->canReadZone())->toBeFalse()
-        ->and(fn () => $anschluss->zone('beispiel.de'))
-        ->toThrow(RegistrarException::class, 'nicht dokumentiert und wird nicht geraten');
+    it('liest die Zone ueber dns/getZoneDetails', function (): void {
+        Http::fake(['*/dns/getZoneDetails' => Http::response(riZone())]);
 
-    // Entscheidend: es wurde nichts versucht. Fehlversuche bei genau diesem
-    // Anbieter haben das Konto schon einmal gesperrt.
-    Http::assertNothingSent();
+        $zone = riAnschluss()->zone('Beispiel.DE');
+
+        expect($zone->origin)->toBe('beispiel.de')
+            ->and($zone->ttl)->toBe(86400)
+            ->and($zone->soaEmail)->toBe('hostmaster@beispiel.de')
+            // Ein Änderungsdatum nennt der Anbieter nicht; die Seriennummer
+            // `2026092886` trägt es im Muster JJJJMMTT.
+            ->and($zone->updatedAt?->toDateString())->toBe('2026-09-28')
+            // Vorrang hat der virtuelle Nameserver-Satz des Anbieters.
+            ->and($zone->nameservers)->toBe(['ns1.example.net', 'ns2.example.net'])
+            ->and($zone->records)->toHaveCount(5);
+
+        $records = collect($zone->sortedRecords())->keyBy(
+            fn ($record): string => $record->type.':'.$record->name,
+        );
+
+        // Der Ursprung steht beim Anbieter als voller Domainname und wird zu
+        // `@` — so wie bei jedem anderen Anschluss auch.
+        expect($records['A:@']->content)->toBe('203.0.113.10')
+            ->and($records['A:@']->ttl)->toBe(86400)
+            // Priorität nur, wo sie eine Bedeutung hat.
+            ->and($records['A:@']->priority)->toBeNull()
+            ->and($records['MX:@']->priority)->toBe(10)
+            ->and($records['CNAME:www']->content)->toBe('beispiel.de.')
+            // Ein voll ausgeschriebener Untername wird auf denselben Stand
+            // gebracht.
+            ->and($records->has('TXT:alt'))->toBeTrue()
+            // Ein Spezial-Record trägt kein `content`, sondern `data`.
+            ->and($records['HEADER:ziel']->content)->toBe('uri=beispiel.de redirectCode=301');
+    });
+
+    it('schickt dafuer nur den Domainnamen', function (): void {
+        Http::fake(['*/dns/getZoneDetails' => Http::response(riZone())]);
+
+        riAnschluss()->zone('beispiel.de');
+
+        Http::assertSent(function (Request $request): bool {
+            if (! str_contains($request->url(), 'dns/getZoneDetails')) {
+                return true;
+            }
+
+            // Nur der Name — kein Feld, das etwas ändern könnte.
+            return $request->data() === ['domain' => 'beispiel.de'];
+        });
+    });
+
+    it('nimmt die NS-Eintraege der Zone, wenn kein virtueller Nameserver genannt ist', function (): void {
+        $antwort = riZone();
+        unset($antwort['vns']);
+        $antwort['records']['15666754'] = [
+            'id' => 15666754, 'name' => 'beispiel.de', 'ttl' => 86400,
+            'type' => 'NS', 'priority' => 0, 'content' => 'ns3.example.net.',
+        ];
+
+        Http::fake(['*/dns/getZoneDetails' => Http::response($antwort)]);
+
+        expect(riAnschluss()->zone('beispiel.de')->nameservers)->toBe(['ns3.example.net']);
+    });
+
+    it('liefert kein Aenderungsdatum, wenn die Seriennummer keins enthaelt', function (): void {
+        $antwort = riZone();
+        // Nicht jede Zone zählt ihre Seriennummer nach Datum; ein erfundenes
+        // Datum wäre schlechter als keins.
+        $antwort['soa']['serial'] = '42';
+
+        Http::fake(['*/dns/getZoneDetails' => Http::response($antwort)]);
+
+        expect(riAnschluss()->zone('beispiel.de')->updatedAt)->toBeNull();
+    });
+
+    it('bricht ab, wenn die Antwort keine Eintraege enthaelt', function (): void {
+        $antwort = riZone();
+        unset($antwort['records']);
+
+        Http::fake(['*/dns/getZoneDetails' => Http::response($antwort)]);
+
+        // Eine leere Zone anzuzeigen, wo der Anbieter etwas anderes gemeint
+        // hat, hiesse: ein Eintrag sei verschwunden.
+        expect(fn () => riAnschluss()->zone('beispiel.de'))
+            ->toThrow(RegistrarException::class, 'keine Eintragsliste');
+    });
+
+    it('verlangt einen Domainnamen und ruft dafuer nichts auf', function (): void {
+        expect(fn () => riAnschluss()->zone('  '))
+            ->toThrow(RegistrarException::class, 'Ohne Domainnamen');
+
+        Http::assertNothingSent();
+    });
 });
 
 describe('ReadDnsZone', function (): void {
@@ -272,6 +434,8 @@ describe('ReadDnsZone', function (): void {
     it('bricht bei einem Anbieter ohne Lesezugriff ab', function (): void {
         $domain = Domain::factory()->create(['provider' => RegistrarProvider::ResellerInterface]);
 
+        anschlussOhneZone();
+
         Http::fake();
 
         expect(fn () => app(ReadDnsZone::class)($domain))
@@ -318,6 +482,8 @@ describe('Anzeige', function (): void {
 
     it('sagt bei einem Anbieter ohne Lesezugriff, dass er es nicht kann', function (): void {
         $domain = Domain::factory()->create(['provider' => RegistrarProvider::ResellerInterface]);
+
+        anschlussOhneZone();
 
         Http::fake();
 
