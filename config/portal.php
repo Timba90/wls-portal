@@ -61,6 +61,32 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | DNS-Zonen der Registrare
+    |--------------------------------------------------------------------------
+    |
+    | Die Zone einer Domain wird beim Anbieter gelesen, wenn jemand sie auf der
+    | Detailseite aufschlägt — nicht importiert und nicht nächtlich
+    | abgeglichen. Sie ändert sich selten und gehört nicht uns; eine Kopie in
+    | der Datenbank wäre nur ein zweiter, älterer Stand.
+    |
+    | `cache_minutes` hält das Ergebnis kurz vor, damit ein Wechsel zwischen
+    | den Reitern nicht jedes Mal beim Anbieter anklopft. Beide Anschlüsse
+    | wiederholen einen fehlgeschlagenen Aufruf nie — häufige Versuche hat
+    | ResellerInterface schon einmal als Angriff gewertet und das Konto
+    | gesperrt.
+    |
+    | Geschrieben wird nichts. Es gibt keinen Schalter, der das ändert.
+    |
+    */
+
+    'dns' => [
+
+        'cache_minutes' => (int) env('REGISTRAR_DNS_CACHE_MINUTES', 10),
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | MCP-Zugang
     |--------------------------------------------------------------------------
     |

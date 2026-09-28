@@ -25,7 +25,8 @@ use Throwable;
  *     { "stid": "…", "status": { "code": "S0301", "type": "SUCCESS" },
  *       "object": { … }, "data": [ … ] }
  *
- * Nur lesend: `/hello`, `/domain/_search` und `/certificate/_search`.
+ * Nur lesend: `/hello`, `/domain/_search`, `/certificate/_search` und
+ * `/zone/{name}`.
  */
 class AutoDnsClient implements RegistrarClient
 {
@@ -36,7 +37,7 @@ class AutoDnsClient implements RegistrarClient
     private const SEITENGROESSE = 100;
 
     /**
-     * @param  array{endpoint?: string, username?: string, password?: string, context?: string}  $config
+     * @param  array{endpoint?: string, username?: string, password?: string, context?: string, name_server?: string}  $config
      */
     public function __construct(private readonly array $config) {}
 
@@ -132,6 +133,124 @@ class AutoDnsClient implements RegistrarClient
                 alternativeNames: $this->names($eintrag, 'subjectAlternativeNames'),
             );
         }
+    }
+
+    public function canReadZone(): bool
+    {
+        return true;
+    }
+
+    /**
+     * Liest eine Zone ueber `GET zone/{name}` — „Zone Info" (0205).
+     *
+     * Die Schnittstelle kennt denselben Aufruf auch mit dem verwaltenden
+     * Nameserver im Pfad (`zone/{name}/{virtualNameServer}`). Manche Konten
+     * brauchen ihn, weil dieselbe Zone auf mehreren Nameservern liegen kann;
+     * er steht darum als Einstellung bereit und wird nur mitgeschickt, wenn er
+     * gesetzt ist. Geraten wird er nicht.
+     */
+    public function zone(string $domain): DnsZone
+    {
+        $this->guardConfigured();
+
+        $name = mb_strtolower(trim($domain));
+
+        if ($name === '') {
+            throw new RegistrarException('Ohne Domainnamen lässt sich keine Zone lesen.');
+        }
+
+        $nameserver = $this->text($this->config, 'name_server');
+
+        $pfad = $nameserver === null
+            ? 'zone/'.rawurlencode($name)
+            : 'zone/'.rawurlencode($name).'/'.rawurlencode($nameserver);
+
+        $umschlag = $this->envelope($this->send('get', $pfad), $pfad);
+
+        $zone = $umschlag['data'][0] ?? null;
+
+        if (! is_array($zone)) {
+            throw new RegistrarException(
+                "autoDNS hat zu {$name} keine Zone geliefert.",
+                $umschlag,
+            );
+        }
+
+        return new DnsZone(
+            origin: $this->text($zone, 'origin') ?? $name,
+            nameservers: $this->names($zone, 'nameServers'),
+            records: $this->records($zone),
+            ttl: $this->number($zone['soa'] ?? [], 'ttl'),
+            soaEmail: is_array($zone['soa'] ?? null) ? $this->text($zone['soa'], 'email') : null,
+            updatedAt: $this->date($zone, 'updated'),
+        );
+    }
+
+    /**
+     * Die Eintraege einer Zone.
+     *
+     * Neben `resourceRecords` fuehrt autoDNS die Haupt-IP getrennt: aus ihr
+     * entsteht der A-Eintrag auf dem Ursprung, und bei `wwwInclude` zusaetzlich
+     * der auf `www`. Beide stehen in keiner Eintragsliste, gelten im DNS aber
+     * trotzdem — sie fehlten hier sonst genau dort, wo man sie zuerst sucht.
+     * Sie sind als abgeleitet gekennzeichnet, damit die Anzeige sie nicht als
+     * echte Zeilen der Zone ausgibt.
+     *
+     * @param  array<string, mixed>  $zone
+     * @return array<int, DnsRecord>
+     */
+    private function records(array $zone): array
+    {
+        $records = [];
+
+        $eintraege = $zone['resourceRecords'] ?? [];
+
+        foreach (is_array($eintraege) ? $eintraege : [] as $eintrag) {
+            if (! is_array($eintrag)) {
+                continue;
+            }
+
+            $typ = $this->text($eintrag, 'type');
+            $wert = $this->text($eintrag, 'value');
+
+            if ($typ === null || $wert === null) {
+                continue;
+            }
+
+            $records[] = new DnsRecord(
+                name: $this->text($eintrag, 'name') ?? '@',
+                type: mb_strtoupper($typ),
+                content: $wert,
+                ttl: $this->number($eintrag, 'ttl'),
+                priority: $this->number($eintrag, 'pref'),
+            );
+        }
+
+        $haupt = $zone['main'] ?? null;
+        $adresse = is_array($haupt) ? $this->text($haupt, 'address') : null;
+
+        if ($adresse !== null) {
+            $ttl = is_array($haupt) ? $this->number($haupt, 'ttl') : null;
+            $typ = str_contains($adresse, ':') ? 'AAAA' : 'A';
+
+            $records[] = new DnsRecord('@', $typ, $adresse, $ttl, derived: true);
+
+            if (($zone['wwwInclude'] ?? false) === true) {
+                $records[] = new DnsRecord('www', $typ, $adresse, $ttl, derived: true);
+            }
+        }
+
+        return $records;
+    }
+
+    /**
+     * @param  array<string, mixed>  $eintrag
+     */
+    private function number(array $eintrag, string $feld): ?int
+    {
+        $wert = $eintrag[$feld] ?? null;
+
+        return is_numeric($wert) ? (int) $wert : null;
     }
 
     /**

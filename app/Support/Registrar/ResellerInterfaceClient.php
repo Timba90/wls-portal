@@ -170,6 +170,35 @@ class ResellerInterfaceClient implements RegistrarClient
     }
 
     /**
+     * Dieser Anschluss kann noch keine Zone lesen.
+     *
+     * Dass es die Kategorie `dns/*` gibt, ist gesichert — die Anleitung nennt
+     * sie, und die Plesk-Erweiterung des Anbieters ruft dort vier *schreibende*
+     * Funktionen auf (Zone anlegen, Zone aendern, Eintraege setzen, Zone
+     * loeschen). Der *lesende* Aufruf kommt in keiner oeffentlichen Quelle vor:
+     * nicht in der Anleitung, nicht in den drei eigenen API-Clients des
+     * Anbieters, nicht in seiner Plesk-Erweiterung.
+     *
+     * Er wird deshalb nicht erraten. Ein Name, der zufaellig auf eine
+     * schreibende Funktion trifft, aendert eine echte Zone; ein Name, der
+     * daneben liegt, erzeugt Fehlversuche bei genau dem Anbieter, der das Konto
+     * schon einmal gesperrt hat. Sobald der Name feststeht, sind es drei
+     * Zeilen: die Aktion in die Positivliste, der Aufruf hier, die Zuordnung
+     * der Felder.
+     */
+    public function canReadZone(): bool
+    {
+        return false;
+    }
+
+    public function zone(string $domain): DnsZone
+    {
+        throw new RegistrarException(
+            'ResellerInterface kann hier noch keine DNS-Zone liefern: der lesende Aufruf der Schnittstelle ist nicht dokumentiert und wird nicht geraten.',
+        );
+    }
+
+    /**
      * Die Konten, deren Bestand gelesen wird.
      *
      * Die eingetragene `reseller_id` aus den Zugangsdaten steht fuer den
