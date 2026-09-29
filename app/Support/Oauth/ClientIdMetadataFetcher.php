@@ -139,9 +139,14 @@ class ClientIdMetadataFetcher
                 // Host-Pruefung noch einmal neu, wo wir hinfassen.
                 'allow_redirects' => false,
 
-                // Nicht die ganze Antwort in den Speicher: wir lesen unten
-                // nur so viel, wie erlaubt ist.
-                'stream' => true,
+                // Streamen und cURL-Optionen zusammen geht nicht: der
+                // Stream-Handler des Guzzle-Handlers ignoriert alle
+                // cURL-Optionen, die BINDUNG AN DIE GEPRUEFTEN ADRESSEN
+                // (CURLOPT_RESOLVE) waere dann wirkungslos — genau die
+                // entschuldigt den Stream. Die Groessengrenze greift
+                // deshalb erst beim Lesen des Body (unten); der Timeout
+                // deckt den Download ab.
+                'stream' => false,
 
                 'curl' => $this->pinTo($clientId, $adressen),
             ])
