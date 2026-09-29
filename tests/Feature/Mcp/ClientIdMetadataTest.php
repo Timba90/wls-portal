@@ -276,3 +276,133 @@ it('hält Adressen im eigenen Netz fern', function (): void {
         ->and(PublicHostGuard::isPublic('fd00::1'))->toBeFalse()
         ->and(PublicHostGuard::isPublic('93.184.216.34'))->toBeTrue();
 });
+
+/*
+ * Native Clients.
+ *
+ * Codex läuft auf dem Rechner des Benutzers und nimmt den Code über einen kurz
+ * geöffneten lokalen Port entgegen. Seine Rückleitungen sind deshalb `http`
+ * auf die Loopback-Adresse — für native Anwendungen die Regel (RFC 8252,
+ * Abschnitt 7.3). Eine Prüfung „nur HTTPS" hat jeden solchen Client abgewiesen,
+ * obwohl sein Dokument in Ordnung war.
+ *
+ * Das Dokument unten ist das, was `chatgpt.com` tatsächlich ausliefert.
+ */
+const CODEX_KENNUNG = 'https://chatgpt.com/oauth/codex/RfgAVj22ag3i/client.json';
+
+function codexDokument(array $ueberschreiben = []): array
+{
+    return array_merge([
+        'client_id' => CODEX_KENNUNG,
+        'client_uri' => 'https://chatgpt.com/codex',
+        'application_type' => 'native',
+        'redirect_uris' => [
+            'http://127.0.0.1/callback/RfgAVj22ag3i',
+            'http://localhost/callback/RfgAVj22ag3i',
+        ],
+        'token_endpoint_auth_method' => 'none',
+        'token_endpoint_auth_methods_supported' => ['none'],
+        'grant_types' => ['authorization_code', 'refresh_token'],
+        'response_types' => ['code'],
+        'client_name' => 'Codex',
+        'logo_uri' => 'https://persistent.oaistatic.com/sonic/misc/openai-logo.png',
+    ], $ueberschreiben);
+}
+
+it('nimmt ein natives Client-Dokument mit Loopback-Rückleitungen an', function (): void {
+    Http::fake([CODEX_KENNUNG => Http::response(codexDokument())]);
+
+    $client = app(ResolveClientFromMetadataDocument::class)(CODEX_KENNUNG);
+
+    expect($client)->toBeInstanceOf(Client::class)
+        ->and($client->name)->toBe('Codex')
+        ->and($client->redirect_uris)->toBe([
+            'http://127.0.0.1/callback/RfgAVj22ag3i',
+            'http://localhost/callback/RfgAVj22ag3i',
+        ]);
+});
+
+it('erlaubt http nur für den eigenen Rechner, nicht für Namen, die so anfangen', function (string $rueckleitung): void {
+    Http::fake([CODEX_KENNUNG => Http::response(codexDokument(['redirect_uris' => [$rueckleitung]]))]);
+
+    expect(app(ResolveClientFromMetadataDocument::class)(CODEX_KENNUNG))->toBeNull();
+})->with([
+    'getarnt als Loopback' => 'http://127.0.0.1.example.com/callback',
+    'getarnt als localhost' => 'http://localhost.example.com/callback',
+    'fremder Host' => 'http://chatgpt.com/callback',
+    'anderes Schema' => 'ftp://127.0.0.1/callback',
+]);
+
+it('führt einen nativen Client mit frei gewähltem Port bis zu einem Token', function (): void {
+    Http::fake([CODEX_KENNUNG => Http::response(codexDokument())]);
+
+    /*
+     * Den Port kennt der Client erst beim Anmelden — er öffnet irgendeinen
+     * freien. Im Dokument steht die Adresse ohne Port; League vergleicht bei
+     * Loopback-Adressen ohne ihn, wie RFC 8252 es verlangt. Dieser Test hält
+     * fest, dass beides zusammen bis zu einem Token trägt.
+     */
+    $rueckleitung = 'http://127.0.0.1:54321/callback/RfgAVj22ag3i';
+
+    $benutzer = User::factory()->create();
+    $pruefer = 'x'.str_repeat('b', 63);
+    $frage = rtrim(strtr(base64_encode(hash('sha256', $pruefer, true)), '+/', '-_'), '=');
+
+    $this->actingAs($benutzer)
+        ->get('/oauth/authorize?'.http_build_query([
+            'client_id' => CODEX_KENNUNG,
+            'redirect_uri' => $rueckleitung,
+            'response_type' => 'code',
+            'scope' => 'mcp:use',
+            'state' => 'zustand',
+            'code_challenge' => $frage,
+            'code_challenge_method' => 'S256',
+        ]))
+        ->assertOk()
+        ->assertSee('Codex');
+
+    $weiterleitung = $this->actingAs($benutzer)
+        ->post('/oauth/authorize', ['auth_token' => session('authToken'), 'state' => 'zustand'])
+        ->assertRedirect()
+        ->headers->get('Location');
+
+    expect($weiterleitung)->toStartWith($rueckleitung);
+
+    parse_str(parse_url($weiterleitung, PHP_URL_QUERY), $rueckgabe);
+
+    $this->postJson('/oauth/token', [
+        'grant_type' => 'authorization_code',
+        'client_id' => CODEX_KENNUNG,
+        'redirect_uri' => $rueckleitung,
+        'code_verifier' => $pruefer,
+        'code' => $rueckgabe['code'],
+    ])->assertOk()->assertJsonStructure(['access_token', 'refresh_token']);
+});
+
+it('holt das Dokument so, dass die Adressbindung auch angewendet wird', function (): void {
+    /*
+     * Die Bindung an die geprüften Adressen (CURLOPT_RESOLVE) steht in den
+     * cURL-Optionen. Der Stream-Handler von Guzzle kennt die nicht — mit
+     * `stream => true` lief der Abruf über ihn, die Bindung war wirkungslos und
+     * jeder Abruf brach mit einer Handler-Meldung ab. Kein Client konnte sich
+     * verbinden.
+     *
+     * Gefangen hat das kein Test, weil `Http::fake()` den Handler ersetzt und
+     * die Unverträglichkeit nie zum Tragen kam. Dieser Test sieht sich deshalb
+     * die Optionen selbst an, die an Guzzle gehen.
+     */
+    $gesehen = null;
+
+    Http::fake(function ($request, array $optionen) use (&$gesehen) {
+        $gesehen = $optionen;
+
+        return Http::response(dokument());
+    });
+
+    app(ResolveClientFromMetadataDocument::class)(KENNUNG);
+
+    expect($gesehen)->not->toBeNull()
+        ->and($gesehen['curl'] ?? [])->toHaveKey(CURLOPT_RESOLVE)
+        // cURL-Optionen wirken nur ohne Stream-Handler.
+        ->and($gesehen['stream'] ?? false)->toBeFalse();
+});
