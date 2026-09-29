@@ -290,11 +290,44 @@ class ClientIdMetadataFetcher
         }
 
         foreach ($rueckleitungen as $adresse) {
-            if (! is_string($adresse) || ! str_starts_with($adresse, 'https://')) {
-                throw new ClientIdMetadataException('Rueckleitungsadressen muessen HTTPS sein.');
+            if (! is_string($adresse) || ! self::isAcceptableRedirect($adresse)) {
+                throw new ClientIdMetadataException(
+                    'Rueckleitungsadressen muessen HTTPS sein oder auf den eigenen Rechner zeigen (127.0.0.1, [::1], localhost).'
+                );
             }
         }
 
         return array_values($rueckleitungen);
+    }
+
+    /**
+     * HTTPS — oder `http` auf die Loopback-Adresse.
+     *
+     * Die zweite Form ist kein Zugestaendnis, sondern die Regel fuer native
+     * Anwendungen (RFC 8252, Abschnitt 7.3): Codex etwa laeuft auf dem Rechner
+     * des Benutzers und nimmt den Code ueber einen kurz geoeffneten lokalen
+     * Port entgegen. Der Code verlaesst den Rechner dabei nicht, und ohne den
+     * PKCE-Pruefer, den wir von jedem oeffentlichen Client verlangen, ist er
+     * fuer jeden anderen wertlos. Frueher stand hier „nur HTTPS" — damit wurde
+     * jeder native Client abgewiesen, obwohl sein Dokument in Ordnung war.
+     *
+     * Verglichen wird der Hostname exakt: `127.0.0.1.example.com` ist keine
+     * Loopback-Adresse, nur weil es so anfaengt. Den Port gibt der Client erst
+     * beim Anmelden an; League vergleicht bei Loopback-Adressen deshalb ohne
+     * ihn, wie RFC 8252 es verlangt.
+     */
+    private static function isAcceptableRedirect(string $adresse): bool
+    {
+        if (str_starts_with($adresse, 'https://')) {
+            return true;
+        }
+
+        $teile = parse_url($adresse);
+
+        if (! is_array($teile) || ($teile['scheme'] ?? null) !== 'http') {
+            return false;
+        }
+
+        return in_array(mb_strtolower($teile['host'] ?? ''), ['127.0.0.1', '[::1]', 'localhost'], true);
     }
 }
