@@ -51,3 +51,8 @@ it('stops an expired creation preflight before issuing any request', function ()
     expect(fn () => fluxTestClient()->ledgerAccounts(hrtime(true) / 1e9 - 1))->toThrow(FluxException::class);
     Http::assertNothingSent();
 });
+it('accepts the actual token validation response and checks ledger access', function () {
+    Http::fake(['*/auth/token/validate' => Http::response(['status' => 'token valid']), '*/ledger-accounts*' => Http::response(['data' => ['data' => [], 'current_page' => 1, 'last_page' => 1]])]);
+    expect(fluxTestClient()->testConnection())->toContain('Flux antwortet');
+    Http::assertSentCount(2);
+});

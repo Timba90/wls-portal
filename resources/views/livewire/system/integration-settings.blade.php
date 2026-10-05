@@ -126,11 +126,17 @@
 
             <x-card>
                 <x-slot:header>Flux REST-API</x-slot:header>
+                <p class="mb-4 text-sm text-ink-muted">Mit deinem Flux-Benutzer anmelden oder ein vorhandenes API-Token hinterlegen. E-Mail und Passwort werden nur für die Anmeldung verwendet; gespeichert wird das Token.</p>
                 <div class="grid gap-4 md:grid-cols-2">
                     <x-input label="REST-API-Adresse" wire:model="fluxInput.base_url" />
                     <x-input label="Mandanten-ID" wire:model="fluxInput.tenant_id" />
                     <x-input label="API-Token" type="password" autocomplete="new-password" wire:model="fluxInput.token" placeholder="Zum Hinterlegen oder Ersetzen eingeben" hint="Leer lassen, um das gespeicherte Token beizubehalten." />
                 </div>
+                <form wire:submit="loginFlux" class="mt-4 grid gap-4 border-t border-line pt-4 md:grid-cols-2">
+                    <x-input label="Flux-E-Mail / Benutzername" autocomplete="off" wire:model="fluxLogin.username" />
+                    <x-input label="Flux-Passwort" type="password" autocomplete="new-password" wire:model="fluxLogin.password" />
+                    <x-button type="submit" wire:loading.attr="disabled">Mit Flux anmelden und Token speichern</x-button>
+                </form>
                 <div class="mt-4 flex flex-wrap gap-2">
                     <x-button wire:click="saveFlux" wire:loading.attr="disabled">Speichern</x-button>
                     <x-button wire:click="testFlux" wire:loading.attr="disabled">Verbindung prüfen</x-button>

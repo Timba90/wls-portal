@@ -2,6 +2,7 @@
 
 namespace App\Livewire\System;
 
+use App\Actions\Flux\LoginFlux;
 use App\Actions\Flux\SaveFluxCredentials;
 use App\Enums\RegistrarProvider;
 use App\Models\IntegrationCredential;
@@ -35,6 +36,23 @@ class IntegrationSettings extends Component
     public array $input = [];
 
     public array $fluxInput = [];
+
+    public array $fluxLogin = ['username' => '', 'password' => ''];
+
+    public function loginFlux(): void
+    {
+        abort_unless(auth()->check(), 403);
+        try {
+            app(LoginFlux::class)->handle($this->fluxInput, $this->fluxLogin, auth()->id());
+            $this->loadFlux();
+            $this->dispatch('zugang-gespeichert');
+        } catch (FluxException $exception) {
+            $this->dispatch('zugang-abgelehnt', meldung: $exception->getMessage());
+        } finally {
+            $this->fluxLogin = ['username' => '', 'password' => ''];
+            $this->fluxInput['token'] = '';
+        }
+    }
 
     private function loadFlux(): void
     {

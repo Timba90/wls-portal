@@ -21,6 +21,9 @@ class FluxClient
 
     public static function validateCredentials(array $credentials): void
     {
+        if (! is_string($credentials['base_url'] ?? null)) {
+            throw new FluxException('Bitte eine gültige Flux-Adresse eingeben.');
+        }
         $url = parse_url($credentials['base_url'] ?? '');
         if (! is_array($url) || ($url['scheme'] ?? '') !== 'https'
             || ($url['host'] ?? '') !== config('services.flux.allowed_host')
@@ -46,7 +49,10 @@ class FluxClient
 
     public function testConnection(): string
     {
-        $this->request('GET', 'auth/token/validate');
+        $validation = $this->request('GET', 'auth/token/validate');
+        if (($validation['status'] ?? null) !== 'token valid') {
+            throw new FluxException('Flux hat die Token-Gültigkeit nicht bestätigt.');
+        }
         $this->ledgerAccounts();
 
         return 'Flux antwortet; der Sachkontenzugriff funktioniert.';
@@ -142,7 +148,8 @@ class FluxClient
             });
         }
         $body = $response->json();
-        if (! is_array($body) || (isset($body['status']) && (! is_int($body['status']) || $body['status'] >= 300))) {
+        $tokenValidation = $path === 'auth/token/validate' && ($body['status'] ?? null) === 'token valid';
+        if (! is_array($body) || (! $tokenValidation && isset($body['status']) && (! is_int($body['status']) || $body['status'] < 200 || $body['status'] >= 300))) {
             throw new FluxException('Flux hat eine ungültige Antwort geliefert.');
         }
 
