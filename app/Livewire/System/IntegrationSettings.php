@@ -2,9 +2,12 @@
 
 namespace App\Livewire\System;
 
+use App\Actions\Flux\SaveFluxCredentials;
 use App\Enums\RegistrarProvider;
 use App\Models\IntegrationCredential;
 use App\Models\RegistrarSync;
+use App\Support\Flux\FluxClient;
+use App\Support\Flux\FluxException;
 use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
@@ -31,8 +34,49 @@ class IntegrationSettings extends Component
      */
     public array $input = [];
 
+    public array $fluxInput = [];
+
+    private function loadFlux(): void
+    {
+        $values = IntegrationCredential::valuesFor('flux');
+        $this->fluxInput = ['base_url' => $values['base_url'] ?? config('services.flux.base_url'), 'tenant_id' => (string) ($values['tenant_id'] ?? ''), 'token' => ''];
+    }
+
+    public function saveFlux(): void
+    {
+        abort_unless(auth()->check(), 403);
+        try {
+            app(SaveFluxCredentials::class)->handle($this->fluxInput, auth()->id());
+            $this->loadFlux();
+            $this->dispatch('zugang-gespeichert');
+        } catch (FluxException $exception) {
+            $this->dispatch('zugang-abgelehnt', meldung: $exception->getMessage());
+        } finally {
+            $this->fluxInput['token'] = '';
+        }
+    }
+
+    public function testFlux(): void
+    {
+        abort_unless(auth()->check(), 403);
+        try {
+            $this->dispatch('zugang-geprueft', meldung: app(FluxClient::class)->testConnection());
+        } catch (FluxException $exception) {
+            $this->dispatch('zugang-abgelehnt', meldung: $exception->getMessage());
+        }
+    }
+
+    public function forgetFlux(): void
+    {
+        abort_unless(auth()->check(), 403);
+        IntegrationCredential::query()->where('provider', 'flux')->delete();
+        $this->loadFlux();
+        $this->dispatch('zugang-entfernt');
+    }
+
     public function mount(): void
     {
+        $this->loadFlux();
         foreach (RegistrarProvider::withClient() as $anbieter) {
             $this->input[$anbieter->value] = array_fill_keys(
                 array_keys($this->fieldsFor($anbieter)),
@@ -154,7 +198,9 @@ class IntegrationSettings extends Component
      */
     public function save(string $provider): void
     {
-        $anbieter = RegistrarProvider::from($provider);
+        abort_unless(auth()->check(), 403);
+        $anbieter = RegistrarProvider::tryFrom($provider);
+        abort_unless($anbieter !== null && in_array($anbieter, RegistrarProvider::withClient(), true), 422);
         $felder = $this->fieldsFor($anbieter);
 
         $eingaben = array_filter(
@@ -189,7 +235,10 @@ class IntegrationSettings extends Component
      */
     public function test(string $provider): void
     {
-        $client = app(RegistrarClientFactory::class)->for(RegistrarProvider::from($provider));
+        abort_unless(auth()->check(), 403);
+        $anbieter = RegistrarProvider::tryFrom($provider);
+        abort_unless($anbieter !== null && in_array($anbieter, RegistrarProvider::withClient(), true), 422);
+        $client = app(RegistrarClientFactory::class)->for($anbieter);
 
         try {
             $this->dispatch('zugang-geprueft', meldung: $client->testConnection());
@@ -203,6 +252,9 @@ class IntegrationSettings extends Component
      */
     public function forget(string $provider): void
     {
+        abort_unless(auth()->check(), 403);
+        $anbieter = RegistrarProvider::tryFrom($provider);
+        abort_unless($anbieter !== null && in_array($anbieter, RegistrarProvider::withClient(), true), 422);
         IntegrationCredential::query()->where('provider', $provider)->delete();
 
         $this->mount();

@@ -124,6 +124,21 @@
                 </x-card>
             @endforeach
 
+            <x-card>
+                <x-slot:header>Flux REST-API</x-slot:header>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <x-input label="REST-API-Adresse" wire:model="fluxInput.base_url" />
+                    <x-input label="Mandanten-ID" wire:model="fluxInput.tenant_id" />
+                    <x-input label="API-Token" type="password" autocomplete="new-password" wire:model="fluxInput.token" placeholder="Zum Hinterlegen oder Ersetzen eingeben" hint="Leer lassen, um das gespeicherte Token beizubehalten." />
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-button wire:click="saveFlux" wire:loading.attr="disabled">Speichern</x-button>
+                    <x-button wire:click="testFlux" wire:loading.attr="disabled">Verbindung prüfen</x-button>
+                    <x-button color="red" outline wire:click="forgetFlux" wire:confirm="Flux-Zugangsdaten entfernen?">Entfernen</x-button>
+                    <a class="self-center underline" href="{{ route('ledger-accounts.index') }}">Sachkonten öffnen</a>
+                </div>
+            </x-card>
+
             <x-panel title="Wie es weitergeht" subtitle="Nach dem Hinterlegen der Zugangsdaten">
                 <p class="text-[12.5px] leading-relaxed text-ink-muted">
                     Der erste Schritt ist ein Trockenlauf. Er zeigt, was der Import anlegen und ändern

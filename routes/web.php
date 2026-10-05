@@ -29,6 +29,7 @@ use App\Livewire\Registrar\DomainList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Services\ServiceOverview;
+use App\Livewire\System\FluxLedgerAccountList;
 use App\Livewire\System\IntegrationSettings;
 use App\Livewire\Users\UserList;
 use Illuminate\Support\Facades\Route;
@@ -76,6 +77,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/zertifikate', CertificateList::class)->name('certificates.index');
 
     Route::livewire('/schnittstellen', IntegrationSettings::class)->name('integrations.index');
+    Route::livewire('/sachkonten', FluxLedgerAccountList::class)->name('ledger-accounts.index');
     Route::livewire('/archiv', ArchivePage::class)->name('archive.index');
 
     Route::livewire('/felder', CustomFieldDefinitionList::class)->name('custom-fields.index');

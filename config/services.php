@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'flux' => [
+        'base_url' => 'https://flux.weblab-studio.de/api',
+        'allowed_host' => 'flux.weblab-studio.de',
+    ],
 
     /*
     |--------------------------------------------------------------------------

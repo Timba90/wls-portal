@@ -34,9 +34,9 @@ class IntegrationCredential extends Model
      *
      * @return array<string, string>
      */
-    public static function valuesFor(RegistrarProvider $provider): array
+    public static function valuesFor(RegistrarProvider|string $provider): array
     {
-        $eintrag = static::query()->where('provider', $provider->value)->first();
+        $eintrag = static::query()->where('provider', $provider instanceof RegistrarProvider ? $provider->value : $provider)->first();
 
         /** @var array<string, string> */
         return $eintrag?->credentials ?? [];

@@ -96,3 +96,12 @@ php artisan horizon
   Architekturentscheidungen
 - `docs/BACKLOG.md` — bewusst verschobene Funktionen und offene Rückfragen
 - `docs/ANFORDERUNGEN.md` — die zugrunde liegende Anforderungslage
+# Flux REST und Sachkonten
+
+Nach dem Deployment `php artisan migrate --force` ausführen. Unter **Schnittstellen → Flux REST-API** die Adresse `https://flux.weblab-studio.de/api`, die Mandanten-ID und ein API-Token mit Sachkonten-Lese- und Anlageberechtigung hinterlegen. Der Zugang wird verschlüsselt gespeichert; ein leeres Token-Feld behält das vorhandene Token bei. Der APP_KEY muss dauerhaft erhalten bleiben.
+
+Mit **Verbindung prüfen** den lesenden Zugriff testen, anschließend unter **Sachkonten** den Flux-Bestand abgleichen. Das Formular verknüpft vorhandene Kontonummern im ausgewählten Mandanten oder legt fehlende Konten gezielt an. Abweichende Kontotypen werden zurückgewiesen. Die bestätigte Flux-ID bleibt für spätere Rechnungszuordnungen gespeichert. SKR04 ist der gewünschte Kontenrahmen; importierte Konten sind damit nicht steuerlich geprüft.
+
+Bei einer unklaren Anlageantwort erfolgt nur ein lesender Kontrollabruf, kein zweiter POST. Vor einem erneuten Versuch den Bestand abgleichen. Mehrere Portalinstanzen benötigen denselben zentralen Cache für die Anlagelocks. Externe gleichzeitige Kontoanlagen können nur durch Flux selbst atomar gegen Dubletten geschützt werden.
+
+Diese Erweiterung enthält keinen vollständigen SKR04-Import und keine automatische Rechnungsanlage oder E-Mail-Versendung. Sie wurde lokal mit HTTP-Fakes geprüft; der produktive Zugang muss nach dem Deployment getestet werden.

@@ -859,3 +859,8 @@ ausgenommenen Leistungen deshalb separat aus.
 - Dokumente liegen in privatem Object Storage, ohne öffentliche URLs; der
   Zugriff läuft ausschließlich über die Anwendung.
 - Audit-Einträge sind über die Anwendung nicht änder- oder löschbar.
+# Flux-Sachkonten
+
+Flux wird getrennt von den Registraren unter dem Provider `flux` angebunden. Zugangsdaten liegen im verschlüsselten `IntegrationCredential`; Token werden nie vorbefüllt. `FluxClient` erlaubt nur den konfigurierten HTTPS-Host und den REST-Pfad `/api`, folgt keinen Redirects und wiederholt keine POST-Anfragen.
+
+Die Actions unter `app/Actions/Flux` gleichen den vollständigen paginierten Bestand ab und verknüpfen oder erstellen Sachkonten gezielt. `flux_ledger_accounts` speichert pro Provider, Mandant und Kontonummer die Flux-ID und Metadaten. Ein Abgleich löscht keine fehlenden Konten. Rechnungszuordnung und Versand sind spätere Erweiterungen.
