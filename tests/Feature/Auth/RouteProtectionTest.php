@@ -83,13 +83,19 @@ function geschuetzteRouten(): array
         ->all();
 }
 
-it('schickt Gäste auf jeder Seite zur Anmeldung', function (): void {
+it('verlangt auf jeder Seite und API-Route eine Anmeldung', function (): void {
     $ungeschuetzt = [];
 
     foreach (geschuetzteRouten() as $route) {
         // Platzhalter füllen: die Anmeldeprüfung läuft vor der Modellbindung,
         // ein Gast darf also nie bis zu einem 404 durchkommen.
         $pfad = preg_replace('/\{[^}]+\}/', '1', $route->uri());
+
+        if (str_starts_with($route->uri(), 'api/')) {
+            $this->getJson('/'.ltrim((string) $pfad, '/'))->assertUnauthorized();
+
+            continue;
+        }
 
         $antwort = $this->get('/'.ltrim((string) $pfad, '/'));
 

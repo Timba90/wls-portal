@@ -29,6 +29,9 @@ use App\Livewire\Registrar\DomainList;
 use App\Livewire\Services\CustomerServiceDetail;
 use App\Livewire\Services\CustomerServiceForm;
 use App\Livewire\Services\ServiceOverview;
+use App\Livewire\Subscriptions\SubscriptionDetail;
+use App\Livewire\Subscriptions\SubscriptionForm;
+use App\Livewire\Subscriptions\SubscriptionList;
 use App\Livewire\System\FluxLedgerAccountList;
 use App\Livewire\System\IntegrationSettings;
 use App\Livewire\Users\UserList;
@@ -75,6 +78,11 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/domains/{domain}', DomainDetail::class)->name('domains.show');
     Route::livewire('/domains/{domain}/bearbeiten', DomainForm::class)->name('domains.edit');
     Route::livewire('/zertifikate', CertificateList::class)->name('certificates.index');
+
+    Route::livewire('/subscriptions', SubscriptionList::class)->name('subscriptions.index');
+    Route::livewire('/subscriptions/neu', SubscriptionForm::class)->name('subscriptions.create');
+    Route::livewire('/subscriptions/{subscription}', SubscriptionDetail::class)->name('subscriptions.show');
+    Route::livewire('/subscriptions/{subscription}/bearbeiten', SubscriptionForm::class)->name('subscriptions.edit');
 
     Route::livewire('/schnittstellen', IntegrationSettings::class)->name('integrations.index');
     Route::livewire('/sachkonten', FluxLedgerAccountList::class)->name('ledger-accounts.index');

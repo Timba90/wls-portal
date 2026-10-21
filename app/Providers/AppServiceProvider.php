@@ -9,6 +9,7 @@ use App\Models\CustomerService;
 use App\Models\Domain;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\Subscription;
 use App\Passport\ClientIdMetadataClientRepository;
 use App\Support\LicenseCostCalculator;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -185,6 +186,7 @@ class AppServiceProvider extends ServiceProvider
                 'products' => Product::query()->active()->count(),
                 'domains' => Domain::query()->count(),
                 'certificates' => Certificate::query()->count(),
+                'subscriptions' => Subscription::query()->count(),
             ]));
         });
     }

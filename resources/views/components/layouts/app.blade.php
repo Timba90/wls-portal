@@ -67,6 +67,9 @@
 
                     <x-nav-item route="certificates.index" icon="lock-closed"
                                 label="Zertifikate" :count="$navCounts['certificates']" />
+
+                    <x-nav-item route="subscriptions.index" icon="server-stack"
+                                label="Subscriptions" :count="$navCounts['subscriptions']" />
                 </x-nav-group>
 
                 <x-nav-group label="Katalog">
