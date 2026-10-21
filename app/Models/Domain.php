@@ -82,6 +82,17 @@ class Domain extends Model
     }
 
     /**
+     * Case- and accent-insensitive partial search for display filters only.
+     * Domain identity and exact lookups retain the binary column collation.
+     *
+     * @param  Builder<Domain>  $query
+     */
+    public function scopeSearchName(Builder $query, string $search): void
+    {
+        $query->whereRaw('domains.name COLLATE utf8mb4_unicode_ci LIKE ?', ['%'.$search.'%']);
+    }
+
+    /**
      * Domains ohne Zuordnung zu einem Kunden.
      *
      * Nach einem Import ist das der Stapel, der Arbeit macht: der Registrar

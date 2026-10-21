@@ -75,7 +75,11 @@ class BestandSuchen extends PortalTool
     {
         $query->with(['customer', 'customerService']);
 
-        $this->applySearch($query, $eingabe['suchbegriff'] ?? null, [$namensspalte]);
+        if ($query->getModel() instanceof Domain && filled($eingabe['suchbegriff'] ?? null)) {
+            $query->searchName($eingabe['suchbegriff']);
+        } else {
+            $this->applySearch($query, $eingabe['suchbegriff'] ?? null, [$namensspalte]);
+        }
 
         if (filled($eingabe['kunde_id'] ?? null)) {
             $query->where('customer_id', $eingabe['kunde_id']);

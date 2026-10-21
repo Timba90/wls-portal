@@ -173,3 +173,14 @@ it('faellt auch in der Zertifikatsliste auf die Voreinstellung zurueck', functio
         ->assertOk()
         ->assertSee('www.beispiel.de');
 });
+
+it('findet ASCII- und Umlautdomains bei grossgeschriebener Suche', function (): void {
+    Domain::factory()->create(['name' => 'hofats.de']);
+    Domain::factory()->create(['name' => 'höfats.de']);
+
+    Livewire::actingAs($this->benutzer)->test(DomainList::class)
+        ->set('search', 'HOFATS')
+        ->assertViewHas('domains', fn ($domains) => $domains->total() === 2)
+        ->assertSee('hofats.de')
+        ->assertSee('höfats.de');
+});
