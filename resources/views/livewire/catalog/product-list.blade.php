@@ -34,8 +34,8 @@
                             wire:click="setCategory('')"
                             @class([
                                 'flex items-center gap-2.5 rounded-[7px] px-2.5 py-2 text-left transition',
-                                'bg-raised' => $categoryId === '',
-                                'hover:bg-raised' => $categoryId !== '',
+                                'bg-raised' => blank($categoryId),
+                                'hover:bg-raised' => filled($categoryId),
                             ])>
                         <span class="h-[7px] w-[7px] flex-none rounded-full bg-accent"></span>
                         <span class="min-w-0 flex-1 truncate text-[12.5px] text-ink-base">Alle Kategorien</span>
@@ -101,7 +101,7 @@
                 <div class="flex flex-wrap items-center justify-between gap-2.5">
                     <div class="flex flex-wrap gap-1.5">
                         @foreach ($this->statusFilters() as $filter)
-                            @php $aktiv = $status === $filter['wert']; @endphp
+                            @php $aktiv = ($status ?? '') === $filter['wert']; @endphp
 
                             <button type="button"
                                     wire:click="setStatus('{{ $filter['wert'] }}')"

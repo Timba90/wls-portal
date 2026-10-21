@@ -168,6 +168,10 @@
                                         @endif
                                         @break
 
+                                    @case('billing')
+                                        <x-inventory-billing :service="$domain->customerService" />
+                                        @break
+
                                     @case('service')
                                         @if ($domain->customerService)
                                             <span class="truncate text-[12px] text-ink-muted">

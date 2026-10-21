@@ -79,7 +79,7 @@
         <div class="mb-3.5 flex flex-wrap items-center justify-between gap-2.5">
             <div class="flex flex-wrap gap-1.5">
                 @foreach ($this->statusFilters() as $filter)
-                    @php $aktiv = $status === $filter['wert']; @endphp
+                    @php $aktiv = ($status ?? '') === $filter['wert']; @endphp
 
                     <button type="button"
                             wire:click="setStatus('{{ $filter['wert'] }}')"

@@ -174,6 +174,10 @@
                             @endif
                         </x-detail-row>
 
+                        <x-detail-row label="Abrechnung">
+                            <x-inventory-billing :service="$domain->customerService" :show-service="false" />
+                        </x-detail-row>
+
                         <x-detail-row label="Leistung">
                             @if ($domain->customerService)
                                 <a href="{{ route('customer-services.show', [$domain->customerService->customer_id, $domain->customerService]) }}"
@@ -182,7 +186,7 @@
                                     {{ $domain->customerService->billing_label ?: $domain->customerService->name }}
                                 </a>
                             @else
-                                <span class="text-ink-faint">nicht einzeln abgerechnet</span>
+                                <span class="text-ink-faint">Keine Leistung zugeordnet</span>
                             @endif
                         </x-detail-row>
                     </dl>

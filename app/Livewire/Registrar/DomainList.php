@@ -37,16 +37,16 @@ class DomainList extends Component
     public string $search = '';
 
     #[Url(as: 'anbieter', except: '')]
-    public string $provider = '';
+    public ?string $provider = '';
 
     #[Url(as: 'zuordnung', except: '')]
-    public string $assignment = '';
+    public ?string $assignment = '';
 
     #[Url(as: 'kunde', except: '')]
-    public string $customerFilter = '';
+    public ?string $customerFilter = '';
 
     #[Url(as: 'ablauf', except: '')]
-    public string $expiry = '';
+    public ?string $expiry = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'expires_on', 'direction' => 'asc'];
@@ -111,6 +111,7 @@ class DomainList extends Component
         return [
             'domain' => ['label' => 'Domain', 'sortable' => false, 'fixed' => true],
             'customer' => ['label' => 'Kunde', 'sortable' => false],
+            'billing' => ['label' => 'Abrechnung', 'sortable' => false],
             'service' => ['label' => 'Leistung', 'sortable' => false, 'default_visible' => false],
             'expires_on' => ['label' => 'Läuft ab'],
             'auto_renew' => ['label' => 'Verlängerung', 'sortable' => false],
@@ -130,6 +131,7 @@ class DomainList extends Component
         return [
             'domain' => ['breite' => '1.9fr'],
             'customer' => ['breite' => '1.3fr'],
+            'billing' => ['breite' => '1.5fr'],
             'expires_on' => ['breite' => '1.1fr'],
             'auto_renew' => ['breite' => '0.9fr'],
             'provider' => ['breite' => '0.9fr'],
@@ -167,11 +169,11 @@ class DomainList extends Component
         return Domain::query()
             ->with([
                 'customer:id,company_name,first_name,last_name,customer_number,type',
-                'customerService:id,name,billing_label',
+                'customerService:id,customer_id,name,billing_label,status,do_not_bill,billing_interval_unit,billing_interval_count',
             ])
-            ->when($this->search !== '', fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
-            ->when($this->provider !== '', fn (Builder $query) => $query->where('provider', $this->provider))
-            ->when($this->customerFilter !== '', fn (Builder $query) => $query->where('customer_id', (int) $this->customerFilter))
+            ->when(filled($this->search), fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
+            ->when(filled($this->provider), fn (Builder $query) => $query->where('provider', $this->provider))
+            ->when(filled($this->customerFilter), fn (Builder $query) => $query->where('customer_id', (int) $this->customerFilter))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())
             ->when($this->assignment === 'assigned', fn (Builder $query) => $query->whereNotNull('customer_id'))
             ->when($this->assignment === 'without_service', fn (Builder $query) => $query->withoutService())
