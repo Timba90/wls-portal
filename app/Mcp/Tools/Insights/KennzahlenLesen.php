@@ -48,6 +48,8 @@ class KennzahlenLesen extends PortalTool
                 'marge' => $this->fromMoney($kennzahlen['yearlyMargin']),
             ],
             'marge_prozent' => $kennzahlen['marginPercentage'],
+            'kostenbasis_vollstaendig' => $kennzahlen['costsComplete'],
+            'artikel_ohne_eur_kosten' => $kennzahlen['missingCostProducts'],
         ]);
     }
 

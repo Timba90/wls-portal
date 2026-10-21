@@ -130,3 +130,21 @@ it('fuehrt die Stammdaten in der Reihenfolge des Entwurfs', function (): void {
         'Einkaufspreis', 'Verkaufspreis', 'Varianten', 'Angelegt', 'Zuletzt geändert',
     ]);
 });
+
+it('zeigt Originalwaehrung und unvollstaendige EUR-Kosten einer Lizenz', function (): void {
+    $artikel = Product::factory()->create([
+        'purchase_cost_model' => 'shared_unlimited',
+        'purchase_usage_unit' => 'website',
+        'purchase_amount_cents' => 29999,
+        'purchase_currency' => 'USD',
+        'purchase_eur_amount_cents' => null,
+        'purchase_interval_unit' => 'year',
+        'purchase_interval_count' => 1,
+    ]);
+
+    Livewire::actingAs(User::factory()->create())
+        ->test(ProductDetail::class, ['product' => $artikel])
+        ->assertSee('299,99 USD')
+        ->assertSee('EUR-Kosten fehlen')
+        ->assertSee('Nicht zugeteilt / Monat');
+});

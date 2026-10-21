@@ -16,6 +16,7 @@ use App\Models\PriceChange;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use Illuminate\JsonSchema\JsonSchemaTypeFactory;
 
 beforeEach(function (): void {
     $this->benutzer = User::factory()->create();
@@ -216,4 +217,24 @@ it('entfernt eine Leistung endgültig samt Preisverlauf', function (): void {
 
     expect(CustomerService::query()->whereKey($leistung->id)->exists())->toBeFalse()
         ->and(PriceChange::query()->where('customer_service_id', $leistung->id)->exists())->toBeFalse();
+});
+
+it('erlaubt EUR Schaetzbetrag und optionale Paketkapazitaet im MCP explizit zu entfernen', function (): void {
+    $product = Product::factory()->create([
+        'purchase_cost_model' => 'shared_unlimited', 'purchase_currency' => 'USD',
+        'purchase_amount_cents' => 29999, 'purchase_eur_amount_cents' => 29999,
+        'purchase_units_per_pack' => 5,
+    ]);
+    PortalServer::actingAs($this->benutzer)
+        ->tool(ProduktSpeichern::class, [
+            'id' => $product->id, 'purchase_eur_amount_cents' => null, 'purchase_units_per_pack' => null,
+        ])->assertOk();
+    expect($product->fresh()->purchase_eur_amount_cents)->toBeNull()
+        ->and($product->fresh()->purchase_units_per_pack)->toBeNull();
+});
+
+it('advertises nullable license values to MCP clients', function (): void {
+    $schema = app(ProduktSpeichern::class)->schema(new JsonSchemaTypeFactory);
+    expect($schema['purchase_eur_amount_cents']->toArray()['type'])->toContain('null')
+        ->and($schema['purchase_units_per_pack']->toArray()['type'])->toContain('null');
 });

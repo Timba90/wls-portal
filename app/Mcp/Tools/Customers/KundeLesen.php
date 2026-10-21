@@ -38,10 +38,12 @@ class KundeLesen extends PortalTool
             'responsibleUser',
             'emailAddresses',
             'phoneNumbers',
-            'services',
+            'services.product',
             'contactAssignments.contact',
             'contactAssignments.roles',
         ]);
+
+        $missingLicenseCosts = $kunde->services->contains(fn (CustomerService $service): bool => $service->hasMissingLicenseCost());
 
         return Response::json([
             'id' => $kunde->id,
@@ -86,14 +88,18 @@ class KundeLesen extends PortalTool
                 'id' => $leistung->id,
                 'name' => $leistung->name,
                 'status' => $leistung->status->value,
+                'lizenzkosten_unvollstaendig' => $leistung->hasMissingLicenseCost(),
+                'usage_quantity' => $leistung->usage_quantity,
+                'usage_project_id' => $leistung->usage_project_id,
                 'verkaufspreis' => $this->money($leistung->sales_price_cents),
                 'abrechnungsintervall' => $leistung->billingInterval()->label(),
             ])->all(),
             'kennzahlen' => [
+                'lizenzkosten_unvollstaendig' => $missingLicenseCosts,
                 'umsatz_monat' => $this->money($kunde->monthlyRevenue()->cents),
                 'umsatz_jahr' => $this->money($kunde->yearlyRevenue()->cents),
-                'kosten_monat' => $this->money($kunde->monthlyCosts()->cents),
-                'marge_monat' => $this->money($kunde->monthlyMargin()->cents),
+                'kosten_monat' => $missingLicenseCosts ? null : $this->money($kunde->monthlyCosts()->cents),
+                'marge_monat' => $missingLicenseCosts ? null : $this->money($kunde->monthlyMargin()->cents),
             ],
         ]);
     }

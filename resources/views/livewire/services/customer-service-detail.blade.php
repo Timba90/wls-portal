@@ -50,6 +50,13 @@
         </x-slot:actions>
 
 
+        @if ($service->hasMissingLicenseCost())
+            <x-alert color="amber" class="mb-3.5" title="Marge unvollständig">Für die Lizenzkosten fehlt der EUR-Kalkulationsbetrag. Originalkosten sind am Katalogartikel erfasst.</x-alert>
+        @endif
+        @if ($service->product?->hasLicenseCostModel())
+            <p class="mb-3.5 text-sm text-ink-muted">Nutzung gemeinsamer Kosten: {{ $service->product->purchase_usage_unit === 'customer' ? 'Kunde wird automatisch eindeutig gezählt' : $service->usage_quantity.' '.(match ($service->product->purchase_usage_unit) { 'website' => 'Webseiten', 'project' => 'Projekte', default => 'Benutzer' }) }}. Kosten werden auf aktive Leistungen verteilt.@if ($service->usageProject) Projekt: {{ $service->usageProject->name }}.@endif</p>
+        @endif
+
         {{-- Kopfkarte: Kürzel, Name mit Status, Kunde und Kennzahlenreihe. --}}
         <div class="mb-3.5 flex flex-wrap items-center gap-4 rounded-[10px] border border-line bg-panel px-[17px] py-4">
             <x-avatar-initials :initials="Str::upper(Str::substr($service->name, 0, 2))" size="lg" />
@@ -87,8 +94,8 @@
             <div class="ml-auto flex flex-wrap gap-[22px]">
                 @foreach ([
                     ['Verkaufspreis', $service->salesPrice()->format(), false],
-                    ['Einkaufspreis', $service->purchasePrice()->format(), false],
-                    ['Marge', $service->margin()->format(), $service->margin()->isNegative()],
+                    ['Einkaufspreis', $service->hasMissingLicenseCost() ? 'Unvollständig' : $service->purchasePrice()->format(), false],
+                    ['Marge', $service->hasMissingLicenseCost() ? 'Unvollständig' : $service->margin()->format(), ! $service->hasMissingLicenseCost() && $service->margin()->isNegative()],
                     ['Umsatz / Mon', $service->monthlyRevenue()->format(), false],
                 ] as [$label, $wert, $negativ])
                     <div class="flex flex-col gap-1" wire:key="kennzahl-{{ $loop->index }}">

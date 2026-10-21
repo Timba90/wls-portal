@@ -210,7 +210,7 @@
 
                                             @case('default_purchase_price_cents')
                                                 <span class="truncate tabular text-right text-[12.5px] text-ink-muted">
-                                                    {{ $artikel->defaultPurchasePrice()->format() }}
+                                                    {{ $artikel->hasLicenseCostModel() ? 'Gemeinsame Kosten' : $artikel->defaultPurchasePrice()->format() }}
                                                 </span>
                                                 @break
 
@@ -219,7 +219,7 @@
                                                     'truncate tabular text-right text-[12.5px]',
                                                     'text-[color:var(--pill-bad-ink)]' => $artikel->defaultMargin()->isNegative(),
                                                     'text-ink-base' => ! $artikel->defaultMargin()->isNegative(),
-                                                ])>{{ $artikel->defaultMargin()->format() }}</span>
+                                                ])>{{ $artikel->hasLicenseCostModel() ? 'Nutzungsabhängig' : $artikel->defaultMargin()->format() }}</span>
                                                 @break
 
                                             @case('variants_count')

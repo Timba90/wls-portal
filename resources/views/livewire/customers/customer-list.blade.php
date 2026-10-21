@@ -199,7 +199,7 @@
 
                                     @case('monthly_costs')
                                         <span class="truncate tabular text-right text-[12.5px] text-ink-muted">
-                                            {{ $kunde->monthlyCosts()->format() }}
+                                            {{ $kunde->services->contains(fn ($service) => $service->hasMissingLicenseCost()) ? 'Unvollständig' : $kunde->monthlyCosts()->format() }}
                                         </span>
                                         @break
 
@@ -208,7 +208,7 @@
                                             'tabular text-right text-[12.5px]',
                                             'text-[color:var(--pill-bad-ink)]' => $kunde->monthlyMargin()->isNegative(),
                                             'text-ink-base' => ! $kunde->monthlyMargin()->isNegative(),
-                                        ])>{{ $kunde->monthlyMargin()->format() }}</span>
+                                        ])>{{ $kunde->services->contains(fn ($service) => $service->hasMissingLicenseCost()) ? 'Unvollständig' : $kunde->monthlyMargin()->format() }}</span>
                                         @break
                                 @endswitch
                             </div>

@@ -12,6 +12,7 @@ use App\Livewire\Services\ServiceOverview;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
+use App\Models\Project;
 use App\Models\User;
 use Livewire\Livewire;
 
@@ -268,4 +269,32 @@ it('filtert die Leistungen ohne Abrechnungsdatum', function (): void {
         ->set('billingFilter', 'no_schedule')
         ->assertSee('Domain ohne Datum')
         ->assertDontSee('Domain mit Datum');
+});
+
+it('speichert die Lizenznutzung einer Kundenleistung und weist Null zurueck', function (): void {
+    $customer = Customer::factory()->create();
+    $form = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceForm::class, ['customer' => $customer])
+        ->set('name', 'Lizenzen')
+        ->set('usage_quantity', 0)
+        ->call('save')
+        ->assertHasErrors(['usage_quantity']);
+
+    $form->set('usage_quantity', 4)->call('save')->assertHasNoErrors();
+    expect($customer->services()->firstOrFail()->usage_quantity)->toBe(4);
+});
+
+it('ordnet gemeinsame Projektkosten nur einem Projekt desselben Kunden zu', function (): void {
+    $customer = Customer::factory()->create();
+    $project = Project::factory()->for($customer)->create();
+    $foreign = Project::factory()->create();
+    $form = Livewire::actingAs(User::factory()->create())
+        ->test(CustomerServiceForm::class, ['customer' => $customer])
+        ->set('name', 'Servernutzung')
+        ->set('usage_project_id', $foreign->id)
+        ->call('save')
+        ->assertHasErrors(['usage_project_id']);
+
+    $form->set('usage_project_id', $project->id)->call('save')->assertHasNoErrors();
+    expect($customer->services()->firstOrFail()->usage_project_id)->toBe($project->id);
 });

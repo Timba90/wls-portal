@@ -209,10 +209,12 @@ class ServiceOverview extends Component
         $umsatz = Money::zero();
         $kosten = Money::zero();
         $anzahl = 0;
+        $kostenVollstaendig = true;
 
         $this->baseQuery()
-            ->select(['id', 'purchase_price_cents', 'sales_price_cents', 'billing_interval_unit', 'billing_interval_count', 'status', 'do_not_bill'])
-            ->chunkById(500, function ($services) use (&$umsatz, &$kosten, &$anzahl): void {
+            ->with('product')
+            ->select(['id', 'product_id', 'purchase_price_cents', 'sales_price_cents', 'billing_interval_unit', 'billing_interval_count', 'status', 'do_not_bill'])
+            ->chunkById(500, function ($services) use (&$umsatz, &$kosten, &$anzahl, &$kostenVollstaendig): void {
                 foreach ($services as $service) {
                     if (! $service->countsTowardsRevenue()) {
                         continue;
@@ -220,6 +222,7 @@ class ServiceOverview extends Component
 
                     $umsatz = $umsatz->plus($service->monthlyRevenue());
                     $kosten = $kosten->plus($service->monthlyCosts());
+                    $kostenVollstaendig = $kostenVollstaendig && ! $service->hasMissingLicenseCost();
                     $anzahl++;
                 }
             });
@@ -230,6 +233,7 @@ class ServiceOverview extends Component
             'monthlyCosts' => $kosten,
             'monthlyMargin' => $umsatz->minus($kosten),
             'count' => $anzahl,
+            'costsComplete' => $kostenVollstaendig,
         ];
     }
 

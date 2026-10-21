@@ -30,6 +30,8 @@ class LeistungSpeichern extends PortalTool
     {
         $eingabe = $request->validate([
             'id' => ['nullable', 'integer'],
+            'usage_project_id' => ['nullable', 'integer', 'exists:projects,id'],
+            'usage_quantity' => ['nullable', 'integer', 'min:1'],
             'kunde_id' => ['nullable', 'integer', 'exists:customers,id'],
             'produkt_id' => ['nullable', 'integer', 'exists:products,id'],
             'variante_id' => ['nullable', 'integer', 'exists:product_variants,id'],
@@ -128,6 +130,8 @@ class LeistungSpeichern extends PortalTool
         $verkauf = $eingabe['verkaufspreis_cents'] ?? $leistung?->sales_price_cents ?? 0;
 
         return [
+            'usage_project_id' => array_key_exists('usage_project_id', $eingabe) ? $eingabe['usage_project_id'] : $leistung?->usage_project_id,
+            'usage_quantity' => $eingabe['usage_quantity'] ?? $leistung?->usage_quantity ?? 1,
             'product_id' => $eingabe['produkt_id'] ?? $leistung?->product_id,
             'product_variant_id' => $eingabe['variante_id'] ?? $leistung?->product_variant_id,
             'name' => $eingabe['name'] ?? $leistung?->name,
@@ -192,7 +196,9 @@ class LeistungSpeichern extends PortalTool
             'kunde_id' => $leistung->customer_id,
             'status' => $leistung->status->value,
             'verkaufspreis' => $this->money($leistung->sales_price_cents),
-            'marge' => $this->money($leistung->margin()->cents),
+            'usage_quantity' => $leistung->usage_quantity,
+            'lizenzkosten_unvollstaendig' => $leistung->hasMissingLicenseCost(),
+            'marge' => $leistung->hasMissingLicenseCost() ? null : $this->money($leistung->margin()->cents),
             'abrechnungsintervall' => $leistung->billingInterval()->label(),
             'umsatz_monat' => $this->money($leistung->monthlyRevenue()->cents),
         ]);
@@ -204,6 +210,8 @@ class LeistungSpeichern extends PortalTool
     public function schema(JsonSchema $schema): array
     {
         return [
+            'usage_project_id' => $schema->integer()->nullable()->description('Projekt desselben Kunden für eindeutige Projektzählung; null entfernt die Zuordnung.'),
+            'usage_quantity' => $schema->integer()->description('Positive Nutzungsmenge, Standard 1. Bei Kundeneinheiten werden Kunden automatisch eindeutig gezählt.'),
             'id' => $schema->integer()->description('Zum Ändern angeben, zum Anlegen weglassen.'),
             'kunde_id' => $schema->integer()->description('Pflicht beim Anlegen. Lässt sich nachträglich nicht wechseln.'),
             'produkt_id' => $schema->integer()->description('Katalogartikel, auf dem die Leistung beruht. Ohne Angabe entsteht eine individuelle Leistung.'),

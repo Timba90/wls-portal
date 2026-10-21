@@ -45,8 +45,10 @@ class ProduktLesen extends PortalTool
             'unterkategorie' => $produkt->subcategory?->only(['id', 'name']),
             'standard_einkaufspreis' => $this->money($produkt->default_purchase_price_cents),
             'standard_verkaufspreis' => $this->money($produkt->default_sales_price_cents),
-            'standard_marge' => $this->money($produkt->defaultMargin()->cents),
-            'standard_marge_prozent' => $produkt->defaultMarginPercentage(),
+            'standard_marge' => $produkt->hasLicenseCostModel() ? null : $this->money($produkt->defaultMargin()->cents),
+            'standard_marge_prozent' => $produkt->hasLicenseCostModel() ? null : $produkt->defaultMarginPercentage(),
+            'lizenzkonfiguration' => $produkt->only(['purchase_cost_model', 'purchase_usage_unit', 'purchase_amount_cents', 'purchase_currency', 'purchase_eur_amount_cents', 'purchase_interval_unit', 'purchase_interval_count', 'purchase_units_per_pack']),
+            'lizenzkosten' => $produkt->hasLicenseCostModel() ? $produkt->licenseCostSummary() : null,
             'abrechnungsintervall' => [
                 'einheit' => $produkt->default_billing_interval_unit->value,
                 'anzahl' => $produkt->default_billing_interval_count,

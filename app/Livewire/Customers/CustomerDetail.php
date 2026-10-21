@@ -96,7 +96,7 @@ class CustomerDetail extends Component
         // Fuer die Kennzahlen im Kopfband: nur abrechnungsrelevante Leistungen.
         $this->customer->load([
             'responsibleUser',
-            'services' => fn ($query) => $query->billable(),
+            'services' => fn ($query) => $query->active()->with('product'),
             'emailAddresses',
             'phoneNumbers',
             'contactAssignments.contact.emailAddresses',

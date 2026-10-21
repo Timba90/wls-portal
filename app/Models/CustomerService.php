@@ -30,6 +30,8 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * schreibgeschuetzt; das wird im Model erzwungen, nicht nur in der Oberflaeche.
  */
 #[Fillable([
+    'usage_project_id',
+    'usage_quantity',
     'customer_id',
     'product_id',
     'product_variant_id',
@@ -94,6 +96,11 @@ class CustomerService extends Model
     /**
      * @return BelongsTo<ProductVariant, $this>
      */
+    public function usageProject(): BelongsTo
+    {
+        return $this->belongsTo(Project::class, 'usage_project_id');
+    }
+
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
@@ -161,6 +168,14 @@ class CustomerService extends Model
 
     public function purchasePrice(): Money
     {
+        if ($this->product?->hasLicenseCostModel()) {
+            $months = $this->billingInterval()->unit->monthsPerUnit() * ($this->billing_interval_count ?? 1);
+
+            return Money::fromCents((int) round(
+                $months >= 12 ? $this->yearlyCosts()->cents * $months / 12 : $this->monthlyCosts()->cents * $months
+            ));
+        }
+
         return Money::fromCents($this->purchase_price_cents);
     }
 
@@ -209,13 +224,26 @@ class CustomerService extends Model
         return $this->billingInterval()->toYearly($this->salesPrice());
     }
 
+    public function hasMissingLicenseCost(): bool
+    {
+        return $this->product?->hasLicenseCostModel() && $this->product->licenseCostSummary()['missing_eur'];
+    }
+
     public function monthlyCosts(): Money
     {
+        if ($this->product?->hasLicenseCostModel()) {
+            return Money::fromCents($this->product->licenseCostSummary()['allocations'][$this->id]['monthly_cents'] ?? 0);
+        }
+
         return $this->billingInterval()->toMonthly($this->purchasePrice());
     }
 
     public function yearlyCosts(): Money
     {
+        if ($this->product?->hasLicenseCostModel()) {
+            return Money::fromCents($this->product->licenseCostSummary()['allocations'][$this->id]['yearly_cents'] ?? 0);
+        }
+
         return $this->billingInterval()->toYearly($this->purchasePrice());
     }
 
@@ -389,6 +417,7 @@ class CustomerService extends Model
             'catalog_snapshot' => 'array',
             'catalog_reviewed_snapshot' => 'array',
             'catalog_reviewed_at' => 'datetime',
+            'usage_quantity' => 'integer',
             'purchase_price_cents' => 'integer',
             'sales_price_cents' => 'integer',
             'billing_interval_count' => 'integer',

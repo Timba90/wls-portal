@@ -13,6 +13,8 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Legt eine Kundenleistung an — mit oder ohne Katalogartikel.
@@ -39,6 +41,11 @@ class CreateCustomerService
         array $tags = [],
         array $components = [],
     ): CustomerService {
+        Validator::make($attributes, [
+            'usage_quantity' => ['sometimes', 'required', 'integer', 'min:1', 'max:1000000000'],
+            'usage_project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where('customer_id', $customer->id)],
+        ])->validate();
+
         return DB::transaction(function () use ($customer, $attributes, $tags, $components): CustomerService {
             $product = filled($attributes['product_id'] ?? null)
                 ? Product::query()->findOrFail($attributes['product_id'])
@@ -54,6 +61,8 @@ class CreateCustomerService
                 'product_id' => $product?->getKey(),
                 'product_variant_id' => $variant?->getKey(),
                 'catalog_snapshot' => ($this->buildCatalogSnapshot)($product, $variant),
+                'usage_project_id' => array_key_exists('usage_project_id', $attributes) ? $attributes['usage_project_id'] : null,
+                'usage_quantity' => $attributes['usage_quantity'] ?? 1,
                 'name' => $attributes['name'],
                 'billing_label' => $attributes['billing_label'] ?? null,
                 'description' => $attributes['description'] ?? null,
