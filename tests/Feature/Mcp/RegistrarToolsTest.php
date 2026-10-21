@@ -210,3 +210,14 @@ it('hinterlegt eine Notiz an einer Domain', function (): void {
     expect($domain->notes()->count())->toBe(1)
         ->and($domain->notes()->sole()->body)->toContain('IONOS');
 });
+
+it('findet getrennte Umlautdomains weiterhin mit ASCII-Suche in Grossbuchstaben', function (): void {
+    Domain::factory()->create(['name' => 'hofats.de']);
+    Domain::factory()->create(['name' => 'höfats.de']);
+
+    PortalServer::actingAs($this->benutzer)
+        ->tool(BestandSuchen::class, ['typ' => 'domain', 'suchbegriff' => 'HOFATS'])
+        ->assertOk()
+        ->assertSee('hofats.de')
+        ->assertSee('höfats.de');
+});

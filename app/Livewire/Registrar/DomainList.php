@@ -171,7 +171,7 @@ class DomainList extends Component
                 'customer:id,company_name,first_name,last_name,customer_number,type',
                 'customerService:id,customer_id,name,billing_label,status,do_not_bill,billing_interval_unit,billing_interval_count',
             ])
-            ->when(filled($this->search), fn (Builder $query) => $query->where('name', 'like', '%'.$this->search.'%'))
+            ->when(filled($this->search), fn (Builder $query) => $query->searchName($this->search))
             ->when(filled($this->provider), fn (Builder $query) => $query->where('provider', $this->provider))
             ->when(filled($this->customerFilter), fn (Builder $query) => $query->where('customer_id', (int) $this->customerFilter))
             ->when($this->assignment === 'unassigned', fn (Builder $query) => $query->unassigned())
