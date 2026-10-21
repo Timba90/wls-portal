@@ -145,7 +145,7 @@ it('weist eine nicht registrierte Rueckleitung vor der Zustimmungsseite ab', fun
             'code_challenge' => Str::random(43),
             'code_challenge_method' => 'S256',
         ]))
-        ->assertStatus(400)
+        ->assertUnauthorized()
         ->assertDontSee('Zugriff erlauben?');
 });
 
