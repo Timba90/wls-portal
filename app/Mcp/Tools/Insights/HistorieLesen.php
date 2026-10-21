@@ -8,6 +8,7 @@ use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Product;
+use App\Models\Subscription;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\JsonSchema\Types\Type;
@@ -30,12 +31,13 @@ class HistorieLesen extends PortalTool
         'ansprechpartner' => Contact::class,
         'produkt' => Product::class,
         'leistung' => CustomerService::class,
+        'subscription' => Subscription::class,
     ];
 
     public function handle(Request $request): Response
     {
         $eingabe = $request->validate([
-            'typ' => ['nullable', 'string', 'in:kunde,ansprechpartner,produkt,leistung'],
+            'typ' => ['nullable', 'string', 'in:kunde,ansprechpartner,produkt,leistung,subscription'],
             'id' => ['nullable', 'integer'],
             'ereignis' => ['nullable', 'string', 'in:created,updated,archived,restored,deleted,attached,detached'],
             'benutzer_id' => ['nullable', 'integer'],
@@ -87,7 +89,7 @@ class HistorieLesen extends PortalTool
     public function schema(JsonSchema $schema): array
     {
         return [
-            'typ' => $schema->string()->enum(['kunde', 'ansprechpartner', 'produkt', 'leistung'])
+            'typ' => $schema->string()->enum(['kunde', 'ansprechpartner', 'produkt', 'leistung', 'subscription'])
                 ->description('Nur zusammen mit „id". Ohne beides kommt der Gesamtstrom.'),
             'id' => $schema->integer()->description('Interne ID des Datensatzes. Nur zusammen mit „typ".'),
             'ereignis' => $schema->string()

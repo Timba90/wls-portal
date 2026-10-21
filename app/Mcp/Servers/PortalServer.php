@@ -46,6 +46,9 @@ use App\Mcp\Tools\Services\LeistungLesen;
 use App\Mcp\Tools\Services\LeistungLoeschen;
 use App\Mcp\Tools\Services\LeistungSpeichern;
 use App\Mcp\Tools\Services\LeistungStatusSetzen;
+use App\Mcp\Tools\Subscriptions\SubscriptionLesen;
+use App\Mcp\Tools\Subscriptions\SubscriptionSpeichern;
+use App\Mcp\Tools\Subscriptions\SubscriptionSuchen;
 use Laravel\Mcp\Server;
 use Laravel\Mcp\Server\Attributes\Instructions;
 use Laravel\Mcp\Server\Attributes\Name;
@@ -94,6 +97,15 @@ use Laravel\Mcp\Server\Attributes\Version;
       gepflegte Domain liegt, gehoert in eine Notiz (`notiz-speichern` mit
       `typ: domain`): das Anbieterfeld benennt Anschluesse, keine Registrare
       ohne solchen.
+
+    Zu Subscriptions:
+
+    - Webspaces auf cloud01/cloud02/cloud03 werden ausschliesslich von Hand gepflegt.
+      Diese Kennungen sind keine Verbindungsziele. Kein Plesk-Abruf oder Import.
+    - subscription-speichern aendert per interner ID nur uebergebene Felder;
+      ohne ID legt es einen Eintrag mit server und name an.
+    - Abrechnungseinstellungen stammen aus der verknuepften Kundenleistung,
+      sie belegen keine tatsaechlich gestellte Rechnung.
 
     Zu DNS-Eintraegen:
 
@@ -167,6 +179,10 @@ class PortalServer extends Server
         PreisaenderungPlanen::class,
         PreisaenderungAbbrechen::class,
         PreisDirektSetzen::class,
+
+        SubscriptionSuchen::class,
+        SubscriptionLesen::class,
+        SubscriptionSpeichern::class,
 
         BestandSuchen::class,
         BestandZuordnen::class,
