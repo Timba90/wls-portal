@@ -4,6 +4,8 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response as LaravelResponse;
+use Illuminate\View\View;
 use Symfony\Component\HttpFoundation\Response;
 
 class SecurityHeaders
@@ -32,10 +34,38 @@ class SecurityHeaders
             "object-src 'none'",
             "base-uri 'self'",
             "frame-ancestors 'none'",
-            "form-action 'self'",
+            $this->formAction($response),
         ]);
         $response->headers->set('Content-Security-Policy', $csp, false);
 
         return $response;
+    }
+
+    private function formAction(Response $response): string
+    {
+        $policy = "form-action 'self'";
+
+        if (! $response instanceof LaravelResponse || ! $response->isSuccessful()) {
+            return $policy;
+        }
+
+        $view = $response->getOriginalContent();
+
+        if (! $view instanceof View || $view->name() !== 'oauth.authorize') {
+            return $policy;
+        }
+
+        // Passport rendert diese View erst nach der Pruefung der Rueckleitungsadresse.
+        // Chromium wendet form-action auch auf die Weiterleitung nach dem POST an.
+        $uri = $view->getData()['request']->query('redirect_uri');
+        $parts = is_string($uri) ? parse_url($uri) : false;
+
+        if (! is_array($parts) || ! in_array($parts['scheme'] ?? '', ['https', 'http'], true)
+            || ! preg_match('/\A[a-zA-Z0-9.\[\]:-]+\z/', $parts['host'] ?? '')) {
+            return $policy;
+        }
+
+        return $policy.' '.$parts['scheme'].'://'.$parts['host']
+            .(isset($parts['port']) ? ':'.$parts['port'] : '');
     }
 }

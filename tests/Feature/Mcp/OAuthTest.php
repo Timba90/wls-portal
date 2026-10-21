@@ -84,7 +84,7 @@ it('fuehrt vom Zustimmen bis zum Aufruf des Servers', function (): void {
     $herausforderung = rtrim(strtr(base64_encode(hash('sha256', $pruefer, true)), '+/', '-_'), '=');
 
     // 1. Der Benutzer sieht, worum gebeten wird.
-    $this->actingAs($this->benutzer)
+    $zustimmung = $this->actingAs($this->benutzer)
         ->get('/oauth/authorize?'.http_build_query([
             'client_id' => $this->client->getKey(),
             'redirect_uri' => 'https://client.test/rueckruf',
@@ -98,6 +98,9 @@ it('fuehrt vom Zustimmen bis zum Aufruf des Servers', function (): void {
         ->assertSee('Zugriff erlauben?')
         ->assertSee('Testclient')
         ->assertSee('Zugriff auf den MCP-Server im eigenen Namen');
+
+    expect(explode('; ', $zustimmung->headers->get('Content-Security-Policy')))
+        ->toContain("form-action 'self' https://client.test");
 
     // 2. Er stimmt zu.
     $weiterleitung = $this->actingAs($this->benutzer)
@@ -130,6 +133,20 @@ it('fuehrt vom Zustimmen bis zum Aufruf des Servers', function (): void {
     werkzeugliste($token->json('access_token'))
         ->assertOk()
         ->assertJsonPath('result.tools.0.name', 'kunden-suchen');
+});
+
+it('weist eine nicht registrierte Rueckleitung vor der Zustimmungsseite ab', function (): void {
+    $this->actingAs($this->benutzer)
+        ->get('/oauth/authorize?'.http_build_query([
+            'client_id' => $this->client->getKey(),
+            'redirect_uri' => 'https://fremd.test/rueckruf',
+            'response_type' => 'code',
+            'scope' => Registrar::OAUTH_SCOPE,
+            'code_challenge' => Str::random(43),
+            'code_challenge_method' => 'S256',
+        ]))
+        ->assertStatus(400)
+        ->assertDontSee('Zugriff erlauben?');
 });
 
 it('weist ein Zugriffstoken ohne den Geltungsbereich ab', function (): void {
