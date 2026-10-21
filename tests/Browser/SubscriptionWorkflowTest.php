@@ -53,3 +53,30 @@ it('filters separate servers and resets styled selects without losing billing la
         ->assertNoJavaScriptErrors()
         ->screenshot(filename: 'subscriptions-manual-list');
 });
+
+it('selects visible subscriptions and requires modal confirmation before deleting', function (): void {
+    $this->actingAs(User::factory()->create());
+    $remove = Subscription::factory()->create(['server' => 'cloud02', 'name' => 'alt-loeschen.example']);
+    $keep = Subscription::factory()->create(['server' => 'cloud03', 'name' => 'behalten.example']);
+
+    visit('/subscriptions?server=cloud02')
+        ->click('input[aria-label="Alle auf dieser Seite auswählen"]')
+        ->waitForText('1 ausgewählt')
+        ->click('Ausgewählte löschen')
+        ->waitForText('Diese 1 Portal-Einträge endgültig löschen?')
+        ->click('button:has-text("Abbrechen")')
+        ->assertSee('alt-loeschen.example')
+        ->click('Ausgewählte löschen')
+        ->waitForText('Diese 1 Portal-Einträge endgültig löschen?')
+        ->click('button:has-text("Endgültig löschen")')
+        ->waitForText('1 Subscriptions gelöscht.')
+        ->assertDontSee('alt-loeschen.example')
+        ->assertSee('0 ausgewählt')
+        ->click('Filter zurücksetzen')
+        ->waitForText('behalten.example')
+        ->assertNoJavaScriptErrors()
+        ->screenshot(filename: 'subscriptions-bulk-delete');
+
+    $this->assertModelMissing($remove);
+    $this->assertModelExists($keep);
+});

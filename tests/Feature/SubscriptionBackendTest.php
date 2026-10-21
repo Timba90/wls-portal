@@ -95,9 +95,9 @@ it('accepts scoped OAuth for API access', function () {
     Passport::actingAs(User::factory()->create(), [Registrar::OAUTH_SCOPE]);
     $this->postJson('/api/subscriptions', ['server' => 'cloud01', 'name' => 'oauth.de'])->assertCreated();
 });
-it('does not expose a delete endpoint', function () {
+it('does not permit deletion without a valid token', function () {
     $subscription = Subscription::factory()->create();
-    $this->withToken(User::factory()->create()->createToken('API')->plainTextToken)->deleteJson('/api/subscriptions/'.$subscription->id)->assertMethodNotAllowed();
+    $this->withToken('invalid-token')->deleteJson('/api/subscriptions/'.$subscription->id)->assertUnauthorized();
     expect($subscription->fresh())->not->toBeNull();
 });
 it('preserves source subscriber and setup date through partial updates', function () {
