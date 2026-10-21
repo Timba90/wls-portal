@@ -47,6 +47,7 @@ use App\Mcp\Tools\Services\LeistungLoeschen;
 use App\Mcp\Tools\Services\LeistungSpeichern;
 use App\Mcp\Tools\Services\LeistungStatusSetzen;
 use App\Mcp\Tools\Subscriptions\SubscriptionLesen;
+use App\Mcp\Tools\Subscriptions\SubscriptionLoeschen;
 use App\Mcp\Tools\Subscriptions\SubscriptionSpeichern;
 use App\Mcp\Tools\Subscriptions\SubscriptionSuchen;
 use Laravel\Mcp\Server;
@@ -106,6 +107,8 @@ use Laravel\Mcp\Server\Attributes\Version;
       ohne ID legt es einen Eintrag mit server und name an.
     - Abrechnungseinstellungen stammen aus der verknuepften Kundenleistung,
       sie belegen keine tatsaechlich gestellte Rechnung.
+    - subscription-loeschen entfernt explizit ausgewaehlte Portal-Eintraege endgueltig.
+      Kunden, Domains, Leistungen und echte Plesk-Webspaces bleiben erhalten.
 
     Zu DNS-Eintraegen:
 
@@ -182,6 +185,7 @@ class PortalServer extends Server
 
         SubscriptionSuchen::class,
         SubscriptionLesen::class,
+        SubscriptionLoeschen::class,
         SubscriptionSpeichern::class,
 
         BestandSuchen::class,

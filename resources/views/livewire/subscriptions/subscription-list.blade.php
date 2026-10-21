@@ -1,6 +1,6 @@
 @php
     $columns = $this->tableHeaders();
-    $grid = collect($columns)->map(fn (array $column): string => $column['width'] ?? match ($column['index']) { 'name' => '1.7fr', 'billing', 'customer' => '1.4fr', default => '1fr' })->implode(' ');
+    $grid = '36px '.collect($columns)->map(fn (array $column): string => $column['width'] ?? match ($column['index']) { 'name' => '1.7fr', 'billing', 'customer' => '1.4fr', default => '1fr' })->implode(' ');
 @endphp
 <div>
     <x-page title="Subscriptions" subtitle="Plesk-Webspaces mit Server, Kunde und Abrechnung. Der Bestand wird von Hand gepflegt.">
@@ -17,17 +17,27 @@
                 <x-button color="secondary" outline sm icon="adjustments-horizontal" wire:click="$set('showTableSettings', true)" title="Spalten einrichten" />
             </div>
         </div>
+        <x-errors />
+        @if (session('subscriptions-deleted'))
+            <p role="status" class="mb-3 text-sm text-accent">{{ session('subscriptions-deleted') }}</p>
+        @endif
+        <div class="mb-3 flex items-center gap-3">
+            <span class="text-sm text-ink-muted">{{ count($selectedIds) }} ausgewählt · Auswahl gilt für diese Seite</span>
+            <x-button color="red" sm wire:click="confirmDeletion" :disabled="count($selectedIds) === 0" wire:loading.attr="disabled">Ausgewählte löschen</x-button>
+        </div>
         <p class="mb-3 text-right text-[11.5px] text-ink-faint">{{ $subscriptions->total() }} Subscriptions in der Auswahl</p>
         <div class="overflow-hidden rounded-[10px] border border-line bg-panel">
             <div class="overflow-x-auto">
                 <div role="table" aria-label="Subscriptions" style="min-width: {{ max(850, count($columns) * 150) }}px">
                     <div role="row" class="grid gap-3.5 border-b border-line bg-raised px-[17px] py-2.5" style="grid-template-columns: {{ $grid }}">
+                        <span role="columnheader"><x-checkbox aria-label="Alle auf dieser Seite auswählen" wire:click="togglePageSelection" :checked="$subscriptions->count() > 0 && count(array_diff($subscriptions->pluck('id')->map(fn ($id) => (string) $id)->all(), $selectedIds)) === 0" /></span>
                         @foreach ($columns as $column)
                             <span wire:key="heading-{{ $column['index'] }}" role="columnheader" class="text-[11px] font-semibold text-ink-faint">{{ $column['label'] }}</span>
                         @endforeach
                     </div>
                     @forelse ($subscriptions as $subscription)
                         <div wire:key="subscription-{{ $subscription->id }}" role="row" class="grid items-center gap-3.5 border-b border-line px-[17px] py-3 hover:bg-raised" style="grid-template-columns: {{ $grid }}">
+                            <span role="cell"><x-checkbox wire:model.live="selectedIds" :value="(string) $subscription->id" :aria-label="'Auswählen: '.$subscription->name.' ('.$subscription->server->label().')'" /></span>
                             @foreach ($columns as $column)
                                 <div wire:key="cell-{{ $subscription->id }}-{{ $column['index'] }}" role="cell" class="min-w-0 text-[12px] text-ink-muted">
                                     @switch($column['index'])
@@ -63,6 +73,21 @@
                 <div class="border-t border-line px-[17px] py-3">{{ $subscriptions->links() }}</div>
             @endif
         </div>
+        <x-modal wire="showDeleteConfirmation" id="subscriptions-loeschen" title="Subscriptions löschen" persistent>
+            <p class="mb-3 text-sm text-ink-base">Diese {{ count($pendingDeletionIds) }} Portal-Einträge endgültig löschen?</p>
+            <p class="mb-3 text-sm text-ink-muted">Kunden, Domains, Leistungen und echte Plesk-Webspaces bleiben erhalten.</p>
+            <ul class="max-h-72 overflow-y-auto space-y-1 text-sm text-ink-base">
+                @foreach ($pendingSubscriptions as $pending)
+                    <li wire:key="delete-preview-{{ $pending->id }}">{{ $pending->server->label() }} · {{ $pending->name }}</li>
+                @endforeach
+            </ul>
+            <x-slot:footer>
+                <div class="flex justify-end gap-2">
+                    <x-button color="secondary" outline wire:click="$set('showDeleteConfirmation', false)">Abbrechen</x-button>
+                    <x-button color="red" wire:click="deleteSelected" wire:loading.attr="disabled">Endgültig löschen</x-button>
+                </div>
+            </x-slot:footer>
+        </x-modal>
         <x-column-settings :columns="$this->columnSettings()" />
     </x-page>
 </div>
