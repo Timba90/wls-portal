@@ -38,6 +38,22 @@ class ProductForm extends Component
 
     public string $default_purchase_price = '0,00';
 
+    public string $purchase_cost_model = 'per_service';
+
+    public string $purchase_usage_unit = 'user';
+
+    public string $purchase_amount = '0,00';
+
+    public string $purchase_currency = 'EUR';
+
+    public string $purchase_eur_amount = '';
+
+    public string $purchase_interval_unit = 'month';
+
+    public int $purchase_interval_count = 1;
+
+    public ?int $purchase_units_per_pack = null;
+
     public string $default_sales_price = '0,00';
 
     public string $default_billing_interval_unit = BillingIntervalUnit::Month->value;
@@ -69,6 +85,14 @@ class ProductForm extends Component
         $this->default_sales_price = $product->defaultSalesPrice()->toInput();
         $this->default_billing_interval_unit = $product->default_billing_interval_unit->value;
         $this->default_billing_interval_count = $product->default_billing_interval_count ?? 1;
+        $this->purchase_cost_model = $product->purchase_cost_model ?? 'per_service';
+        $this->purchase_usage_unit = $product->purchase_usage_unit ?? 'user';
+        $this->purchase_amount = Money::fromCents($product->purchase_amount_cents ?? 0)->toInput();
+        $this->purchase_currency = $product->purchase_currency ?? 'EUR';
+        $this->purchase_eur_amount = $product->purchase_eur_amount_cents === null ? '' : Money::fromCents($product->purchase_eur_amount_cents)->toInput();
+        $this->purchase_interval_unit = $product->purchase_interval_unit?->value ?? 'month';
+        $this->purchase_interval_count = $product->purchase_interval_count ?? 1;
+        $this->purchase_units_per_pack = $product->purchase_units_per_pack;
         $this->tagIds = $product->tags->pluck('id')->all();
 
         $this->components = $product->serviceComponents
@@ -217,6 +241,9 @@ class ProductForm extends Component
         $product = $saveProduct(
             attributes: [
                 ...$validated,
+                'purchase_amount_cents' => Money::fromEuroInput($this->purchase_amount)->cents,
+                'purchase_eur_amount_cents' => $this->purchase_currency === 'USD' && filled($this->purchase_eur_amount) ? Money::fromEuroInput($this->purchase_eur_amount)->cents : null,
+                'purchase_units_per_pack' => $this->purchase_cost_model === 'shared_pack' ? $this->purchase_units_per_pack : null,
                 'category_id' => $this->category_id !== '' ? (int) $this->category_id : null,
                 'subcategory_id' => $this->subcategory_id !== '' ? (int) $this->subcategory_id : null,
             ],
@@ -248,6 +275,14 @@ class ProductForm extends Component
     private function rules(): array
     {
         return [
+            'purchase_cost_model' => ['required', Rule::in(['per_service', 'per_unit', 'shared_unlimited', 'shared_pack'])],
+            'purchase_usage_unit' => ['required', Rule::in(['user', 'customer', 'website', 'project'])],
+            'purchase_amount' => ['required', 'string', $this->moneyRule()],
+            'purchase_currency' => ['required', Rule::in(['EUR', 'USD'])],
+            'purchase_eur_amount' => ['nullable', 'string', $this->moneyRule()],
+            'purchase_interval_unit' => ['required', Rule::in(['month', 'year'])],
+            'purchase_interval_count' => ['required', 'integer', 'min:1', 'max:999'],
+            'purchase_units_per_pack' => ['required_if:purchase_cost_model,shared_pack', 'nullable', 'integer', 'min:1'],
             'name' => ['required', 'string', 'max:255'],
             'internal_name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string', 'max:5000'],

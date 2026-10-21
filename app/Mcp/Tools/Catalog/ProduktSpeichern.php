@@ -16,7 +16,7 @@ use Laravel\Mcp\Server\Attributes\Description;
 use Laravel\Mcp\Server\Attributes\Name;
 
 #[Name('produkt-speichern')]
-#[Description('Legt einen Katalogartikel an oder ändert einen bestehenden. Preise werden in ganzen Cent angegeben. Änderungen am Katalog wirken nicht rückwirkend auf bestehende Kundenleistungen.')]
+#[Description('Legt einen Katalogartikel an oder ändert einen bestehenden. Preise werden in ganzen Cent angegeben. Standardpreise wirken nicht rückwirkend. Lizenzkosten werden anhand der aktiven Nutzung neu verteilt.')]
 class ProduktSpeichern extends PortalTool
 {
     public function __construct(private readonly SaveProduct $saveProduct) {}
@@ -25,6 +25,14 @@ class ProduktSpeichern extends PortalTool
     {
         $eingabe = $request->validate([
             'id' => ['nullable', 'integer'],
+            'purchase_cost_model' => ['nullable', 'string', 'in:per_service,per_unit,shared_unlimited,shared_pack'],
+            'purchase_usage_unit' => ['nullable', 'string', 'in:user,customer,website,project'],
+            'purchase_amount_cents' => ['nullable', 'integer', 'min:0'],
+            'purchase_currency' => ['nullable', 'string', 'in:EUR,USD'],
+            'purchase_eur_amount_cents' => ['nullable', 'integer', 'min:0'],
+            'purchase_interval_unit' => ['nullable', 'string', 'in:month,year'],
+            'purchase_interval_count' => ['nullable', 'integer', 'min:1'],
+            'purchase_units_per_pack' => ['nullable', 'integer', 'min:1'],
             'name' => ['nullable', 'string', 'max:255'],
             'interner_name' => ['nullable', 'string', 'max:255'],
             'beschreibung' => ['nullable', 'string'],
@@ -71,7 +79,8 @@ class ProduktSpeichern extends PortalTool
             'name' => $gespeichert->name,
             'status' => $gespeichert->status->value,
             'standard_verkaufspreis' => $this->money($gespeichert->default_sales_price_cents),
-            'standard_marge' => $this->money($gespeichert->defaultMargin()->cents),
+            'standard_marge' => $gespeichert->hasLicenseCostModel() ? null : $this->money($gespeichert->defaultMargin()->cents),
+            'lizenzkosten' => $gespeichert->hasLicenseCostModel() ? $gespeichert->licenseCostSummary() : null,
         ]);
     }
 
@@ -88,6 +97,7 @@ class ProduktSpeichern extends PortalTool
         $verkauf = $eingabe['verkaufspreis_cents'] ?? $produkt?->default_sales_price_cents ?? 0;
 
         return [
+            ...array_intersect_key($eingabe, array_flip(['purchase_cost_model', 'purchase_usage_unit', 'purchase_amount_cents', 'purchase_currency', 'purchase_eur_amount_cents', 'purchase_interval_unit', 'purchase_interval_count', 'purchase_units_per_pack'])),
             'name' => $eingabe['name'] ?? $produkt?->name,
             'internal_name' => $eingabe['interner_name'] ?? $produkt?->internal_name,
             'description' => $eingabe['beschreibung'] ?? $produkt?->description,
@@ -143,6 +153,14 @@ class ProduktSpeichern extends PortalTool
     public function schema(JsonSchema $schema): array
     {
         return [
+            'purchase_cost_model' => $schema->string()->description('Lizenzkosten: purchase_cost_model. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_usage_unit' => $schema->string()->description('Lizenzkosten: purchase_usage_unit. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_amount_cents' => $schema->integer()->description('Lizenzkosten: purchase_amount_cents. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_currency' => $schema->string()->description('Lizenzkosten: purchase_currency. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_eur_amount_cents' => $schema->integer()->nullable()->description('EUR-Kalkulationsbetrag in Cent. null entfernt den Betrag; ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_interval_unit' => $schema->string()->description('Lizenzkosten: purchase_interval_unit. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_interval_count' => $schema->integer()->description('Lizenzkosten: purchase_interval_count. Ohne Angabe bleibt der Bestand erhalten.'),
+            'purchase_units_per_pack' => $schema->integer()->nullable()->description('Kapazität je Paket; Pflicht bei shared_pack. null entfernt die optionale Kapazität bei anderen Modellen; ohne Angabe bleibt der Bestand erhalten.'),
             'id' => $schema->integer()->description('Zum Ändern angeben, zum Anlegen weglassen.'),
             'name' => $schema->string()->description('Pflicht beim Anlegen.'),
             'interner_name' => $schema->string()->description('Pflicht beim Anlegen.'),

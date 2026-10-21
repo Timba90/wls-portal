@@ -11,6 +11,8 @@ use App\Exceptions\ReadOnlyRecordException;
 use App\Models\CustomerService;
 use App\Support\Money;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 /**
  * Aktualisiert eine Kundenleistung.
@@ -43,6 +45,11 @@ class UpdateCustomerService
             );
         }
 
+        Validator::make($attributes, [
+            'usage_quantity' => ['sometimes', 'required', 'integer', 'min:1', 'max:1000000000'],
+            'usage_project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where('customer_id', $service->customer_id)],
+        ])->validate();
+
         return DB::transaction(function () use ($service, $attributes, $tags, $components): CustomerService {
             $unit = BillingIntervalUnit::from($attributes['billing_interval_unit']);
 
@@ -51,6 +58,8 @@ class UpdateCustomerService
             $this->applyPriceChanges($service, $attributes);
 
             $service->update([
+                'usage_project_id' => array_key_exists('usage_project_id', $attributes) ? $attributes['usage_project_id'] : $service->usage_project_id,
+                'usage_quantity' => $attributes['usage_quantity'] ?? $service->usage_quantity,
                 'name' => $attributes['name'],
                 'billing_label' => $attributes['billing_label'] ?? null,
                 'description' => $attributes['description'] ?? null,

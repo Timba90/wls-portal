@@ -10,6 +10,7 @@ use App\Models\Domain;
 use App\Models\Product;
 use App\Models\Project;
 use App\Passport\ClientIdMetadataClientRepository;
+use App\Support\LicenseCostCalculator;
 use Illuminate\Contracts\View\View as ViewContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
@@ -27,6 +28,7 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->scoped(LicenseCostCalculator::class);
         /*
          * Der Device-Grant wird nicht genutzt, und sein Endpunkt
          * `oauth/device/code` waere ohne Anmeldung erreichbar. Der Schalter
@@ -48,6 +50,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configurePasswordRules();
         $this->configureModels();
+        $this->configureLicenseCostCache();
         $this->configureUrls();
         $this->configureNavigationCounts();
         $this->configureFormFieldPaddings();
@@ -146,6 +149,16 @@ class AppServiceProvider extends ServiceProvider
             ->mixedCase()
             ->numbers()
             ->symbols());
+    }
+
+    private function configureLicenseCostCache(): void
+    {
+        $invalidate = fn () => app(LicenseCostCalculator::class)->invalidate();
+        CustomerService::saved($invalidate);
+        CustomerService::deleted($invalidate);
+        Product::saved($invalidate);
+        Product::deleted($invalidate);
+        Project::deleted($invalidate);
     }
 
     private function configureModels(): void

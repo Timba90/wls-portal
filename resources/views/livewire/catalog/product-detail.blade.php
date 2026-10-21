@@ -20,6 +20,33 @@
             </x-alert>
         @endif
 
+        @if ($licenseSummary !== null)
+            <x-card class="mb-3.5">
+                <x-slot:header><h2 class="text-sm font-semibold text-ink">Einkauf / Gemeinsame Kosten</h2></x-slot:header>
+                <dl class="grid gap-4 text-sm sm:grid-cols-3">
+                    <div><dt class="text-ink-muted">Aktive Nutzung</dt><dd>{{ $licenseSummary['usage_units'] }} {{ match ($product->purchase_usage_unit) { 'user' => 'Benutzer', 'customer' => 'Kunden', 'website' => 'Webseiten', 'project' => 'Projekte', default => 'Einheiten' } }}</dd></div>
+                    <div><dt class="text-ink-muted">Originalkosten / Einkaufsperiode</dt><dd>{{ number_format($licenseSummary['amount_cents'] / 100, 2, ',', '.') }} {{ $licenseSummary['currency'] }} / {{ $product->purchase_interval_count }} {{ $product->purchase_interval_unit->value === 'year' ? 'Jahr(e)' : 'Monat(e)' }}</dd></div>
+                    <div><dt class="text-ink-muted">Pakete / Einheiten im Einkauf</dt><dd>{{ $licenseSummary['packages'] }}</dd></div>
+                    <div><dt class="text-ink-muted">EUR-Kosten / Monat</dt><dd>{{ $licenseSummary['monthly_cost_cents'] === null ? 'Unvollständig' : \App\Support\Money::fromCents($licenseSummary['monthly_cost_cents'])->format() }}</dd></div>
+                    <div><dt class="text-ink-muted">EUR-Kosten / Jahr</dt><dd>{{ $licenseSummary['yearly_cost_cents'] === null ? 'Unvollständig' : \App\Support\Money::fromCents($licenseSummary['yearly_cost_cents'])->format() }}</dd></div>
+                    <div><dt class="text-ink-muted">Nicht zugeteilt / Monat</dt><dd>{{ $licenseSummary['missing_eur'] ? 'Unvollständig' : \App\Support\Money::fromCents($licenseSummary['unallocated_monthly_cents'] ?? 0)->format() }}</dd></div>
+                </dl>
+                @if ($licenseSummary['missing_eur'])
+                    <x-alert color="amber" class="mt-4" title="EUR-Kosten fehlen">Originalkosten sind erfasst. Ohne EUR-Kalkulationsbetrag bleiben Einkaufskosten und Margen unvollständig.</x-alert>
+                @endif
+                <div class="mt-4 space-y-2 text-sm">
+                    @foreach ($verwendung as $licenseService)
+                        @if (isset($licenseSummary['allocations'][$licenseService->id]))
+                            <div wire:key="license-allocation-{{ $licenseService->id }}" class="flex flex-wrap justify-between gap-2 border-t border-line pt-2">
+                                <a class="text-accent hover:underline" href="{{ route('customer-services.show', [$licenseService->customer, $licenseService]) }}" wire:navigate>{{ $licenseService->customer->displayName() }} · {{ $licenseService->name }}@if ($licenseService->usageProject) · {{ $licenseService->usageProject->name }}@endif</a>
+                                <span>{{ $licenseSummary['missing_eur'] ? 'EUR-Anteil unvollständig' : \App\Support\Money::fromCents($licenseSummary['allocations'][$licenseService->id]['monthly_cents'])->format().' / Monat' }}</span>
+                            </div>
+                        @endif
+                    @endforeach
+                </div>
+            </x-card>
+        @endif
+
         {{-- Kopfkarte: Kürzel, Name mit Status, Kennzahlenreihe. --}}
         <div class="mb-3.5 flex flex-wrap items-center gap-4 rounded-[10px] border border-line bg-panel px-[17px] py-4">
             <x-avatar-initials :initials="Str::upper(Str::substr($product->name, 0, 2))" size="lg" />
@@ -42,8 +69,8 @@
             <div class="ml-auto flex flex-wrap gap-[22px]">
                 @foreach ([
                     ['Verkaufspreis', $product->defaultSalesPrice()->format(), false],
-                    ['Einkaufspreis', $product->defaultPurchasePrice()->format(), false],
-                    ['Marge', $product->defaultMargin()->format(), $product->defaultMargin()->isNegative()],
+                    ['Einkaufspreis', $product->hasLicenseCostModel() ? 'Siehe Kostenverteilung' : $product->defaultPurchasePrice()->format(), false],
+                    ['Standardmarge', $product->hasLicenseCostModel() ? 'Nutzungsabhängig' : $product->defaultMargin()->format(), ! $product->hasLicenseCostModel() && $product->defaultMargin()->isNegative()],
                     ['Verträge', number_format($verwendung->count(), 0, ',', '.'), false],
                 ] as [$label, $wert, $negativ])
                     <div class="flex flex-col gap-1" wire:key="kennzahl-{{ $loop->index }}">
@@ -216,9 +243,9 @@
                                         @endif
 
                                         <p class="mt-1 text-sm text-ink-base">
-                                            Einkauf {{ $variant->effectivePurchasePrice()->format() }}
+                                            Einkauf {{ $product->hasLicenseCostModel() ? 'gemäß Kostenverteilung' : $variant->effectivePurchasePrice()->format() }}
                                             · Verkauf {{ $variant->effectiveSalesPrice()->format() }}
-                                            · Marge {{ $variant->effectiveMargin()->format() }}
+                                            · Marge {{ $product->hasLicenseCostModel() ? 'nutzungsabhängig' : $variant->effectiveMargin()->format() }}
                                             · {{ $variant->effectiveBillingInterval()->label() }}
                                         </p>
 

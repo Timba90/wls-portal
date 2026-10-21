@@ -49,7 +49,9 @@
                 </x-slot:header>
 
                 <div class="grid gap-4 md:grid-cols-2">
-                    <x-input wire:model="default_purchase_price" label="Standard-Einkaufspreis" suffix="€" required />
+                    @if ($purchase_cost_model === 'per_service')
+                        <x-input wire:model="default_purchase_price" label="Standard-Einkaufspreis" suffix="€" required />
+                    @endif
                     <x-input wire:model="default_sales_price" label="Standard-Verkaufspreis" suffix="€" required />
 
                     <x-select.styled wire:model.live="default_billing_interval_unit"
@@ -80,6 +82,30 @@
                 </x-slot:header>
 
                 <x-service-components-editor :components="$components" move-action="moveComponent" />
+            </x-card>
+
+            <x-card>
+                <x-slot:header><h2 class="text-sm font-semibold text-ink">Einkauf / Gemeinsame Kosten</h2></x-slot:header>
+                <p class="mb-4 text-xs text-ink-muted">Einkaufsperiode und Lizenznutzung sind unabhängig von der Kundenabrechnung. Nur aktive Leistungen verbrauchen Lizenzen, auch ohne Abrechnung.</p>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <x-select.styled wire:model.live="purchase_cost_model" label="Kostenmodell" :options="[['label' => 'Je Leistung (bisheriger Einkaufspreis)', 'value' => 'per_service'], ['label' => 'Je Nutzungseinheit', 'value' => 'per_unit'], ['label' => 'Gemeinsame unbegrenzte Lizenz', 'value' => 'shared_unlimited'], ['label' => 'Gemeinsames Lizenzpaket', 'value' => 'shared_pack']]" select="label:label|value:value" />
+                    @if ($purchase_cost_model !== 'per_service')
+                        <x-select.styled wire:model.live="purchase_usage_unit" label="Nutzungseinheit" :options="[['label' => 'Benutzer', 'value' => 'user'], ['label' => 'Kunde', 'value' => 'customer'], ['label' => 'Webseite', 'value' => 'website'], ['label' => 'Projekt', 'value' => 'project']]" select="label:label|value:value" />
+                        @if ($purchase_usage_unit === 'project')
+                            <p class="text-xs text-ink-muted md:col-span-2">Für jeden konkreten Webserver einen eigenen Artikel verwenden. So bleiben die Kosten verschiedener Server getrennt.</p>
+                        @endif
+                        <x-input wire:model="purchase_amount" label="Original-Einkaufsbetrag je Einheit / Paket" :suffix="$purchase_currency" required />
+                        <x-select.styled wire:model.live="purchase_currency" label="Originalwährung" :options="[['label' => 'EUR', 'value' => 'EUR'], ['label' => 'USD', 'value' => 'USD']]" select="label:label|value:value" />
+                        <x-select.styled wire:model="purchase_interval_unit" label="Einkaufsperiode" :options="[['label' => 'Monat', 'value' => 'month'], ['label' => 'Jahr', 'value' => 'year']]" select="label:label|value:value" />
+                        <x-input wire:model="purchase_interval_count" type="number" min="1" max="999" label="Anzahl Einkaufsperioden" />
+                        @if ($purchase_cost_model === 'shared_pack')
+                            <x-input wire:model="purchase_units_per_pack" type="number" min="1" label="Einheiten je Paket" hint="Aufgerundete Paketanzahl, mindestens ein gekauftes Paket." required />
+                        @endif
+                        @if ($purchase_currency === 'USD')
+                            <x-input wire:model="purchase_eur_amount" label="EUR-Kalkulationsbetrag je Einheit / Paket" suffix="€" hint="Optional. Vorläufige Kalkulation später durch Rechnungs- oder Bankbetrag ersetzen. Ohne EUR-Betrag bleiben Kosten und Marge unvollständig." />
+                        @endif
+                    @endif
+                </div>
             </x-card>
 
             <div class="flex justify-end gap-2">

@@ -236,9 +236,9 @@ class CustomerServiceDetail extends Component
             'Leistungsbeginn' => $this->service->service_start_date?->format('d.m.Y'),
             'Abrechnungsbeginn' => $this->service->billing_start_date?->format('d.m.Y'),
             'Erste Abrechnung' => $this->service->first_billing_date?->format('d.m.Y'),
-            'Einkaufspreis' => $this->service->purchasePrice()->format(),
+            'Einkaufspreis' => $this->service->hasMissingLicenseCost() ? 'Unvollständig' : $this->service->purchasePrice()->format(),
             'Verkaufspreis' => $this->service->salesPrice()->format(),
-            'Marge' => $this->service->margin()->format().($this->service->marginPercentage() !== null
+            'Marge' => $this->service->hasMissingLicenseCost() ? 'Unvollständig' : $this->service->margin()->format().($this->service->marginPercentage() !== null
                 ? ' ('.number_format($this->service->marginPercentage(), 1, ',', '.').' %)'
                 : ''),
             'Umsatz / Jahr' => $this->service->yearlyRevenue()->format(),

@@ -14,6 +14,12 @@
 <div>
     <x-page title="Leistungsübersicht" subtitle="Alle Kundenleistungen mit vereinbartem Preis, Kosten und Abrechnungsintervall.">
 
+        @if (! $summe['costsComplete'])
+            <x-alert color="amber" class="mb-3.5" title="Kostenbasis unvollständig">
+                Bei mindestens einer Leistung fehlt der EUR-Kalkulationsbetrag. Die Marge ist vorläufig.
+            </x-alert>
+        @endif
+
         <div class="mb-3.5 grid gap-3.5 sm:grid-cols-2 lg:grid-cols-4">
             <x-kpi-tile label="Umsatz / Monat"
                         :value="$summe['monthlyRevenue']->format()"
@@ -195,7 +201,7 @@
                                         @break
 
                                     @case('purchase_price_cents')
-                                        <span class="truncate tabular text-right text-[12.5px] text-ink-muted">{{ $leistung->purchasePrice()->format() }}</span>
+                                        <span class="truncate tabular text-right text-[12.5px] text-ink-muted">{{ $leistung->hasMissingLicenseCost() ? 'Unvollständig' : $leistung->purchasePrice()->format() }}</span>
                                         @break
 
                                     @case('monthly')
@@ -210,7 +216,11 @@
                                             'text-[color:var(--pill-bad-ink)]' => $leistung->margin()->isNegative(),
                                             'text-ink-base' => ! $leistung->margin()->isNegative(),
                                         ])>
-                                            {{ $leistung->margin()->format() }}@if ($leistung->marginPercentage() !== null)<span class="text-ink-faint"> ({{ number_format($leistung->marginPercentage(), 1, ',', '.') }} %)</span>@endif
+                                            @if ($leistung->hasMissingLicenseCost())
+                                                Unvollständig
+                                            @else
+                                                {{ $leistung->margin()->format() }}@if ($leistung->marginPercentage() !== null)<span class="text-ink-faint"> ({{ number_format($leistung->marginPercentage(), 1, ',', '.') }} %)</span>@endif
+                                            @endif
                                         </span>
                                         @break
 

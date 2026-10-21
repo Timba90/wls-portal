@@ -174,7 +174,7 @@ class CustomerList extends Component
         return Customer::query()
             ->with([
                 'responsibleUser',
-                'services' => fn ($query) => $query->billable(),
+                'services' => fn ($query) => $query->active()->with('product'),
                 'emailAddresses',
                 'contactAssignments' => fn ($query) => $query->where('is_primary_contact', true)->limit(1),
                 'contactAssignments.contact.emailAddresses',

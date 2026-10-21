@@ -214,7 +214,7 @@ class ProductDetail extends Component
     public function usage(): Collection
     {
         return CustomerService::query()
-            ->with('customer')
+            ->with(['customer', 'usageProject'])
             ->where('product_id', $this->product->id)
             ->orderByRaw("field(status, 'active', 'planned', 'paused', 'ended', 'archived')")
             ->orderBy('name')
@@ -274,7 +274,7 @@ class ProductDetail extends Component
             'Kategorie' => $this->product->category?->name,
             'Unterkategorie' => $this->product->subcategory?->name,
             'Turnus' => $intervall->label(),
-            'Einkaufspreis' => $this->product->defaultPurchasePrice()->format(),
+            'Einkaufspreis' => $this->product->hasLicenseCostModel() ? 'Gemäß gemeinsamer Kostenverteilung' : $this->product->defaultPurchasePrice()->format(),
             'Verkaufspreis' => $this->product->defaultSalesPrice()->format(),
             'Varianten' => (string) $this->product->variants->count(),
             'Angelegt' => $this->product->created_at?->format('d.m.Y'),
@@ -287,6 +287,7 @@ class ProductDetail extends Component
         $this->product->load(['category', 'subcategory', 'tags', 'serviceComponents', 'variants.serviceComponents']);
 
         return view('livewire.catalog.product-detail', [
+            'licenseSummary' => $this->product->hasLicenseCostModel() ? $this->product->licenseCostSummary() : null,
             'statusOptions' => CatalogStatus::options(),
             'intervalUnitOptions' => BillingIntervalUnit::options(),
             'verwendung' => $this->usage(),

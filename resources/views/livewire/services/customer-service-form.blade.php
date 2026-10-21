@@ -81,6 +81,9 @@
                 </x-slot:header>
 
                 <div class="grid gap-4 md:grid-cols-2">
+                    @if ($licenseProduct?->hasLicenseCostModel())
+                        <div class="md:col-span-2"><x-alert color="amber" title="Einkauf aus Lizenzkostenmodell">Effektive Einkaufskosten werden aus der aktiven Artikelnutzung zugeteilt. Der gespeicherte Einkaufspreis bleibt als bisheriger Vorgabewert erhalten.</x-alert></div>
+                    @endif
                     <x-input wire:model="purchase_price" label="Einkaufspreis" suffix="€" required />
                     <x-input wire:model="sales_price" label="Verkaufspreis" suffix="€" required />
 
@@ -124,6 +127,19 @@
                 </x-slot:header>
 
                 <x-service-components-editor :components="$components" move-action="moveComponent" />
+            </x-card>
+
+            <x-card>
+                <x-slot:header><h2 class="text-sm font-semibold text-ink">Nutzung gemeinsamer Kosten</h2></x-slot:header>
+                @if ($licenseProduct?->hasLicenseCostModel() && $licenseProduct->purchase_usage_unit === 'project')
+                    <x-select.styled wire:model.live="usage_project_id" label="Zugeordnetes Projekt" placeholder="Ohne Projekt: manuelle Nutzungsmenge" :options="$usageProjects" select="label:name|value:id" />
+                    <p class="my-3 text-xs text-ink-muted">Zugeordnete Projekte werden automatisch eindeutig gezählt. Ohne Projekt gilt die manuelle Nutzungsmenge als Schätzung.</p>
+                @endif
+                @if ($licenseProduct?->hasLicenseCostModel() && $licenseProduct->purchase_usage_unit === 'customer')
+                    <p class="text-sm text-ink-muted">Kunden werden automatisch eindeutig gezählt. Mehrere aktive Leistungen desselben Kunden zählen gemeinsam als ein Kunde.</p>
+                @else
+                    <x-input wire:model="usage_quantity" type="number" min="1" label="Nutzungsmenge" :hint="match ($licenseProduct?->purchase_usage_unit) { 'project' => 'Ohne Projekt: manuelle Schätzung der Projektanzahl. Zugeordnete Projekte werden eindeutig gezählt.', 'website' => 'Anzahl der Webseiten. Nur aktive Leistungen verbrauchen Einheiten.', 'user' => 'Anzahl der Benutzer. Nur aktive Leistungen verbrauchen Einheiten.', default => 'Positive Anzahl, standardmäßig 1.' }" required />
+                @endif
             </x-card>
 
             <div class="flex justify-end gap-2">

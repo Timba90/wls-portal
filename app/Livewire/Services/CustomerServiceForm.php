@@ -48,6 +48,10 @@ class CustomerServiceForm extends Component
 
     public string $status = CustomerServiceStatus::Planned->value;
 
+    public int $usage_quantity = 1;
+
+    public ?int $usage_project_id = null;
+
     public string $purchase_price = '0,00';
 
     public string $sales_price = '0,00';
@@ -89,13 +93,15 @@ class CustomerServiceForm extends Component
         abort_if($service->isArchived(), 403, 'Archivierte Kundenleistungen können nicht bearbeitet werden.');
 
         $this->service = $service;
+        $this->usage_quantity = $service->usage_quantity ?? 1;
+        $this->usage_project_id = $service->usage_project_id;
         $this->product_id = (string) ($service->product_id ?? '');
         $this->product_variant_id = (string) ($service->product_variant_id ?? '');
         $this->name = $service->name;
         $this->billing_label = (string) $service->billing_label;
         $this->description = (string) $service->description;
         $this->status = $service->status->value;
-        $this->purchase_price = $service->purchasePrice()->toInput();
+        $this->purchase_price = Money::fromCents($service->purchase_price_cents)->toInput();
         $this->sales_price = $service->salesPrice()->toInput();
         $this->billing_interval_unit = $service->billing_interval_unit->value;
         $this->billing_interval_count = $service->billing_interval_count ?? 1;
@@ -353,6 +359,8 @@ class CustomerServiceForm extends Component
             'statusOptions' => CustomerServiceStatus::options(CustomerServiceStatus::selectable()),
             'intervalUnitOptions' => BillingIntervalUnit::options(),
             'products' => $this->products(),
+            'usageProjects' => $this->customer->projects()->orderBy('name')->get(['id', 'name']),
+            'licenseProduct' => $this->product_id !== '' ? Product::query()->find($this->product_id) : null,
             'variants' => $this->variants(),
             'rootCategories' => $this->rootCategories(),
             'subcategories' => $this->subcategories(),
@@ -410,6 +418,8 @@ class CustomerServiceForm extends Component
                 fn (CustomerServiceStatus $status): string => $status->value,
                 CustomerServiceStatus::selectable(),
             ))],
+            'usage_project_id' => ['nullable', 'integer', Rule::exists('projects', 'id')->where('customer_id', $this->customer->id)],
+            'usage_quantity' => ['required', 'integer', 'min:1'],
             'purchase_price' => ['required', 'string', $this->moneyRule()],
             'sales_price' => ['required', 'string', $this->moneyRule()],
             'billing_interval_unit' => ['required', Rule::in(BillingIntervalUnit::values())],

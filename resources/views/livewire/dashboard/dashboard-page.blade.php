@@ -6,6 +6,12 @@
         </x-slot:actions>
 
         <div class="flex flex-col gap-4">
+            @if (! $metrics['costsComplete'])
+                <x-alert color="amber" title="Kostenbasis unvollständig">
+                    Bei {{ $metrics['missingCostProducts'] }} Artikel(n) fehlt der EUR-Kalkulationsbetrag.
+                    Kosten und Margen enthalten bislang nur die bekannten Kosten.
+                </x-alert>
+            @endif
             {{-- Kennzahlreihe --}}
             {{-- Sechs Kacheln nebeneinander sind zu schmal: ein sechsstelliger
                  Betrag bricht dann um. Zwei Reihen zu dritt. --}}

@@ -322,3 +322,23 @@ it('zeigt keine Tags mehr in der Oberflaeche', function (): void {
         ->test(ProductDetail::class, ['product' => $artikel])
         ->assertDontSee('Wartungsvertrag');
 });
+
+it('speichert unabhaengige Lizenzkosten aus dem Artikelformular', function (): void {
+    Livewire::actingAs(User::factory()->create())
+        ->test(ProductForm::class)
+        ->set('name', 'Website Lizenz')
+        ->set('internal_name', 'website-license')
+        ->set('purchase_cost_model', 'shared_unlimited')
+        ->set('purchase_usage_unit', 'website')
+        ->set('purchase_amount', '299,99')
+        ->set('purchase_currency', 'USD')
+        ->set('purchase_interval_unit', 'year')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $product = Product::query()->where('internal_name', 'website-license')->firstOrFail();
+    expect($product->purchase_amount_cents)->toBe(29999)
+        ->and($product->purchase_eur_amount_cents)->toBeNull()
+        ->and($product->purchase_interval_unit->value)->toBe('year')
+        ->and($product->default_billing_interval_unit->value)->toBe('month');
+});

@@ -8,6 +8,7 @@ use App\Models\Concerns\Auditable;
 use App\Models\Concerns\HasCustomFields;
 use App\Models\Concerns\HasTags;
 use App\Support\BillingInterval;
+use App\Support\LicenseCostCalculator;
 use App\Support\Money;
 use Database\Factories\ProductFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -24,6 +25,14 @@ use Illuminate\Database\Eloquent\Relations\MorphMany;
  * Traegt die Standardwerte, von denen eine Kundenleistung abweichen darf.
  */
 #[Fillable([
+    'purchase_cost_model',
+    'purchase_usage_unit',
+    'purchase_amount_cents',
+    'purchase_currency',
+    'purchase_eur_amount_cents',
+    'purchase_interval_unit',
+    'purchase_interval_count',
+    'purchase_units_per_pack',
     'name',
     'internal_name',
     'description',
@@ -85,6 +94,17 @@ class Product extends Model
     public function isArchived(): bool
     {
         return $this->status === CatalogStatus::Archived;
+    }
+
+    public function hasLicenseCostModel(): bool
+    {
+        return ($this->purchase_cost_model ?? 'per_service') !== 'per_service';
+    }
+
+    /** @return array<string, mixed> */
+    public function licenseCostSummary(): array
+    {
+        return app(LicenseCostCalculator::class)->summary($this);
     }
 
     public function defaultPurchasePrice(): Money
@@ -168,6 +188,11 @@ class Product extends Model
     protected function casts(): array
     {
         return [
+            'purchase_interval_unit' => BillingIntervalUnit::class,
+            'purchase_amount_cents' => 'integer',
+            'purchase_eur_amount_cents' => 'integer',
+            'purchase_interval_count' => 'integer',
+            'purchase_units_per_pack' => 'integer',
             'status' => CatalogStatus::class,
             'default_billing_interval_unit' => BillingIntervalUnit::class,
             'default_purchase_price_cents' => 'integer',

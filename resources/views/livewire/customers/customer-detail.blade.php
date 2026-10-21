@@ -82,8 +82,8 @@
                 @foreach ([
                     ['Leistungen', number_format($activeServices, 0, ',', '.'), false],
                     ['Umsatz / Mon', $customer->monthlyRevenue()->format(), false],
-                    ['Kosten / Mon', $customer->monthlyCosts()->format(), false],
-                    ['Marge / Mon', $customer->monthlyMargin()->format(), $customer->monthlyMargin()->isNegative()],
+                    ['Kosten / Mon', $customer->services->contains(fn ($service) => $service->hasMissingLicenseCost()) ? 'Unvollständig' : $customer->monthlyCosts()->format(), false],
+                    ['Marge / Mon', $customer->services->contains(fn ($service) => $service->hasMissingLicenseCost()) ? 'Unvollständig' : $customer->monthlyMargin()->format(), $customer->monthlyMargin()->isNegative()],
                 ] as [$label, $wert, $negativ])
                     <div class="flex flex-col gap-1" wire:key="kennzahl-{{ $loop->index }}">
                         <span class="text-[9.5px] font-semibold uppercase tracking-[0.09em] text-ink-faint">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\CustomerServiceStatus;
 use App\Enums\CustomerStatus;
 use App\Enums\CustomerType;
 use App\Enums\Gender;
@@ -253,9 +254,10 @@ class Customer extends Model
 
     public function monthlyCosts(): Money
     {
-        return $this->sumOverBillableServices(
-            fn (CustomerService $service): Money => $service->monthlyCosts(),
-        );
+        return $this->services
+            ->filter(fn (CustomerService $service): bool => $service->countsTowardsRevenue()
+                || ($service->status === CustomerServiceStatus::Active && $service->product?->hasLicenseCostModel()))
+            ->reduce(fn (Money $carry, CustomerService $service): Money => $carry->plus($service->monthlyCosts()), Money::zero());
     }
 
     public function monthlyMargin(): Money
