@@ -31,13 +31,13 @@ class ProductList extends Component
     public string $search = '';
 
     #[Url(as: 'status', except: 'active')]
-    public string $status = 'active';
+    public ?string $status = 'active';
 
     #[Url(as: 'kategorie', except: '')]
-    public string $categoryId = '';
+    public ?string $categoryId = '';
 
     #[Url(as: 'tag', except: '')]
-    public string $tagId = '';
+    public ?string $tagId = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'name', 'direction' => 'asc'];
@@ -136,9 +136,9 @@ class ProductList extends Component
     public function statusFilters(): array
     {
         $basis = fn (): Builder => Product::query()
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->categoryId !== '', fn (Builder $query) => $this->applyCategory($query))
-            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->categoryId), fn (Builder $query) => $this->applyCategory($query))
+            ->when(filled($this->tagId), fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ));
@@ -173,10 +173,10 @@ class ProductList extends Component
         return Product::query()
             ->with(['category', 'subcategory', 'tags'])
             ->withCount(['variants', 'customerServices as contracts_count'])
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->categoryId !== '', fn (Builder $query) => $this->applyCategory($query))
-            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->status), fn (Builder $query) => $query->where('status', $this->status))
+            ->when(filled($this->categoryId), fn (Builder $query) => $this->applyCategory($query))
+            ->when(filled($this->tagId), fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))
@@ -248,9 +248,9 @@ class ProductList extends Component
         // Kategorie selbst. Sonst stuende in der Leiste eine Vier, waehrend der
         // Klick darauf eine leere Tabelle zeigt.
         $gefiltert = fn (Builder $query): Builder => $query
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->status), fn (Builder $query) => $query->where('status', $this->status))
+            ->when(filled($this->tagId), fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ));
@@ -286,9 +286,9 @@ class ProductList extends Component
     private function categoryTotal(): int
     {
         return Product::query()
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->status), fn (Builder $query) => $query->where('status', $this->status))
+            ->when(filled($this->tagId), fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))

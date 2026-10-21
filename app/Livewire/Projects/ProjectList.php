@@ -38,13 +38,13 @@ class ProjectList extends Component
     public string $search = '';
 
     #[Url(as: 'status', except: self::OPEN_FILTER)]
-    public string $status = self::OPEN_FILTER;
+    public ?string $status = self::OPEN_FILTER;
 
     #[Url(as: 'typ', except: '')]
-    public string $projectTypeId = '';
+    public ?string $projectTypeId = '';
 
     #[Url(as: 'verantwortlich', except: '')]
-    public string $responsibleUserId = '';
+    public ?string $responsibleUserId = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'deadline', 'direction' => 'asc'];
@@ -152,9 +152,9 @@ class ProjectList extends Component
     public function statusFilters(): array
     {
         $basis = fn (): Builder => Project::query()
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->projectTypeId !== '', fn (Builder $query) => $query->where('project_type_id', $this->projectTypeId))
-            ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->projectTypeId), fn (Builder $query) => $query->where('project_type_id', $this->projectTypeId))
+            ->when(filled($this->responsibleUserId), fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
 
         // Eine gruppierte Abfrage statt einer je Schaltflaeche.
         $gezaehlt = StatusTally::from($basis());
@@ -182,14 +182,14 @@ class ProjectList extends Component
     {
         $query = Project::query()
             ->with(['customer', 'projectType', 'responsibleUser', 'milestones', 'positions'])
-            ->when($this->search !== '', fn (Builder $q) => $this->applySearch($q))
+            ->when(filled($this->search), fn (Builder $q) => $this->applySearch($q))
             ->when($this->status === self::OPEN_FILTER, fn (Builder $q) => $q->open())
             ->when(
-                $this->status !== '' && $this->status !== self::OPEN_FILTER,
+                filled($this->status) && $this->status !== self::OPEN_FILTER,
                 fn (Builder $q) => $q->where('status', $this->status),
             )
-            ->when($this->projectTypeId !== '', fn (Builder $q) => $q->where('project_type_id', $this->projectTypeId))
-            ->when($this->responsibleUserId !== '', fn (Builder $q) => $q->where('responsible_user_id', $this->responsibleUserId));
+            ->when(filled($this->projectTypeId), fn (Builder $q) => $q->where('project_type_id', $this->projectTypeId))
+            ->when(filled($this->responsibleUserId), fn (Builder $q) => $q->where('responsible_user_id', $this->responsibleUserId));
 
         $this->applySorting($query);
 

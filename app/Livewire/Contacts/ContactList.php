@@ -28,10 +28,10 @@ class ContactList extends Component
     public string $search = '';
 
     #[Url(as: 'status', except: 'active')]
-    public string $status = 'active';
+    public ?string $status = 'active';
 
     #[Url(as: 'rolle', except: '')]
-    public string $roleId = '';
+    public ?string $roleId = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'last_name', 'direction' => 'asc'];
@@ -117,10 +117,10 @@ class ContactList extends Component
                 'assignments.customer',
                 'assignments.roles',
             ])
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
             ->when($this->status === 'active', fn (Builder $query) => $query->whereNull('archived_at'))
             ->when($this->status === 'archived', fn (Builder $query) => $query->whereNotNull('archived_at'))
-            ->when($this->roleId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->roleId), fn (Builder $query) => $query->whereHas(
                 'assignments.roles',
                 fn (Builder $roles) => $roles->whereKey($this->roleId),
             ))

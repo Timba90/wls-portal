@@ -145,6 +145,10 @@
                                         @endif
                                         @break
 
+                                    @case('billing')
+                                        <x-inventory-billing :service="$zertifikat->customerService" />
+                                        @break
+
                                     @case('service')
                                         @if ($zertifikat->customerService)
                                             <span class="truncate text-[12px] text-ink-muted">

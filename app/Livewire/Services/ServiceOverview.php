@@ -36,25 +36,25 @@ class ServiceOverview extends Component
     public string $search = '';
 
     #[Url(as: 'status', except: 'active')]
-    public string $status = 'active';
+    public ?string $status = 'active';
 
     #[Url(as: 'artikel', except: '')]
-    public string $productId = '';
+    public ?string $productId = '';
 
     #[Url(as: 'kategorie', except: '')]
-    public string $categoryId = '';
+    public ?string $categoryId = '';
 
     #[Url(as: 'tag', except: '')]
-    public string $tagId = '';
+    public ?string $tagId = '';
 
     #[Url(as: 'verantwortlich', except: '')]
-    public string $responsibleUserId = '';
+    public ?string $responsibleUserId = '';
 
     #[Url(as: 'abrechnung', except: '')]
-    public string $billingFilter = '';
+    public ?string $billingFilter = '';
 
     #[Url(as: 'katalog', except: '')]
-    public string $catalogFilter = '';
+    public ?string $catalogFilter = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'name', 'direction' => 'asc'];
@@ -243,7 +243,7 @@ class ServiceOverview extends Component
     private function baseQuery(): Builder
     {
         return CustomerService::query()
-            ->when($this->search !== '', function (Builder $query): void {
+            ->when(filled($this->search), function (Builder $query): void {
                 $term = '%'.$this->search.'%';
 
                 $query->where(function (Builder $query) use ($term): void {
@@ -256,18 +256,18 @@ class ServiceOverview extends Component
                             ->orWhere('customer_number', 'like', $term));
                 });
             })
-            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->productId !== '', fn (Builder $query) => $query->where('product_id', $this->productId))
-            ->when($this->categoryId !== '', fn (Builder $query) => $query->where(
+            ->when(filled($this->status), fn (Builder $query) => $query->where('status', $this->status))
+            ->when(filled($this->productId), fn (Builder $query) => $query->where('product_id', $this->productId))
+            ->when(filled($this->categoryId), fn (Builder $query) => $query->where(
                 fn (Builder $query) => $query
                     ->where('category_id', $this->categoryId)
                     ->orWhere('subcategory_id', $this->categoryId),
             ))
-            ->when($this->tagId !== '', fn (Builder $query) => $query->whereHas(
+            ->when(filled($this->tagId), fn (Builder $query) => $query->whereHas(
                 'tags',
                 fn (Builder $tags) => $tags->whereKey($this->tagId),
             ))
-            ->when($this->responsibleUserId !== '', fn (Builder $query) => $query
+            ->when(filled($this->responsibleUserId), fn (Builder $query) => $query
                 ->where('responsible_user_id', $this->responsibleUserId))
             ->when($this->billingFilter === 'do_not_bill', fn (Builder $query) => $query->where('do_not_bill', true))
             ->when($this->billingFilter === 'billable', fn (Builder $query) => $query->where('do_not_bill', false))

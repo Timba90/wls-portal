@@ -31,13 +31,13 @@ class CustomerList extends Component
     public string $search = '';
 
     #[Url(as: 'status', except: 'active')]
-    public string $status = 'active';
+    public ?string $status = 'active';
 
     #[Url(as: 'typ', except: '')]
-    public string $type = '';
+    public ?string $type = '';
 
     #[Url(as: 'verantwortlich', except: '')]
-    public string $responsibleUserId = '';
+    public ?string $responsibleUserId = '';
 
     /** @var array{column: string, direction: string} */
     public array $sort = ['column' => 'customer_number', 'direction' => 'asc'];
@@ -146,9 +146,9 @@ class CustomerList extends Component
     public function statusFilters(): array
     {
         $basis = fn (): Builder => Customer::query()
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
-            ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->type), fn (Builder $query) => $query->where('type', $this->type))
+            ->when(filled($this->responsibleUserId), fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId));
 
         // Eine gruppierte Abfrage statt einer je Schaltflaeche.
         $gezaehlt = StatusTally::from($basis());
@@ -180,10 +180,10 @@ class CustomerList extends Component
                 'contactAssignments.contact.emailAddresses',
             ])
             ->withCount(['services as active_services_count' => fn (Builder $query) => $query->active()])
-            ->when($this->search !== '', fn (Builder $query) => $this->applySearch($query))
-            ->when($this->status !== '', fn (Builder $query) => $query->where('status', $this->status))
-            ->when($this->type !== '', fn (Builder $query) => $query->where('type', $this->type))
-            ->when($this->responsibleUserId !== '', fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId))
+            ->when(filled($this->search), fn (Builder $query) => $this->applySearch($query))
+            ->when(filled($this->status), fn (Builder $query) => $query->where('status', $this->status))
+            ->when(filled($this->type), fn (Builder $query) => $query->where('type', $this->type))
+            ->when(filled($this->responsibleUserId), fn (Builder $query) => $query->where('responsible_user_id', $this->responsibleUserId))
             ->orderBy($this->sortColumn(), $this->sortDirection())
             ->paginate(25);
     }
