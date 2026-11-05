@@ -107,6 +107,14 @@ class Project extends Model
         return $this->hasMany(ProjectMember::class)->orderBy('sort_order')->orderBy('id');
     }
 
+    /**
+     * @return HasMany<Ticket, $this>
+     */
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
     public function isArchived(): bool
     {
         return $this->status === ProjectStatus::Archived;

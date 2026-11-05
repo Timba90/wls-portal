@@ -14,6 +14,7 @@ use App\Models\EmailAddress;
 use App\Models\PhoneNumber;
 use App\Models\Product;
 use App\Models\Project;
+use App\Models\Ticket;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -73,7 +74,15 @@ class DeletePermanently
                 $projekte++;
             });
 
-            return ['leistungen' => $leistungen, 'projekte' => $projekte];
+            // Tickets haengen ebenfalls mit `restrictOnDelete` am Kunden; ihre
+            // Nachrichten raeumt die Kaskade ab, Kundenzugaenge ebenso.
+            $tickets = 0;
+            $model->tickets()->cursor()->each(function (Ticket $ticket) use (&$tickets): void {
+                $ticket->delete();
+                $tickets++;
+            });
+
+            return ['leistungen' => $leistungen, 'projekte' => $projekte, 'tickets' => $tickets];
         }
 
         if ($model instanceof Product) {

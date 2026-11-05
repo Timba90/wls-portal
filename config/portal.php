@@ -19,6 +19,37 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Kundenportal
+    |--------------------------------------------------------------------------
+    |
+    | Der Bereich für Kunden: Rechnungen und SEPA-Mandat aus Flux, Tickets und
+    | der Stand der eigenen Projekte. Er läuft in derselben Anwendung, aber
+    | unter einem eigenen Guard (`customer`) und einem eigenen Pfad — oder,
+    | wenn `domain` gesetzt ist, auf einer eigenen Domain wie
+    | kunden.weblab-studio.de.
+    |
+    | `enabled` schaltet den gesamten Bereich ab, ohne Zugänge zu löschen.
+    |
+    */
+
+    'customer_portal' => [
+        'enabled' => (bool) env('CUSTOMER_PORTAL_ENABLED', true),
+        'path' => env('CUSTOMER_PORTAL_PATH', 'kundenportal'),
+        'domain' => env('CUSTOMER_PORTAL_DOMAIN'),
+        'tagline' => env('CUSTOMER_PORTAL_TAGLINE', 'Kundenportal'),
+        'login_rate_limit' => (int) env('CUSTOMER_PORTAL_LOGIN_ATTEMPTS', 5),
+
+        // Angaben für den Mandatstext. Ohne Gläubiger-ID kann kein
+        // rechtsgültiges SEPA-Mandat erteilt werden; das Formular bleibt
+        // dann gesperrt.
+        'sepa' => [
+            'creditor_name' => env('SEPA_CREDITOR_NAME', 'weblab studio'),
+            'creditor_id' => env('SEPA_CREDITOR_ID'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Passwortregeln
     |--------------------------------------------------------------------------
     |

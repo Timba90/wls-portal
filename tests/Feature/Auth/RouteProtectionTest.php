@@ -19,6 +19,11 @@ const OEFFENTLICHE_SEITEN = [
     'reset-password/{token}',
     'two-factor-challenge',
 
+    // Anmeldung, Passwort vergessen und Passwort festlegen des Kundenportals.
+    'kundenportal/anmelden',
+    'kundenportal/passwort-vergessen',
+    'kundenportal/passwort-festlegen/{token}',
+
     // Der MCP-Zugang authentifiziert über ein Token, nicht über die Sitzung.
     'mcp/portal',
 
@@ -99,7 +104,12 @@ it('verlangt auf jeder Seite und API-Route eine Anmeldung', function (): void {
 
         $antwort = $this->get('/'.ltrim((string) $pfad, '/'));
 
-        if (! $antwort->isRedirect(route('login'))) {
+        // Das Kundenportal hat eine eigene Anmeldung und einen eigenen Guard.
+        $anmeldung = str_starts_with($route->uri(), 'kundenportal')
+            ? route('customer-portal.login')
+            : route('login');
+
+        if (! $antwort->isRedirect($anmeldung)) {
             $ungeschuetzt[] = $route->uri().' → '.$antwort->getStatusCode();
         }
     }
@@ -114,5 +124,6 @@ it('prüft dabei alle Seiten der Anwendung', function (): void {
     // umfallen, aber merken, wenn das Filtern einmal zu viel wegwirft.
     expect($geprueft->count())->toBeGreaterThanOrEqual(25)
         ->and($geprueft)->toContain('dashboard', 'kunden', 'projekte', 'leistungen', 'benutzer')
-        ->and($geprueft)->toContain('dokumente/{document}/versionen/{version}/download');
+        ->and($geprueft)->toContain('dokumente/{document}/versionen/{version}/download')
+        ->and($geprueft)->toContain('tickets', 'kundenportal', 'kundenportal/rechnungen/{invoice}/pdf', 'kundenportal/tickets/{ticket}');
 });

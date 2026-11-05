@@ -1,10 +1,13 @@
 # WLS Portal
 
-Interne Verwaltungskonsole für Kunden, Leistungen und Preise.
+Interne Verwaltungskonsole für Kunden, Leistungen und Preise — mit einem
+davon getrennten **Kundenportal** unter `/kundenportal` (oder einer eigenen
+Domain, siehe `CUSTOMER_PORTAL_DOMAIN`).
 
-Ausdrücklich **kein Kundenportal** — die Anwendung wird ausschließlich intern
-von wenigen Mitarbeitern genutzt. Oberfläche und Daten sind durchgängig
-deutsch, Währung ist ausschließlich EUR.
+Die Verwaltung wird ausschließlich intern von wenigen Mitarbeitern genutzt.
+Kunden melden sich über einen eigenen Guard (`customer`) am Kundenportal an
+und sehen dort nur die Daten ihres eigenen Kundenkontos. Oberfläche und Daten
+sind durchgängig deutsch, Währung ist ausschließlich EUR.
 
 Der wirtschaftliche Zweck: jederzeit erkennen, welche Leistungen bei welchem
 Kunden bestehen, welcher Preis vereinbart wurde und welche Leistungen
@@ -89,6 +92,40 @@ Queues laufen über Redis und werden von Horizon überwacht:
 ```bash
 php artisan horizon
 ```
+
+## Kundenportal
+
+Kunden können im Portal
+
+- Rechnungen als PDF herunterladen (aus Flux),
+- ein SEPA-Lastschriftmandat erteilen (wird direkt in Flux angelegt),
+- Tickets eröffnen und beantworten,
+- Fortschritt, Meilensteine und Betriebsstatus ihrer Projekte verfolgen.
+
+Einrichtung je Kunde im Kundendetail, Reiter **Kundenportal**: Flux-Kontakt-ID
+eintragen (Grundlage für Rechnungen und SEPA) und Zugänge einladen. Der
+Eingeladene bekommt einen Link und legt sein Passwort selbst fest.
+
+Für das SEPA-Mandat muss die Gläubiger-Identifikationsnummer gesetzt sein
+(`SEPA_CREDITOR_ID`, `SEPA_CREDITOR_NAME`), sonst bleibt das Formular
+gesperrt. Das Flux-Token unter **Schnittstellen** braucht zusätzlich Lese-
+rechte auf Aufträge, Medien, Bankverbindungen und SEPA-Mandate sowie
+Anlagerechte auf Bankverbindungen und SEPA-Mandate.
+
+Tickets lassen sich außerdem per API anlegen (persönliches Token aus
+`php artisan portal:mcp-token`):
+
+```bash
+curl -X POST https://portal.example/api/tickets \
+  -H "Authorization: Bearer <token>" -H "Accept: application/json" \
+  -d customer_number=KD-00001 -d subject="Webseite nicht erreichbar" \
+  -d body="HTTP 503 seit 03:12 Uhr" -d priority=urgent -d external_reference=uptime-4711
+```
+
+Eine wiederholte Meldung mit derselben `external_reference` hängt sich an das
+bestehende Ticket an, statt ein neues zu eröffnen. Weitere Endpunkte:
+`GET /api/tickets`, `GET|PATCH /api/tickets/{id}`,
+`POST /api/tickets/{id}/messages`.
 
 ## Dokumentation
 

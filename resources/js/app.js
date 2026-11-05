@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * bleibt, sondern zur Anmeldung zurückkehrt.
  */
 document.addEventListener('alpine:init', () => {
-    window.Alpine.data('idleLogout', ({ minutes = 30 } = {}) => ({
+    window.Alpine.data('idleLogout', ({ minutes = 30, redirect = '/login?abgelaufen=1' } = {}) => ({
         timeout: null,
 
         init() {
@@ -34,7 +34,7 @@ document.addEventListener('alpine:init', () => {
             window.clearTimeout(this.timeout);
 
             this.timeout = window.setTimeout(() => {
-                window.location.assign('/login?abgelaufen=1');
+                window.location.assign(redirect);
             }, minutes * 60 * 1000);
         },
     }));

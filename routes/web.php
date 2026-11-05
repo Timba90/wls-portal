@@ -34,12 +34,14 @@ use App\Livewire\Subscriptions\SubscriptionForm;
 use App\Livewire\Subscriptions\SubscriptionList;
 use App\Livewire\System\FluxLedgerAccountList;
 use App\Livewire\System\IntegrationSettings;
+use App\Livewire\Tickets\TicketDetail;
+use App\Livewire\Tickets\TicketList;
 use App\Livewire\Users\UserList;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard');
 
-Route::middleware('auth')->group(function (): void {
+Route::middleware('auth:web')->group(function (): void {
     Route::livewire('/dashboard', DashboardPage::class)->name('dashboard');
 
     Route::livewire('/kunden', CustomerList::class)->name('customers.index');
@@ -83,6 +85,9 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/subscriptions/neu', SubscriptionForm::class)->name('subscriptions.create');
     Route::livewire('/subscriptions/{subscription}', SubscriptionDetail::class)->name('subscriptions.show');
     Route::livewire('/subscriptions/{subscription}/bearbeiten', SubscriptionForm::class)->name('subscriptions.edit');
+
+    Route::livewire('/tickets', TicketList::class)->name('tickets.index');
+    Route::livewire('/tickets/{ticket}', TicketDetail::class)->name('tickets.show');
 
     Route::livewire('/schnittstellen', IntegrationSettings::class)->name('integrations.index');
     Route::livewire('/sachkonten', FluxLedgerAccountList::class)->name('ledger-accounts.index');

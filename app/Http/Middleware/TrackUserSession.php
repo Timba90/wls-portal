@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use App\Models\UserSession;
 use Closure;
 use Illuminate\Http\Request;
@@ -19,7 +20,9 @@ class TrackUserSession
     {
         $response = $next($request);
 
-        if (! $request->user() || ! $request->hasSession()) {
+        // Nur interne Benutzer: ein Kundenzugang meldet sich ueber einen eigenen
+        // Guard an, und `user_sessions` verweist auf `users`.
+        if (! $request->user() instanceof User || ! $request->hasSession()) {
             return $response;
         }
 

@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\PortalUser;
 use App\Models\User;
 
 return [
@@ -52,6 +53,16 @@ return [
             'driver' => 'passport',
             'provider' => 'users',
         ],
+
+        /*
+         * Kundenzugaenge des Kundenportals. Eigener Guard und eigene Tabelle:
+         * ein Kunde ist nie ein interner Benutzer und kommt an keine interne
+         * Seite heran.
+         */
+        'customer' => [
+            'driver' => 'session',
+            'provider' => 'portal_users',
+        ],
     ],
 
     /*
@@ -75,6 +86,11 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => env('AUTH_MODEL', User::class),
+        ],
+
+        'portal_users' => [
+            'driver' => 'eloquent',
+            'model' => PortalUser::class,
         ],
 
         // 'users' => [
@@ -107,6 +123,15 @@ return [
             'provider' => 'users',
             'table' => env('AUTH_PASSWORD_RESET_TOKEN_TABLE', 'password_reset_tokens'),
             'expire' => 60,
+            'throttle' => 60,
+        ],
+
+        // Einladungs- und Ruecksetzlinks des Kundenportals. Die Einladung
+        // nutzt denselben Broker; 72 Stunden lassen dem Kunden Zeit.
+        'portal_users' => [
+            'provider' => 'portal_users',
+            'table' => 'portal_password_reset_tokens',
+            'expire' => (int) env('CUSTOMER_PORTAL_LINK_EXPIRE_MINUTES', 4320),
             'throttle' => 60,
         ],
     ],

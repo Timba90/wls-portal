@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\User;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -21,9 +22,10 @@ class EnsureTwoFactorIsEnabled
             return $next($request);
         }
 
-        $user = $request->user();
+        // Gilt nur fuer interne Benutzer, nicht fuer Kundenzugaenge.
+        $user = $request->user('web');
 
-        if ($user && ! $user->hasTwoFactorEnabled() && ! $request->routeIs('profile.security')) {
+        if ($user instanceof User && ! $user->hasTwoFactorEnabled() && ! $request->routeIs('profile.security', 'customer-portal.*')) {
             return redirect()
                 ->route('profile.security')
                 ->with('warning', 'Zwei-Faktor-Authentifizierung ist verpflichtend. Bitte richten Sie sie jetzt ein.');
