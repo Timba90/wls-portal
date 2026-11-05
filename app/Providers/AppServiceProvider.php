@@ -2,14 +2,17 @@
 
 namespace App\Providers;
 
+use App\Http\Middleware\EnsurePortalUserIsActive;
 use App\Models\Certificate;
 use App\Models\Contact;
 use App\Models\Customer;
 use App\Models\CustomerService;
 use App\Models\Domain;
+use App\Models\PortalUser;
 use App\Models\Product;
 use App\Models\Project;
 use App\Models\Subscription;
+use App\Models\Ticket;
 use App\Passport\ClientIdMetadataClientRepository;
 use App\Support\LicenseCostCalculator;
 use Illuminate\Contracts\View\View as ViewContract;
@@ -23,6 +26,7 @@ use Illuminate\Validation\Rules\Password;
 use Laravel\Mcp\Server\Registrar;
 use Laravel\Passport\Bridge\ClientRepository;
 use Laravel\Passport\Passport;
+use Livewire\Livewire;
 use TallStackUi\Facades\TallStackUi;
 
 class AppServiceProvider extends ServiceProvider
@@ -57,6 +61,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureFormFieldPaddings();
         $this->configureProgressTrack();
         $this->configureOAuth();
+
+        // Auch Livewire-Folgeanfragen im Kundenportal pruefen, ob der Zugang
+        // noch freigeschaltet ist — nicht nur der erste Seitenaufruf.
+        Livewire::addPersistentMiddleware([EnsurePortalUserIsActive::class]);
 
         Date::use(Carbon::class);
     }
@@ -187,7 +195,21 @@ class AppServiceProvider extends ServiceProvider
                 'domains' => Domain::query()->count(),
                 'certificates' => Certificate::query()->count(),
                 'subscriptions' => Subscription::query()->count(),
+                'tickets' => Ticket::query()->open()->count(),
             ]));
+        });
+
+        // Kundenportal: nur die eigenen offenen Tickets.
+        View::composer('components.layouts.customer', function (ViewContract $view): void {
+            $view->with('portalNavCounts', once(function (): array {
+                $portalUser = auth('customer')->user();
+
+                return [
+                    'tickets' => $portalUser instanceof PortalUser
+                        ? Ticket::query()->whereBelongsTo($portalUser->customer)->open()->count()
+                        : null,
+                ];
+            }));
         });
     }
 

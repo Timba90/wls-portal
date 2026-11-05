@@ -1,4 +1,4 @@
-@props(['compact' => false, 'onBrand' => false])
+@props(['compact' => false, 'onBrand' => false, 'tagline' => null])
 
 {{--
     Markenblock: Monogramm-Chip plus Wortmarke.
@@ -30,7 +30,7 @@
                 'text-ink-faint' => ! $onBrand,
                 'text-brand-dim' => $onBrand,
             ])>
-                {{ config('portal.brand.tagline') }}
+                {{ $tagline ?? config('portal.brand.tagline') }}
             </span>
         </span>
     @endunless

@@ -55,6 +55,8 @@
                                 label="Kunden" :count="$navCounts['customers']" />
                     <x-nav-item route="projects.index" match="projects.*" icon="rectangle-group"
                                 label="Projekte" :count="$navCounts['projects']" />
+                    <x-nav-item route="tickets.index" match="tickets.*" icon="chat-bubble-left-right"
+                                label="Tickets" :count="$navCounts['tickets']" />
                     <x-nav-item route="services.index" icon="clipboard-document-list"
                                 label="Leistungen" :count="$navCounts['services']" />
                     <x-nav-item route="contacts.index" match="contacts.*" icon="user-group"

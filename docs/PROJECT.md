@@ -1,7 +1,7 @@
 # Projektarchitektur
 
-Interne Verwaltungskonsole für Kunden, Leistungen und Preise.
-Kein Kundenportal — die Anwendung wird ausschließlich intern genutzt.
+Interne Verwaltungskonsole für Kunden, Leistungen und Preise, dazu ein davon
+getrenntes Kundenportal (siehe AE-19).
 
 Die fachliche Anforderungslage ist in `docs/ANFORDERUNGEN.md` festgehalten.
 Bewusst verschobene Funktionen stehen in `docs/BACKLOG.md`.
@@ -823,6 +823,48 @@ Werte hängen an Artikel und Variante — in SQL ist das nicht zu vergleichen. D
 Kandidatenmenge ist eng (nur nicht archivierte Leistungen mit Katalogherkunft)
 und wird mit ihren Beziehungen in einem Zug geladen. Dieselbe Linie wie AE-13a.
 
+### AE-19 — Kundenportal in derselben Anwendung, unter eigenem Guard
+
+Die ursprüngliche Anforderung schloss ein Kundenportal aus. Auf Wunsch des
+Auftraggebers gibt es jetzt eines: Rechnungen herunterladen und SEPA-Mandat
+erteilen (beides Flux), Tickets und Projektstatistiken.
+
+**Dieselbe Anwendung statt einer zweiten.** Kunden, Projekte und der
+Flux-Zugang liegen hier; eine zweite Anwendung bräuchte dafür eine eigene
+Schnittstelle und eine zweite Fassung der Gestaltung. Getrennt wird stattdessen
+über einen eigenen Guard `customer` mit eigener Tabelle `portal_users`,
+eigenen Routen (`routes/customer-portal.php`, Präfix `kundenportal` oder eigene
+Domain) und eigenem Layout. Die internen Routen verlangen ausdrücklich
+`auth:web`, damit eine Kundensitzung dort nie als angemeldet gilt.
+
+**Ein Kundenzugang ist kein Benutzer.** `Auditable`, `TrackUserSession` und
+`EnsureTwoFactorIsEnabled` werten nur noch interne Benutzer aus — sonst stünde
+die ID eines Kundenzugangs als `user_id` in der Historie und zeigte auf eine
+ganz andere Person.
+
+**Flux bleibt führend.** Rechnungen und Mandate werden nicht gespeichert,
+sondern je Aufruf aus Flux gelesen (fünf Minuten zwischengespeichert). Die
+Zuordnung läuft über `customers.flux_contact_id`. Jede Antwort wird zusätzlich
+gegen diesen Kontakt geprüft — ein ignorierter Filter darf nie fremde
+Rechnungen zeigen. Endpunkte: `GET orders`, `GET orders/{id}?include=media`
+(Collection `invoice`), `GET media/private/{id}`, `GET|POST
+contact-bank-connections`, `GET|POST sepa-mandates`. Die IBAN erscheint im
+Portal nur maskiert und landet weder in der Datenbank noch in der Historie.
+Die beiden POSTs einer Mandatserteilung werden nie wiederholt; eine Sperre je
+Kunde verhindert doppeltes Absenden.
+
+**Tickets** (`tickets`, `ticket_messages`) gehören dem Kunden, nicht dem
+einzelnen Zugang. Nummer `TK-00001` über die Sequenztabelle. Interne Notizen
+sieht der Kunde nie. Der Status folgt dem Gespräch: antwortet der Kunde, ist
+das Team am Zug (`offen`), antwortet das Team, wartet es auf den Kunden.
+Per API eröffnete Tickets haben keinen Absender („System"), damit die
+Benachrichtigung beim Team landet; `external_reference` verhindert Dubletten
+bei wiederholten Meldungen.
+
+**Projektstatistiken ohne Geld.** Der Kunde sieht Fortschritt, Meilensteine,
+Termine, Betriebsampeln und Tickets je Projekt — keine Positionen, Preise oder
+Margen (`App\Actions\CustomerPortal\CalculateProjectStatistics`).
+
 ---
 
 ## 5. Archivierung
@@ -852,7 +894,10 @@ ausgenommenen Leistungen deshalb separat aus.
 
 ## 6. Sicherheit
 
-- Alle Seiten außer Login und Passwort-Reset sind authentifizierungspflichtig.
+- Alle Seiten außer Login und Passwort-Reset sind authentifizierungspflichtig —
+  in der Verwaltung wie im Kundenportal, jeweils mit eigenem Guard.
+- Kundenzugänge legt das Team an; es gibt keine Selbstregistrierung. Die
+  Anmeldung ist je E-Mail-Adresse und IP begrenzt.
 - Passwörter: mindestens 12 Zeichen, Groß- und Kleinbuchstaben, Zahl und
   Sonderzeichen. Kein automatischer Ablauf.
 - Keine öffentliche Registrierung — Benutzer legen andere Benutzer an.

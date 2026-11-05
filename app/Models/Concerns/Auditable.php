@@ -4,6 +4,7 @@ namespace App\Models\Concerns;
 
 use App\Enums\AuditEvent;
 use App\Models\AuditLog;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
@@ -79,8 +80,13 @@ trait Auditable
         array $newValues = [],
         ?string $description = null,
     ): void {
+        // Nur interne Benutzer stehen in der Historie. Im Kundenportal ist der
+        // angemeldete Benutzer ein Kundenzugang, dessen ID in `users` auf eine
+        // ganz andere Person zeigen wuerde.
+        $benutzer = auth()->user();
+
         AuditLog::query()->create([
-            'user_id' => auth()->id(),
+            'user_id' => $benutzer instanceof User ? $benutzer->getKey() : null,
             'auditable_type' => $this->getMorphClass(),
             'auditable_id' => $this->getKey(),
             'event' => $event,

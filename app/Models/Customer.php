@@ -41,6 +41,7 @@ use Illuminate\Support\Str;
     'gender',
     'short_label',
     'internal_code',
+    'flux_contact_id',
     'status',
     'responsible_user_id',
 ])]
@@ -109,6 +110,32 @@ class Customer extends Model
     public function projects(): HasMany
     {
         return $this->hasMany(Project::class)->orderByDesc('id');
+    }
+
+    /**
+     * Zugaenge zum Kundenportal.
+     *
+     * @return HasMany<PortalUser, $this>
+     */
+    public function portalUsers(): HasMany
+    {
+        return $this->hasMany(PortalUser::class)->orderBy('name');
+    }
+
+    /**
+     * @return HasMany<Ticket, $this>
+     */
+    public function tickets(): HasMany
+    {
+        return $this->hasMany(Ticket::class);
+    }
+
+    /**
+     * Ob Rechnungen und SEPA-Mandate aus Flux abrufbar sind.
+     */
+    public function isLinkedToFlux(): bool
+    {
+        return $this->flux_contact_id !== null;
     }
 
     /**
@@ -311,6 +338,7 @@ class Customer extends Model
             'gender' => 'Geschlecht',
             'short_label' => 'Kurzbezeichnung',
             'internal_code' => 'Internes Kürzel',
+            'flux_contact_id' => 'Flux-Kontakt',
             'status' => 'Status',
             'responsible_user_id' => 'Interner Verantwortlicher',
             'archived_at' => 'Archiviert am',
@@ -329,6 +357,7 @@ class Customer extends Model
             'salutation' => Salutation::class,
             'birth_date' => 'date',
             'archived_at' => 'datetime',
+            'flux_contact_id' => 'integer',
         ];
     }
 }

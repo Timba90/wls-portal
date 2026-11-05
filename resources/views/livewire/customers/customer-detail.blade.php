@@ -4,6 +4,7 @@
         'notizen' => 'Notizen',
         'dokumente' => 'Dokumente',
         'felder' => 'Eigene Felder',
+        'kundenportal' => 'Kundenportal',
         'historie' => 'Historie',
     ]);
 @endphp
@@ -138,6 +139,10 @@
                                                                         :read-only="$customer->isArchived()"
                                                                         :key="'felder-'.$customer->id" />
                         </div>
+                        @break
+
+                    @case('kundenportal')
+                        <livewire:customers.customer-portal-access :customer="$customer" :key="'kundenportal-'.$customer->id" />
                         @break
 
                     @case('historie')

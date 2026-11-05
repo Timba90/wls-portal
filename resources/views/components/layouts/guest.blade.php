@@ -48,16 +48,15 @@
                     class="pointer-events-none absolute inset-0 z-0 h-full w-full"></canvas>
 
             <div class="relative z-10">
-                <x-brand on-brand />
+                <x-brand on-brand :tagline="$tagline ?? null" />
             </div>
 
             <div class="relative z-10 flex max-w-[430px] flex-col gap-6">
                 <h1 class="text-[30px] font-semibold leading-[1.2] tracking-[-0.02em] text-brand-text text-pretty">
-                    Kunden, Leistungen und Verträge an einer Stelle.
+                    {{ $headline ?? 'Kunden, Leistungen und Verträge an einer Stelle.' }}
                 </h1>
                 <p class="text-[13.5px] leading-relaxed text-brand-muted text-pretty">
-                    Betreuung, Abrechnung und Laufzeiten für alle Mandate — ohne Tabellenchaos,
-                    mit einer verbindlichen Zahl pro Kunde.
+                    {{ $lead ?? 'Betreuung, Abrechnung und Laufzeiten für alle Mandate — ohne Tabellenchaos, mit einer verbindlichen Zahl pro Kunde.' }}
                 </p>
             </div>
 
