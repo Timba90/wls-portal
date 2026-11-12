@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\DocumentController;
 use App\Livewire\Archive\ArchivePage;
+use App\Livewire\Billing\RecurringInvoiceReconciliation;
 use App\Livewire\Catalog\CategoryList;
 use App\Livewire\Catalog\ProductDetail;
 use App\Livewire\Catalog\ProductForm;
@@ -71,6 +72,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('/projekte/{project}/bearbeiten', ProjectForm::class)->name('projects.edit');
 
     Route::livewire('/leistungen', ServiceOverview::class)->name('services.index');
+    Route::livewire('/serienrechnungen', RecurringInvoiceReconciliation::class)->name('recurring-invoices.index');
 
     Route::livewire('/domains', DomainList::class)->name('domains.index');
     // `neu` steht vor dem Platzhalter, sonst faengt der es als Domainnamen.

@@ -57,6 +57,8 @@
                                 label="Projekte" :count="$navCounts['projects']" />
                     <x-nav-item route="services.index" icon="clipboard-document-list"
                                 label="Leistungen" :count="$navCounts['services']" />
+                    <x-nav-item route="recurring-invoices.index" icon="arrow-path"
+                                label="Serienrechnungen" />
                     <x-nav-item route="contacts.index" match="contacts.*" icon="user-group"
                                 label="Ansprechpartner" :count="$navCounts['contacts']" />
                     <x-nav-item route="products.index" match="products.*" icon="cube"

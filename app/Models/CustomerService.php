@@ -148,6 +148,16 @@ class CustomerService extends Model
         return $this->morphMany(ServiceComponent::class, 'componentable')->orderBy('sort_order');
     }
 
+    /**
+     * Lexoffice-Serienrechnungspositionen, die diese Leistung abrechnen.
+     *
+     * @return HasMany<LexofficeRecurringTemplateItem, $this>
+     */
+    public function lexofficeRecurringTemplateItems(): HasMany
+    {
+        return $this->hasMany(LexofficeRecurringTemplateItem::class);
+    }
+
     public function isArchived(): bool
     {
         return $this->status === CustomerServiceStatus::Archived;
