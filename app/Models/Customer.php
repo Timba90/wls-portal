@@ -43,6 +43,7 @@ use Illuminate\Support\Str;
     'internal_code',
     'status',
     'responsible_user_id',
+    'lexoffice_contact_id',
 ])]
 class Customer extends Model
 {
@@ -133,6 +134,16 @@ class Customer extends Model
     public function phoneNumbers(): MorphMany
     {
         return $this->morphMany(PhoneNumber::class, 'owner')->orderBy('sort_order');
+    }
+
+    /**
+     * Serienrechnungen dieses Kunden in Lexoffice.
+     *
+     * @return HasMany<LexofficeRecurringTemplate, $this>
+     */
+    public function lexofficeRecurringTemplates(): HasMany
+    {
+        return $this->hasMany(LexofficeRecurringTemplate::class);
     }
 
     public function isCompany(): bool
@@ -301,6 +312,7 @@ class Customer extends Model
     {
         return [
             'customer_number' => 'Kundennummer',
+            'lexoffice_contact_id' => 'Lexoffice-Kontakt',
             'type' => 'Kundentyp',
             'company_name' => 'Firmenname',
             'salutation' => 'Anrede',

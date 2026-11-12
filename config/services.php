@@ -8,6 +8,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Lexoffice (Lexware Office)
+    |--------------------------------------------------------------------------
+    |
+    | Ausschliesslich lesend (§57). Der API-Schluessel liegt verschluesselt
+    | unter „Schnittstellen"; die Umgebungsvariable ist nur der Rueckfall.
+    | Die API erlaubt zwei Anfragen pro Sekunde — der Abstand zwischen zwei
+    | Anfragen haelt das ein.
+    |
+    */
+
+    'lexoffice' => [
+        'base_url' => env('LEXOFFICE_BASE_URL', 'https://api.lexware.io/v1'),
+        'api_key' => env('LEXOFFICE_API_KEY'),
+        'request_interval_ms' => (int) env('LEXOFFICE_REQUEST_INTERVAL_MS', 550),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Third Party Services
     |--------------------------------------------------------------------------
     |

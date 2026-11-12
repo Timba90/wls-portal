@@ -9,6 +9,8 @@ use App\Models\IntegrationCredential;
 use App\Models\RegistrarSync;
 use App\Support\Flux\FluxClient;
 use App\Support\Flux\FluxException;
+use App\Support\Lexoffice\LexofficeClient;
+use App\Support\Lexoffice\LexofficeException;
 use App\Support\Registrar\RegistrarClientFactory;
 use App\Support\Registrar\RegistrarException;
 use Illuminate\Contracts\View\View;
@@ -38,6 +40,59 @@ class IntegrationSettings extends Component
     public array $fluxInput = [];
 
     public array $fluxLogin = ['username' => '', 'password' => ''];
+
+    /**
+     * Neuer Lexoffice-API-Schluessel; der gespeicherte wird nie zurueckgelesen.
+     */
+    public string $lexofficeApiKey = '';
+
+    public function saveLexoffice(): void
+    {
+        abort_unless(auth()->check(), 403);
+        $apiKey = trim($this->lexofficeApiKey);
+        $this->lexofficeApiKey = '';
+
+        if ($apiKey === '') {
+            $this->dispatch('zugang-unveraendert');
+
+            return;
+        }
+
+        if (strlen($apiKey) > 512 || preg_match('/[\x00-\x20\x7f]/', $apiKey)) {
+            $this->dispatch('zugang-abgelehnt', meldung: 'Der Lexoffice-API-Schlüssel enthält ungültige Zeichen.');
+
+            return;
+        }
+
+        IntegrationCredential::query()->updateOrCreate(['provider' => 'lexoffice'], [
+            'credentials' => ['api_key' => $apiKey],
+            'updated_by' => auth()->id(),
+        ]);
+        $this->dispatch('zugang-gespeichert');
+    }
+
+    public function testLexoffice(): void
+    {
+        abort_unless(auth()->check(), 403);
+
+        try {
+            $this->dispatch('zugang-geprueft', meldung: app(LexofficeClient::class)->testConnection());
+        } catch (LexofficeException $exception) {
+            $this->dispatch('zugang-abgelehnt', meldung: $exception->getMessage());
+        }
+    }
+
+    public function forgetLexoffice(): void
+    {
+        abort_unless(auth()->check(), 403);
+        IntegrationCredential::query()->where('provider', 'lexoffice')->delete();
+        $this->dispatch('zugang-entfernt');
+    }
+
+    public function hasLexofficeKey(): bool
+    {
+        return filled(IntegrationCredential::valuesFor('lexoffice')['api_key'] ?? null);
+    }
 
     public function loginFlux(): void
     {

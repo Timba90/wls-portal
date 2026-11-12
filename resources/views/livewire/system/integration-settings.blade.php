@@ -145,6 +145,26 @@
                 </div>
             </x-card>
 
+            <x-card>
+                <x-slot:header>Lexoffice</x-slot:header>
+                <p class="mb-4 text-sm text-ink-muted">
+                    Lexoffice wird nur gelesen: die Serienrechnungen werden täglich abgeglichen und unter
+                    <a class="underline" href="{{ route('recurring-invoices.index') }}" wire:navigate>Serienrechnungen</a>
+                    den Kundenleistungen gegenübergestellt.
+                    {{ $this->hasLexofficeKey() ? 'Ein API-Schlüssel ist hinterlegt.' : 'Es ist noch kein API-Schlüssel hinterlegt.' }}
+                </p>
+                <div class="grid gap-4 md:grid-cols-2">
+                    <x-input label="API-Schlüssel" type="password" autocomplete="new-password" wire:model="lexofficeApiKey" placeholder="Zum Hinterlegen oder Ersetzen eingeben" />
+                </div>
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <x-button wire:click="saveLexoffice" wire:loading.attr="disabled">Speichern</x-button>
+                    <x-button wire:click="testLexoffice" wire:loading.attr="disabled">Verbindung prüfen</x-button>
+                    @if ($this->hasLexofficeKey())
+                        <x-button color="red" outline wire:click="forgetLexoffice" wire:confirm="Lexoffice-API-Schlüssel entfernen?">Entfernen</x-button>
+                    @endif
+                </div>
+            </x-card>
+
             <x-panel title="Wie es weitergeht" subtitle="Nach dem Hinterlegen der Zugangsdaten">
                 <p class="text-[12.5px] leading-relaxed text-ink-muted">
                     Der erste Schritt ist ein Trockenlauf. Er zeigt, was der Import anlegen und ändern

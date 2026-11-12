@@ -22,3 +22,13 @@ Schedule::command('registrar:sync --geplant')
     ->timezone(config('app.timezone'))
     ->onOneServer()
     ->withoutOverlapping();
+
+/*
+ * Taeglicher Abgleich der Lexoffice-Serienrechnungen (§57: einmal taeglich).
+ * Liest nur; das Ergebnis steht unter „Serienrechnungen".
+ */
+Schedule::command('lexoffice:serienrechnungen')
+    ->dailyAt('03:40')
+    ->timezone(config('app.timezone'))
+    ->onOneServer()
+    ->withoutOverlapping();
